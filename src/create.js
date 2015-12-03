@@ -10,29 +10,35 @@ let create = vnode => {
 	let { tagName, props, children } = vnode
 	let elem = document.createElement(tagName)
 	if (isObj(props)) {
-		Object.keys(props).forEach(key => {
-			let value = props[key]
-			if (key === 'attributes') {
-				return setAttrs(elem, value)
-			}
-			if (key === 'style') {
-				return setStyle(elem, value)
-			}
-			elem[key] = value
-		})
+		setProps(elem, props)
 	}
 	if (children && children.length > 0) {
-		children.forEach(child => {
-			let childNode = create(child)
-			elem.appendChild(childNode)
-		})
+		children.forEach(child => addChild(elem, child))
 	}
 	return elem
 }
 
 export default create
 
-let setAttrs = (elem, attrs) => {
+export let addChild = (elem, childVnode) => {
+	let childNode = create(child)
+	elem.appendChild(childNode)
+}
+
+export let setProps = (elem, props) => {
+	Object.keys(props).forEach(key => {
+		let value = props[key]
+		if (key === 'attributes') {
+			return setAttrs(elem, value)
+		}
+		if (key === 'style') {
+			return setStyle(elem, value)
+		}
+		elem[key] = value
+	})
+}
+
+export let setAttrs = (elem, attrs) => {
 	if (!isObj(attrs)) {
 		return
 	}
@@ -41,7 +47,7 @@ let setAttrs = (elem, attrs) => {
 	})
 }
 
-let setStyle = (elem, style) => {
+export let setStyle = (elem, style) => {
 	if (!isObj(style)) {
 		return
 	}
