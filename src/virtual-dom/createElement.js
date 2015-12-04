@@ -1,13 +1,9 @@
-import { h } from './virtual-dom'
-import { Widget, collectRef } from './component'
-import { types } from 'refer'
-import { assignProperties } from './DOMPropertyOperations'
-import { injection } from './DOMProperty'
-import HTMLDOMPropertyConfig from './HTMLDOMPropertyConfig'
-import SVGDOMPropertyConfig from './SVGDOMPropertyConfig'
-import { pipe } from './util'
-
-let { isFn, isStr, isObj, isNum } = types
+import hyperscript from './hyperscript'
+import { isFn, isStr, isObj, isNum, pipe } from './util'
+import { assignProperties } from './vendor/DOMPropertyOperations'
+import { injection } from './vendor/DOMProperty'
+import HTMLDOMPropertyConfig from './vendor/HTMLDOMPropertyConfig'
+import SVGDOMPropertyConfig from './vendor/SVGDOMPropertyConfig'
 
 injection.injectDOMPropertyConfig(HTMLDOMPropertyConfig)
 injection.injectDOMPropertyConfig(SVGDOMPropertyConfig)
@@ -129,7 +125,7 @@ let assign = (properties) => {
 			if (isStr(value)) {
 				let refKey = value
 				let refValue = value
-				props.attributes['data-refid'] = collectRef(refKey, refValue)
+				props.attributes['data-refid'] = refValue
 				hasChange = true
 			}
 		} else {
@@ -148,14 +144,12 @@ let getProps = (properties, children) => {
 	return properties
 }
 
-export default (tagName, properties, ...children) => {
-	let isComponent = isFn(tagName) && isFn(tagName.prototype.render)
-	if (isComponent) {
-		return new Widget(tagName, getProps(properties, children))
-	}
+let createElement = (tagName, properties, ...children) => {
 	if (isFn(tagName)) {
 		tagName = tagName(getProps(properties, children))
 	}
 	let props = assign(properties)
-	return h(tagName, props, ...children.filter(child => typeof child !== 'boolean'))
+	return hyperscript(tagName, props, ...children.filter(child => typeof child !== 'boolean'))
 }
+
+export default createElement

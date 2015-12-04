@@ -1,20 +1,43 @@
-import React, { create } from 'react'
+import React from 'react'
 
 let style = {
-	width: '500px',
-	height: '100px',
+	width: 500,
+	height: 100,
 	background: '#eaeaea'
 }
 
 let vnode = (
 	<div id="header" className="header" style={ style }>
 		Hello
-		<span className="highlight" attributes={{ style: 'padding:0 10px; color: #fff; background:pink;' }}>react</span>
+		<span className="highlight" style='padding:0 10px; color: #fff; background:pink;'>react</span>
 	</div>
 )
 
-let node = create(vnode)
+var nextVnode = (
+	<div id="header" className="header" style={ style }>
+		Hello
+		<span className="highlight" data-test="abd" style='padding:0 10px; color: #fff; background:blue;'>world</span>
+		sdafasdfasdf
+		<div>
+			<span className="highlight" data-test="abd" style='padding:0 10px; color: #fff; background:blue;'>world</span>
+		</div>
+		<span className="highlight" data-test="abd" style='padding:0 10px; color: #fff; background:blue;'>world</span>
+		<span className="highlight" data-test="abd" style='padding:0 10px; color: #fff; background:blue;'>world</span>
+		<span className="highlight" data-test="abd" style='padding:0 10px; color: #fff; background:blue;'>world</span>
+	</div>
+)
 
 let container = document.getElementById('container')
+let count = 0
+let update = () => {
+	let patches
+	count += 1
+	if (count % 2) {
+		React.render(vnode, container)
+	} else {
+		React.render(nextVnode, container)
+	}
+}
 
-container.appendChild(node)
+setInterval(update, 1000)
+

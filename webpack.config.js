@@ -20,7 +20,8 @@ module.exports = {
     resolve: {
         extensions: ['', '.js'],
         alias: {
-            'react': __dirname + '/src'
+            'react': __dirname + '/src',
+            'virtual-dom': __dirname + '/virtual-dom'
         }
     }
 };
