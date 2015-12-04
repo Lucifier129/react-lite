@@ -19,7 +19,7 @@ var DBMon = React.createClass({
 
   render: function() {
     return (
-      <div id="container" classNmae="abd">
+      <div id="container">
         <table className="table table-striped latest-data">
           <tbody>
             {
