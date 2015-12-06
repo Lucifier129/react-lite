@@ -1,54 +1,52 @@
-import { isStr, isObj, isFn } from './util'
-import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, Widget } from './constant'
-import create, { setAttrs, setStyle, setProps, addChild } from './create'
+import { isStr, isObj, isFn, setProps, setStyleValue, removeProps } from './util'
+import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET } from './constant'
+import create, { addChild } from './create'
+
 /**
 * patch dom
 */
-
 let patch = (node, patches, parent) => {
 	if (!patches) {
 		return node
 	}
-	
+	let { vnode, newVnode, type, childrenType } = patches
 	let newNode
 	parent = parent || node.parentNode
-	switch (patches.type) {
+	switch (type) {
 		case CREATE:
-			newNode = create(patches.vnode)
+			newNode = create(newVnode)
 			parent.appendChild(newNode)
 			break
 		case REMOVE:
 			parent.removeChild(node)
 			break
 		case REPLACE:
-			newNode = create(patches.vnode)
+			newNode = create(newVnode)
 			parent.replaceChild(newNode, node)
 			break
 		case PROPS:
-			let { props, newProps } = patches.store 
-			applyProps(node, props, newProps)
+			applyProps(node, vnode.props, newVnode.props)
 			break
-		case Widget:
-			let { vnode, newVnode } = patches.store
+		case WIDGET:
 			newVnode.update(vnode, node)
 			break
 	}
-	if (!patches.children || (patches.type && patches.type !== PROPS)) {
+	if (!childrenType) {
 		return newNode || node
 	}
 
-	switch (patches.children.type) {
-		case CREATE:
-			patches.children.vnodes.forEach(vnode => node.appendChild(create(vnode)))
-			break
+	switch (childrenType) {
 		case REMOVE:
 			node.innerHTML = ''
 			break
+		case CREATE:
+			patches.newChildren.forEach(child => addChild(node, child))
+			break
 		case REPLACE:
 			let children = Array.prototype.slice.call(node.childNodes)
-			patches.children.store.forEach((childPatches, index) => 
+			patches.childrenPatches.forEach((childPatches, index) => {
 				patch(children[index], childPatches, node)	
-			)
+			})
 			break
 	}
 
@@ -61,67 +59,43 @@ let applyProps = (node, props, newProps) => {
 	if (props == null && isObj(newProps)) {
 		return setProps(node, newProps)
 	} else if (newProps == null && isObj(props)) {
-		return removeProps(node, props)
+		return Object.keys(props).each(key => removeProp(node, key))
 	}
 	Object.keys({ ...props, ...newProps }).forEach(key => {
-		if (key === 'attributes') {
-			return patchAttrs(node, props.attributes, newProps.attributes)
-		} else if (key === 'style') {
-			return patchStyle(node, props.style, newProps.style)
-		}
-		node[key] = newProps[key]
-	})
-}
+		let newValue = newProps[key]
 
-
-let removeProps = (node, props) => {
-	Object.keys(props).forEach(key => {
-		let value = props[key]
-		if (key === 'attributes') {
-			return removeAttrs(node, value)
-		} else if (key === 'style') {
-			return removeStyle(node, value)
-		}
-		try {
-			node[key] = ''
-		} catch (e) {
-			node[key] = null
-		}
-	})
-}
-
-let removeAttrs = (node, attrs) => {
-	if (!isObj(attrs)) {
-		return
-	}
-	Object.keys(attrs).forEach(attrName => node.removeAttribute(attrName))
-}
-
-let removeStyle = (node, style) => {
-	if (!isObj(style)) {
-		return
-	}
-	Object.keys(style).forEach(key => node.style[key] = '')
-}
-
-let patchAttrs = (node, attrs, newAttrs) => {
-	Object.keys({ ...attrs, ...newAttrs }).forEach(attrName => {
-		let newAttr = newAttrs[attrName]
-		if (newAttr === undefined) {
-			node.removeAttribute(attrName)
-		} else if (attrs[name] !== newAttr) {
-			node.setAttribute(attrName, newAttr)
+		switch (true) {
+			case key === 'style':
+				patchStyle(node, props.style, newProps.style)
+				break
+			case /^on/.test(key):
+				node[key] = isFn(newValue) ? newValue : null
+				break
+			case key in node:
+				if (newValue === undefined) {
+					removeProp(node, key)
+				} else {
+					node[key] = newValue
+				}
+				break
+			default:
+				if (newValue === undefined) {
+					node.removeAttribute(key)
+				} else {
+					node.setAttribute(key, newValue)
+				}
 		}
 	})
 }
 
 let patchStyle = (node, style, newStyle) => {
+	let domStyle = node.style
 	Object.keys({ ...style, ...newStyle }).forEach(key => {
 		let value = newStyle[key]
 		if (value === undefined) {
-			node.style[key] = ''
+			domStyle[key] = ''
 		} else if (value !== style[key]) {
-			node.style[key] = value
+			setStyleValue(domStyle, key, value)
 		}
 	})
 }

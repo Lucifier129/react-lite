@@ -1,4 +1,4 @@
-import h from './hyperscript'
+import createElement from './virtual-dom/createElement'
 import { render, unmount } from './render'
 import { Component, createClass, findDOMNode } from './component'
 import { info } from './util'
@@ -40,7 +40,6 @@ let Children = {
 }
 
 export default {
-	h,
 	info,
 	Component,
 	createClass,
@@ -50,7 +49,7 @@ export default {
 	PropTypes,
 	unmount,
 	unmountComponentAtNode: unmount,
-	createElement: h,
+	createElement,
 	createStore,
 	createLogger,
 	createDispatch,

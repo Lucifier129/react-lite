@@ -1,9 +1,14 @@
-import { isStr, isFn, isObj, isArr, isNum } from './util'
+import { isStr, isFn, isObj, isArr, isNum, isBln, setProps } from './util'
+import { WIDGET } from './constant'
 
 /**
 * 根据 tagName props attrs 创建 real-dom
 */
 let create = vnode => {
+
+	if (isBln(vnode)) {
+		return
+	}
 
 	if (vnode == null) {
 		return document.createElement('noscript')
@@ -13,11 +18,18 @@ let create = vnode => {
 		return document.createTextNode(vnode)
 	}
 
-	if (vnode.type === 'Widget') {
+	if (vnode.type === WIDGET) {
 		return vnode.init()
 	}
 
 	let { tagName, props, children } = vnode
+
+	if (isFn(tagName)) {
+		props.children = children
+		vnode = tagName(props)
+		return create(vnode)
+	}
+
 	if (tagName == null) {
 		debugger
 	}
@@ -38,36 +50,7 @@ export let addChild = (elem, child) => {
 		return child.forEach(item => addChild(elem, item))
 	}
 	let childNode = create(child)
-	elem.appendChild(childNode)
-}
-
-export let setProps = (elem, props) => {
-	Object.keys(props).forEach(key => {
-		let value = props[key]
-		if (key === 'attributes') {
-			return setAttrs(elem, value)
-		}
-		if (key === 'style') {
-			return setStyle(elem, value)
-		}
-		elem[key] = value
-	})
-}
-
-export let setAttrs = (elem, attrs) => {
-	if (!isObj(attrs)) {
-		return
+	if (childNode !== undefined) {
+		elem.appendChild(childNode)
 	}
-	Object.keys(attrs).forEach(attrName => {
-		elem.setAttribute(attrName, attrs[attrName])
-	})
-}
-
-export let setStyle = (elem, style) => {
-	if (!isObj(style)) {
-		return
-	}
-	Object.keys(style).forEach(key => {
-		elem.style[key] = style[key]
-	})
 }

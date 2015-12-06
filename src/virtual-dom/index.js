@@ -1,10 +1,10 @@
 import create from './create'
 import diff from './diff'
 import patch from './patch'
-import h from './hyperscript'
+import createElement from './createElement'
 
 export default {
-	h,
+	createElement,
 	diff,
 	patch,
 	create

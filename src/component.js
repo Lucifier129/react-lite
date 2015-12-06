@@ -106,7 +106,7 @@ export let findDOMNode = node => node || node.getDOMNode()
 
 export class Widget {
 	constructor(Component, props) {
-		this.type = 'Widget'
+		this.type = 'WIDGET'
 		this.Component = Component
 		this.props = props
 	}
