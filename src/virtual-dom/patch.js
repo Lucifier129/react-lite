@@ -1,4 +1,4 @@
-import { isStr, isObj, isFn, setProps, setStyleValue, removeProps } from './util'
+import { isStr, isObj, isFn, setProps, setStyleValue, removeProps, setEvent, removeEvent, isEventKey } from './util'
 import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET } from './constant'
 import create, { addChild } from './create'
 
@@ -62,19 +62,23 @@ let applyProps = (node, props, newProps) => {
 		return Object.keys(props).each(key => removeProp(node, key))
 	}
 	Object.keys({ ...props, ...newProps }).forEach(key => {
+		let value = props[key]
 		let newValue = newProps[key]
-
 		switch (true) {
 			case key === 'style':
 				patchStyle(node, props.style, newProps.style)
 				break
-			case /^on/.test(key):
-				node[key] = isFn(newValue) ? newValue : null
+			case isEventKey(key):
+				if (!isFn(newValue)) {
+					removeEvent(node, key)
+				} else if (newValue !== value) {
+					setEvent(node, key, newValue)
+				}
 				break
 			case key in node:
 				if (newValue === undefined) {
 					removeProp(node, key)
-				} else {
+				} else if (newValue !== value) {
 					node[key] = newValue
 				}
 				break

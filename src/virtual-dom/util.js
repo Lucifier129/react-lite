@@ -35,9 +35,14 @@ export let setProps = (elem, props) => {
 	)
 }
 
+export let isEventKey = key => /^on/.test(key)
+
 export let removeProp = (elem, key) => {
 	let oldValue = elem[key]
 	switch (true) {
+		case isEventKey(key):
+			removeEvent(elem, key)
+			break
 		case isFn(oldValue):
 			elem[key] = null
 			break
@@ -58,10 +63,20 @@ export let removeProp = (elem, key) => {
 }
 
 export let setEvent = (elem, key, value) => {
+	key = key.toLowerCase()
 	elem[key] = value
 	if (key === 'onchange' && !elem.oninput) {
 		elem.oninput = value
+		value.oninput = true
 	}
+}
+
+export let removeEvent = (elem, key) => {
+	key = key.toLowerCase()
+	if (isFn(elem[key]) && elem[key].oninput) {
+		elem.oninput = null
+	}
+	elem[key] = null
 }
 
 
