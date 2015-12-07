@@ -1,6 +1,8 @@
 import { isStr, isFn, isObj, isArr, isNum, isBln, setProps } from './util'
 import { WIDGET } from './constant'
 
+let widgetElems = []
+
 /**
 * 根据 tagName props attrs 创建 real-dom
 */

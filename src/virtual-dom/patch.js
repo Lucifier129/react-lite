@@ -11,7 +11,7 @@ let patch = (node, patches, parent) => {
 	}
 	let { vnode, newVnode, type, childrenType } = patches
 	let newNode
-	parent = parent || node.parentNode
+	parent = node ? node.parentNode : parent
 	switch (type) {
 		case CREATE:
 			newNode = create(newVnode)
@@ -30,9 +30,6 @@ let patch = (node, patches, parent) => {
 		case WIDGET:
 			newVnode.update(vnode, node)
 			break
-	}
-	if (!childrenType) {
-		return newNode || node
 	}
 
 	switch (childrenType) {
