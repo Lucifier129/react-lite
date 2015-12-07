@@ -1,4 +1,14 @@
-/******/ (function(modules) { // webpackBootstrap
+(function webpackUniversalModuleDefinition(root, factory) {
+	if(typeof exports === 'object' && typeof module === 'object')
+		module.exports = factory();
+	else if(typeof define === 'function' && define.amd)
+		define([], factory);
+	else if(typeof exports === 'object')
+		exports["React"] = factory();
+	else
+		root["React"] = factory();
+})(this, function() {
+return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
 
@@ -46,96 +56,17 @@
 
 	'use strict';
 
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-	var _react = __webpack_require__(1);
-
-	var _react2 = _interopRequireDefault(_react);
-
-	var style = {
-		width: 500,
-		height: 100,
-		background: '#eaeaea'
-	};
-
-	var vnode = _react2['default'].createElement(
-		'div',
-		{ id: 'header', className: 'header', style: style },
-		'Hello',
-		_react2['default'].createElement(
-			'span',
-			{ className: 'highlight', style: 'padding:0 10px; color: #fff; background:pink;' },
-			'react'
-		)
-	);
-
-	var nextVnode = _react2['default'].createElement(
-		'div',
-		{ id: 'header', className: 'header', style: style },
-		'Hello',
-		_react2['default'].createElement(
-			'span',
-			{ className: 'highlight', 'data-test': 'abd', style: 'padding:0 10px; color: #fff; background:blue;' },
-			'world'
-		),
-		'sdafasdfasdf',
-		_react2['default'].createElement(
-			'div',
-			null,
-			_react2['default'].createElement(
-				'span',
-				{ className: 'highlight', 'data-test': 'abd', style: 'padding:0 10px; color: #fff; background:blue;' },
-				'world'
-			)
-		),
-		_react2['default'].createElement(
-			'span',
-			{ className: 'highlight', 'data-test': 'abd', style: 'padding:0 10px; color: #fff; background:blue;' },
-			'world'
-		),
-		_react2['default'].createElement(
-			'span',
-			{ className: 'highlight', 'data-test': 'abd', style: 'padding:0 10px; color: #fff; background:blue;' },
-			'world'
-		),
-		_react2['default'].createElement(
-			'span',
-			{ className: 'highlight', 'data-test': 'abd', style: 'padding:0 10px; color: #fff; background:blue;' },
-			'world'
-		)
-	);
-
-	var container = document.getElementById('container');
-	var count = 0;
-	var update = function update() {
-		var patches = undefined;
-		count += 1;
-		if (count % 2) {
-			_react2['default'].render(vnode, container);
-		} else {
-			_react2['default'].render(nextVnode, container);
-		}
-	};
-
-	setInterval(update, 1000);
-
-/***/ },
-/* 1 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
 	exports.__esModule = true;
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-	var _createElement = __webpack_require__(2);
+	var _createElement = __webpack_require__(7);
 
 	var _createElement2 = _interopRequireDefault(_createElement);
 
-	var _render = __webpack_require__(9);
+	var _render = __webpack_require__(8);
 
-	var _component = __webpack_require__(3);
+	var _component = __webpack_require__(4);
 
 	var check = function check() {
 	  return check;
@@ -179,6 +110,37 @@
 	module.exports = exports['default'];
 
 /***/ },
+/* 1 */
+/***/ function(module, exports) {
+
+	/**
+	* 常量
+	*/
+	'use strict';
+
+	exports.__esModule = true;
+	var CREATE = 'CREATE';
+	exports.CREATE = CREATE;
+	var REMOVE = 'REMOVE';
+	exports.REMOVE = REMOVE;
+	var REORDER = 'REORDER';
+	exports.REORDER = REORDER;
+	var REPLACE = 'REPLACE';
+	exports.REPLACE = REPLACE;
+	var INSERT = 'INSERT';
+	exports.INSERT = INSERT;
+	var PROPS = 'PROPS';
+	exports.PROPS = PROPS;
+	var WIDGET = 'WIDGET';
+	exports.WIDGET = WIDGET;
+	var DID_MOUNT = 'DID_MOUNT';
+	exports.DID_MOUNT = DID_MOUNT;
+	var WILL_UNMOUNT = 'WILL_UNMOUNT';
+	exports.WILL_UNMOUNT = WILL_UNMOUNT;
+	var COMPONENT_ID = 'data-esnextid';
+	exports.COMPONENT_ID = COMPONENT_ID;
+
+/***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -186,38 +148,346 @@
 
 	exports.__esModule = true;
 
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+	var _constant = __webpack_require__(1);
 
-	var _component = __webpack_require__(3);
+	//types.js
+	var isType = function isType(type) {
+		return function (obj) {
+			return obj != null && Object.prototype.toString.call(obj) === '[object ' + type + ']';
+		};
+	};
+	exports.isType = isType;
+	var isObj = isType('Object');
+	exports.isObj = isObj;
+	var isStr = isType('String');
+	exports.isStr = isStr;
+	var isNum = isType('Number');
+	exports.isNum = isNum;
+	var isFn = isType('Function');
+	exports.isFn = isFn;
+	var isBln = isType('Boolean');
+	exports.isBln = isBln;
+	var isArr = Array.isArray || isType('Array');
+	exports.isArr = isArr;
+	var isThenable = function isThenable(obj) {
+		return obj != null && isFn(obj.then);
+	};
 
-	var _util = __webpack_require__(4);
+	exports.isThenable = isThenable;
+	var pipe = function pipe(fn1, fn2) {
+		return function () {
+			for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+				args[_key] = arguments[_key];
+			}
 
-	var createElement = function createElement(tagName, props) {
-		for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-			children[_key - 2] = arguments[_key];
-		}
-
-		var isComponent = _util.isFn(tagName) && _util.isFn(tagName.prototype.render);
-		children = children.filter(function (child) {
-			return !_util.isBln(child);
-		});
-		if (isComponent) {
-			return new _component.Widget(tagName, _extends({}, props, {
-				children: children.length === 1 ? children[0] : children
-			}));
-		}
-		return {
-			tagName: tagName,
-			props: props,
-			children: children
+			fn1.apply(this, args);
+			return fn2.apply(this, args);
 		};
 	};
 
-	exports['default'] = createElement;
-	module.exports = exports['default'];
+	exports.pipe = pipe;
+	var getUid = function getUid() {
+		return Math.random().toString(36).substr(2);
+	};
+
+	exports.getUid = getUid;
+	var $events = {};
+
+	var $on = function $on(name, callback) {
+		var events = $events[name] = $events[name] || [];
+		events.push(callback);
+	};
+
+	exports.$on = $on;
+	var $off = function $off(name, callback) {
+		if (!isFn(callback)) {
+			$events[name] = [];
+			return;
+		}
+		var index = $events[name].indexOf(callback);
+		if (index !== -1) {
+			$events[name].splice(index, 1);
+		}
+	};
+
+	exports.$off = $off;
+	var $trigger = function $trigger(name) {
+		for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+			args[_key2 - 1] = arguments[_key2];
+		}
+
+		if (isArr($events[name])) {
+			$events[name].forEach(function (callback) {
+				return callback.apply(undefined, args);
+			});
+		}
+	};
+
+	exports.$trigger = $trigger;
+	var appendChild = function appendChild(node, child) {
+		node.appendChild(child);
+	};
+
+	exports.appendChild = appendChild;
+	var removeChild = function removeChild(node, child) {
+		$trigger(_constant.WILL_UNMOUNT, child);
+		node.removeChild(child);
+	};
+
+	exports.removeChild = removeChild;
+	var replaceChild = function replaceChild(node, newChild, child) {
+		$trigger(_constant.WILL_MOUNT, child, newChild);
+		if (newChild.nodeType === 3 && child.nodeType === 3) {
+			return child.replaceData(0, child.length, newChild.textContent);
+		}
+		node.replaceChild(newChild, child);
+	};
+
+	exports.replaceChild = replaceChild;
+	var setProp = function setProp(elem, key, value) {
+		switch (true) {
+			case key === 'style':
+				setStyle(elem, value);
+				break;
+			case /^on/.test(key):
+				setEvent(elem, key.toLowerCase(), value);
+				break;
+			case key in elem:
+				elem[key] = value;
+				break;
+			default:
+				if (key !== 'key') {
+					elem.setAttribute(key, value);
+				}
+		}
+	};
+
+	exports.setProp = setProp;
+	var setProps = function setProps(elem, props) {
+		Object.keys(props).forEach(function (key) {
+			return setProp(elem, key, props[key]);
+		});
+	};
+
+	exports.setProps = setProps;
+	var isEventKey = function isEventKey(key) {
+		return (/^on/.test(key)
+		);
+	};
+
+	exports.isEventKey = isEventKey;
+	var removeProp = function removeProp(elem, key) {
+		var oldValue = elem[key];
+		switch (true) {
+			case isEventKey(key):
+				removeEvent(elem, key);
+				break;
+			case isFn(oldValue):
+				elem[key] = null;
+				break;
+			case isStr(oldValue):
+				elem[key] = '';
+				break;
+			case isBln(oldValue):
+				elem[key] = false;
+				break;
+			default:
+				try {
+					elem[key] = undefined;
+					delete elem[key];
+				} catch (e) {
+					//pass
+				}
+		}
+	};
+
+	exports.removeProp = removeProp;
+	var setEvent = function setEvent(elem, key, value) {
+		key = key.toLowerCase();
+		elem[key] = value;
+		if (key === 'onchange' && !elem.oninput) {
+			elem.oninput = value;
+			value.oninput = true;
+		}
+	};
+
+	exports.setEvent = setEvent;
+	var removeEvent = function removeEvent(elem, key) {
+		key = key.toLowerCase();
+		if (isFn(elem[key]) && elem[key].oninput) {
+			elem.oninput = null;
+		}
+		elem[key] = null;
+	};
+
+	exports.removeEvent = removeEvent;
+	var removeStyle = function removeStyle(elem, style) {
+		if (!isObj(style)) {
+			return;
+		}
+		Object.keys(style).forEach(function (key) {
+			return elem.style[key] = '';
+		});
+	};
+
+	exports.removeStyle = removeStyle;
+	var setStyle = function setStyle(elem, style) {
+		if (!isObj(style)) {
+			return;
+		}
+		Object.keys(style).forEach(function (key) {
+			setStyleValue(elem.style, key, style[key]);
+		});
+	};
+
+	exports.setStyle = setStyle;
+	var isUnitlessNumber = {
+		animationIterationCount: true,
+		boxFlex: true,
+		boxFlexGroup: true,
+		boxOrdinalGroup: true,
+		columnCount: true,
+		flex: true,
+		flexGrow: true,
+		flexPositive: true,
+		flexShrink: true,
+		flexNegative: true,
+		flexOrder: true,
+		fontWeight: true,
+		lineClamp: true,
+		lineHeight: true,
+		opacity: true,
+		order: true,
+		orphans: true,
+		tabSize: true,
+		widows: true,
+		zIndex: true,
+		zoom: true,
+
+		// SVG-related properties
+		fillOpacity: true,
+		stopOpacity: true,
+		strokeDashoffset: true,
+		strokeOpacity: true,
+		strokeWidth: true
+	};
+
+	/**
+	 * @param {string} prefix vendor-specific prefix, eg: Webkit
+	 * @param {string} key style name, eg: transitionDuration
+	 * @return {string} style name prefixed with `prefix`, properly camelCased, eg:
+	 * WebkitTransitionDuration
+	 */
+	var prefixKey = function prefixKey(prefix, key) {
+		return prefix + key.charAt(0).toUpperCase() + key.substring(1);
+	};
+
+	/**
+	 * Support style names that may come passed in prefixed by adding permutations
+	 * of vendor prefixes.
+	 */
+	var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
+
+	// Using Object.keys here, or else the vanilla for-in loop makes IE8 go into an
+	// infinite loop, because it iterates over the newly added props too.
+	Object.keys(isUnitlessNumber).forEach(function (prop) {
+		return prefixes.forEach(function (prefix) {
+			return isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop];
+		});
+	});
+
+	var RE_NUMBER = /^-?\d+(\.\d+)?$/;
+	var setStyleValue = function setStyleValue(style, key, value) {
+		if (RE_NUMBER.test(value) && !isUnitlessNumber[key]) {
+			style[key] = value + 'px';
+		} else {
+			style[key] = value;
+		}
+	};
+	exports.setStyleValue = setStyleValue;
 
 /***/ },
 /* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	exports.__esModule = true;
+
+	var _util = __webpack_require__(2);
+
+	var _constant = __webpack_require__(1);
+
+	var widgetElems = [];
+
+	/**
+	* 根据 tagName props attrs 创建 real-dom
+	*/
+	var create = function create(_x) {
+		var _again = true;
+
+		_function: while (_again) {
+			var vnode = _x;
+			_again = false;
+
+			if (vnode == null) {
+				return document.createElement('noscript');
+			}
+
+			if (_util.isStr(vnode) || _util.isNum(vnode)) {
+				return document.createTextNode(vnode);
+			}
+
+			if (vnode.type === _constant.WIDGET) {
+				return vnode.init();
+			}
+
+			var _vnode = vnode;
+			var tagName = _vnode.tagName;
+			var props = _vnode.props;
+			var children = _vnode.children;
+
+			if (_util.isFn(tagName)) {
+				props.children = children;
+				vnode = tagName(props);
+				_x = vnode;
+				_again = true;
+				_vnode = tagName = props = children = undefined;
+				continue _function;
+			}
+
+			if (tagName == null) {
+				debugger;
+			}
+			var elem = document.createElement(tagName);
+			if (_util.isObj(props)) {
+				_util.setProps(elem, props);
+			}
+			if (children && children.length > 0) {
+				children.forEach(function (child) {
+					return addChild(elem, child);
+				});
+			}
+			return elem;
+		}
+	};
+
+	exports['default'] = create;
+	var addChild = function addChild(elem, child) {
+		if (_util.isArr(child)) {
+			return child.forEach(function (item) {
+				return addChild(elem, item);
+			});
+		}
+		var childNode = create(child);
+		if (childNode !== undefined) {
+			_util.appendChild(elem, childNode);
+		}
+	};
+	exports.addChild = addChild;
+
+/***/ },
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -232,19 +502,19 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-	var _util = __webpack_require__(4);
+	var _util = __webpack_require__(2);
 
-	var _constant = __webpack_require__(5);
+	var _constant = __webpack_require__(1);
 
-	var _create = __webpack_require__(6);
+	var _create = __webpack_require__(3);
 
 	var _create2 = _interopRequireDefault(_create);
 
-	var _diff = __webpack_require__(7);
+	var _diff = __webpack_require__(5);
 
 	var _diff2 = _interopRequireDefault(_diff);
 
-	var _patch = __webpack_require__(8);
+	var _patch = __webpack_require__(6);
 
 	var _patch2 = _interopRequireDefault(_patch);
 
@@ -519,384 +789,7 @@
 	exports.createClass = createClass;
 
 /***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	exports.__esModule = true;
-
-	var _constant = __webpack_require__(5);
-
-	//types.js
-	var isType = function isType(type) {
-		return function (obj) {
-			return obj != null && Object.prototype.toString.call(obj) === '[object ' + type + ']';
-		};
-	};
-	exports.isType = isType;
-	var isObj = isType('Object');
-	exports.isObj = isObj;
-	var isStr = isType('String');
-	exports.isStr = isStr;
-	var isNum = isType('Number');
-	exports.isNum = isNum;
-	var isFn = isType('Function');
-	exports.isFn = isFn;
-	var isBln = isType('Boolean');
-	exports.isBln = isBln;
-	var isArr = Array.isArray || isType('Array');
-	exports.isArr = isArr;
-	var isThenable = function isThenable(obj) {
-		return obj != null && isFn(obj.then);
-	};
-
-	exports.isThenable = isThenable;
-	var pipe = function pipe(fn1, fn2) {
-		return function () {
-			for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-				args[_key] = arguments[_key];
-			}
-
-			fn1.apply(this, args);
-			return fn2.apply(this, args);
-		};
-	};
-
-	exports.pipe = pipe;
-	var getUid = function getUid() {
-		return Math.random().toString(36).substr(2);
-	};
-
-	exports.getUid = getUid;
-	var $events = {};
-
-	var $on = function $on(name, callback) {
-		var events = $events[name] = $events[name] || [];
-		events.push(callback);
-	};
-
-	exports.$on = $on;
-	var $off = function $off(name, callback) {
-		if (!isFn(callback)) {
-			$events[name] = [];
-			return;
-		}
-		var index = $events[name].indexOf(callback);
-		if (index !== -1) {
-			$events[name].splice(index, 1);
-		}
-	};
-
-	exports.$off = $off;
-	var $trigger = function $trigger(name) {
-		for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-			args[_key2 - 1] = arguments[_key2];
-		}
-
-		if (isArr($events[name])) {
-			$events[name].forEach(function (callback) {
-				return callback.apply(undefined, args);
-			});
-		}
-	};
-
-	exports.$trigger = $trigger;
-	var appendChild = function appendChild(node, child) {
-		node.appendChild(child);
-	};
-
-	exports.appendChild = appendChild;
-	var removeChild = function removeChild(node, child) {
-		$trigger(_constant.WILL_UNMOUNT, child);
-		node.removeChild(child);
-	};
-
-	exports.removeChild = removeChild;
-	var replaceChild = function replaceChild(node, newChild, child) {
-		$trigger(_constant.WILL_MOUNT, child, newChild);
-		if (newChild.nodeType === 3 && child.nodeType === 3) {
-			return child.replaceData(0, child.length, newChild.textContent);
-		}
-		node.replaceChild(newChild, child);
-	};
-
-	exports.replaceChild = replaceChild;
-	var setProp = function setProp(elem, key, value) {
-		switch (true) {
-			case key === 'style':
-				setStyle(elem, value);
-				break;
-			case /^on/.test(key):
-				setEvent(elem, key.toLowerCase(), value);
-				break;
-			case key in elem:
-				elem[key] = value;
-				break;
-			default:
-				if (key !== 'key') {
-					elem.setAttribute(key, value);
-				}
-		}
-	};
-
-	exports.setProp = setProp;
-	var setProps = function setProps(elem, props) {
-		Object.keys(props).forEach(function (key) {
-			return setProp(elem, key, props[key]);
-		});
-	};
-
-	exports.setProps = setProps;
-	var isEventKey = function isEventKey(key) {
-		return (/^on/.test(key)
-		);
-	};
-
-	exports.isEventKey = isEventKey;
-	var removeProp = function removeProp(elem, key) {
-		var oldValue = elem[key];
-		switch (true) {
-			case isEventKey(key):
-				removeEvent(elem, key);
-				break;
-			case isFn(oldValue):
-				elem[key] = null;
-				break;
-			case isStr(oldValue):
-				elem[key] = '';
-				break;
-			case isBln(oldValue):
-				elem[key] = false;
-				break;
-			default:
-				try {
-					elem[key] = undefined;
-					delete elem[key];
-				} catch (e) {
-					//pass
-				}
-		}
-	};
-
-	exports.removeProp = removeProp;
-	var setEvent = function setEvent(elem, key, value) {
-		key = key.toLowerCase();
-		elem[key] = value;
-		if (key === 'onchange' && !elem.oninput) {
-			elem.oninput = value;
-			value.oninput = true;
-		}
-	};
-
-	exports.setEvent = setEvent;
-	var removeEvent = function removeEvent(elem, key) {
-		key = key.toLowerCase();
-		if (isFn(elem[key]) && elem[key].oninput) {
-			elem.oninput = null;
-		}
-		elem[key] = null;
-	};
-
-	exports.removeEvent = removeEvent;
-	var removeStyle = function removeStyle(elem, style) {
-		if (!isObj(style)) {
-			return;
-		}
-		Object.keys(style).forEach(function (key) {
-			return elem.style[key] = '';
-		});
-	};
-
-	exports.removeStyle = removeStyle;
-	var setStyle = function setStyle(elem, style) {
-		if (!isObj(style)) {
-			return;
-		}
-		Object.keys(style).forEach(function (key) {
-			setStyleValue(elem.style, key, style[key]);
-		});
-	};
-
-	exports.setStyle = setStyle;
-	var isUnitlessNumber = {
-		animationIterationCount: true,
-		boxFlex: true,
-		boxFlexGroup: true,
-		boxOrdinalGroup: true,
-		columnCount: true,
-		flex: true,
-		flexGrow: true,
-		flexPositive: true,
-		flexShrink: true,
-		flexNegative: true,
-		flexOrder: true,
-		fontWeight: true,
-		lineClamp: true,
-		lineHeight: true,
-		opacity: true,
-		order: true,
-		orphans: true,
-		tabSize: true,
-		widows: true,
-		zIndex: true,
-		zoom: true,
-
-		// SVG-related properties
-		fillOpacity: true,
-		stopOpacity: true,
-		strokeDashoffset: true,
-		strokeOpacity: true,
-		strokeWidth: true
-	};
-
-	/**
-	 * @param {string} prefix vendor-specific prefix, eg: Webkit
-	 * @param {string} key style name, eg: transitionDuration
-	 * @return {string} style name prefixed with `prefix`, properly camelCased, eg:
-	 * WebkitTransitionDuration
-	 */
-	var prefixKey = function prefixKey(prefix, key) {
-		return prefix + key.charAt(0).toUpperCase() + key.substring(1);
-	};
-
-	/**
-	 * Support style names that may come passed in prefixed by adding permutations
-	 * of vendor prefixes.
-	 */
-	var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
-
-	// Using Object.keys here, or else the vanilla for-in loop makes IE8 go into an
-	// infinite loop, because it iterates over the newly added props too.
-	Object.keys(isUnitlessNumber).forEach(function (prop) {
-		return prefixes.forEach(function (prefix) {
-			return isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop];
-		});
-	});
-
-	var RE_NUMBER = /^-?\d+(\.\d+)?$/;
-	var setStyleValue = function setStyleValue(style, key, value) {
-		if (RE_NUMBER.test(value) && !isUnitlessNumber[key]) {
-			style[key] = value + 'px';
-		} else {
-			style[key] = value;
-		}
-	};
-	exports.setStyleValue = setStyleValue;
-
-/***/ },
 /* 5 */
-/***/ function(module, exports) {
-
-	/**
-	* 常量
-	*/
-	'use strict';
-
-	exports.__esModule = true;
-	var CREATE = 'CREATE';
-	exports.CREATE = CREATE;
-	var REMOVE = 'REMOVE';
-	exports.REMOVE = REMOVE;
-	var REORDER = 'REORDER';
-	exports.REORDER = REORDER;
-	var REPLACE = 'REPLACE';
-	exports.REPLACE = REPLACE;
-	var INSERT = 'INSERT';
-	exports.INSERT = INSERT;
-	var PROPS = 'PROPS';
-	exports.PROPS = PROPS;
-	var WIDGET = 'WIDGET';
-	exports.WIDGET = WIDGET;
-	var DID_MOUNT = 'DID_MOUNT';
-	exports.DID_MOUNT = DID_MOUNT;
-	var WILL_UNMOUNT = 'WILL_UNMOUNT';
-	exports.WILL_UNMOUNT = WILL_UNMOUNT;
-	var COMPONENT_ID = 'data-esnextid';
-	exports.COMPONENT_ID = COMPONENT_ID;
-
-/***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	exports.__esModule = true;
-
-	var _util = __webpack_require__(4);
-
-	var _constant = __webpack_require__(5);
-
-	var widgetElems = [];
-
-	/**
-	* 根据 tagName props attrs 创建 real-dom
-	*/
-	var create = function create(_x) {
-		var _again = true;
-
-		_function: while (_again) {
-			var vnode = _x;
-			_again = false;
-
-			if (vnode == null) {
-				return document.createElement('noscript');
-			}
-
-			if (_util.isStr(vnode) || _util.isNum(vnode)) {
-				return document.createTextNode(vnode);
-			}
-
-			if (vnode.type === _constant.WIDGET) {
-				return vnode.init();
-			}
-
-			var _vnode = vnode;
-			var tagName = _vnode.tagName;
-			var props = _vnode.props;
-			var children = _vnode.children;
-
-			if (_util.isFn(tagName)) {
-				props.children = children;
-				vnode = tagName(props);
-				_x = vnode;
-				_again = true;
-				_vnode = tagName = props = children = undefined;
-				continue _function;
-			}
-
-			if (tagName == null) {
-				debugger;
-			}
-			var elem = document.createElement(tagName);
-			if (_util.isObj(props)) {
-				_util.setProps(elem, props);
-			}
-			if (children && children.length > 0) {
-				children.forEach(function (child) {
-					return addChild(elem, child);
-				});
-			}
-			return elem;
-		}
-	};
-
-	exports['default'] = create;
-	var addChild = function addChild(elem, child) {
-		if (_util.isArr(child)) {
-			return child.forEach(function (item) {
-				return addChild(elem, item);
-			});
-		}
-		var childNode = create(child);
-		if (childNode !== undefined) {
-			_util.appendChild(elem, childNode);
-		}
-	};
-	exports.addChild = addChild;
-
-/***/ },
-/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -905,9 +798,9 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _util = __webpack_require__(4);
+	var _util = __webpack_require__(2);
 
-	var _constant = __webpack_require__(5);
+	var _constant = __webpack_require__(1);
 
 	/**
 	* diff vnode and newVnode
@@ -996,7 +889,7 @@
 	module.exports = exports['default'];
 
 /***/ },
-/* 8 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1007,11 +900,11 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-	var _util = __webpack_require__(4);
+	var _util = __webpack_require__(2);
 
-	var _constant = __webpack_require__(5);
+	var _constant = __webpack_require__(1);
 
-	var _create = __webpack_require__(6);
+	var _create = __webpack_require__(3);
 
 	var _create2 = _interopRequireDefault(_create);
 
@@ -1124,7 +1017,45 @@
 	module.exports = exports['default'];
 
 /***/ },
-/* 9 */
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	exports.__esModule = true;
+
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+	var _component = __webpack_require__(4);
+
+	var _util = __webpack_require__(2);
+
+	var createElement = function createElement(tagName, props) {
+		for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+			children[_key - 2] = arguments[_key];
+		}
+
+		var isComponent = _util.isFn(tagName) && _util.isFn(tagName.prototype.render);
+		children = children.filter(function (child) {
+			return !_util.isBln(child);
+		});
+		if (isComponent) {
+			return new _component.Widget(tagName, _extends({}, props, {
+				children: children.length === 1 ? children[0] : children
+			}));
+		}
+		return {
+			tagName: tagName,
+			props: props,
+			children: children
+		};
+	};
+
+	exports['default'] = createElement;
+	module.exports = exports['default'];
+
+/***/ },
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1133,21 +1064,21 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-	var _create = __webpack_require__(6);
+	var _create = __webpack_require__(3);
 
 	var _create2 = _interopRequireDefault(_create);
 
-	var _diff = __webpack_require__(7);
+	var _diff = __webpack_require__(5);
 
 	var _diff2 = _interopRequireDefault(_diff);
 
-	var _patch = __webpack_require__(8);
+	var _patch = __webpack_require__(6);
 
 	var _patch2 = _interopRequireDefault(_patch);
 
-	var _util = __webpack_require__(4);
+	var _util = __webpack_require__(2);
 
-	var _constant = __webpack_require__(5);
+	var _constant = __webpack_require__(1);
 
 	var store = {};
 	var render = function render(vnode, container, callback) {
@@ -1184,4 +1115,6 @@
 	exports.unmount = unmount;
 
 /***/ }
-/******/ ]);
+/******/ ])
+});
+;

@@ -1,26 +1,24 @@
-import { create, diff } from './virtual-dom'
-import { types } from 'refer'
-import { richPatch, clearDidMounts, callUnmounts } from './component'
-import { getId, info, ATTR_ID } from './util'
+import create from './create'
+import diff from './diff'
+import patch from './patch'
+import { isFn, getUid, appendChild, removeChild, $trigger, $off } from './util'
+import { COMPONENT_ID, DID_MOUNT } from './constant'
 
-let { isFn } = types
-
-let store = info.store =  {}
-
+let store = {}
 export let render = (vnode, container, callback) => {
-	let id = container.getAttribute(ATTR_ID)
+	let id = container.getAttribute(COMPONENT_ID)
 	if (id) {
-		let prevVnode = store[id]
-		let patches = diff(prevVnode, vnode)
-		richPatch(container.firstChild, patches)
+		let patches = diff(store[id], vnode)
+		patch(container.firstChild, patches)
 		store[id] = vnode
 	} else {
 		let node = create(vnode)
-		container.setAttribute(ATTR_ID, id = getId())
+		container.setAttribute(COMPONENT_ID, id = getUid())
 		store[id] = vnode
 		container.innerHTML = ''
-		container.appendChild(node)
-		clearDidMounts()
+		appendChild(container, node)
+		$trigger(DID_MOUNT)
+		$off(DID_MOUNT)
 	}
 	if (isFn(callback)) {
 		callback()
@@ -28,13 +26,12 @@ export let render = (vnode, container, callback) => {
 }
 
 export let unmount = container => {
-	let id = container.getAttribute(ATTR_ID)
-	if (id) {
-		let prevVnode = store[id]
-		if (prevVnode) {
-			delete store[id]
-			callUnmounts(container)
-			container.innerHTML = ''
+	let id = container.getAttribute(COMPONENT_ID)
+	if (store.hasOwnProperty(id)) {
+		let firstChild = container.firstChild
+		if (firstChild) {
+			removeChild(container, firstChild)
 		}
+		delete store[id]
 	}
 }

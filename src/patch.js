@@ -1,4 +1,17 @@
-import { isStr, isObj, isFn, setProps, setStyleValue, removeProps, setEvent, removeEvent, isEventKey } from './util'
+import {
+	isStr,
+	isObj,
+	isFn,
+	setProps,
+	setStyleValue,
+	removeProps,
+	setEvent,
+	removeEvent,
+	isEventKey,
+	appendChild,
+	removeChild,
+	replaceChild
+} from './util'
 import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET } from './constant'
 import create, { addChild } from './create'
 
@@ -15,14 +28,14 @@ let patch = (node, patches, parent) => {
 	switch (type) {
 		case CREATE:
 			newNode = create(newVnode)
-			parent.appendChild(newNode)
+			appendChild(parent, newNode)
 			break
 		case REMOVE:
-			parent.removeChild(node)
+			removeChild(parent, node)
 			break
 		case REPLACE:
 			newNode = create(newVnode)
-			parent.replaceChild(newNode, node)
+			replaceChild(parent, newNode, node)
 			break
 		case PROPS:
 			applyProps(node, vnode.props, newVnode.props)
@@ -82,7 +95,7 @@ let applyProps = (node, props, newProps) => {
 			default:
 				if (newValue === undefined) {
 					node.removeAttribute(key)
-				} else {
+				} else if (key !== 'key') {
 					node.setAttribute(key, newValue)
 				}
 		}

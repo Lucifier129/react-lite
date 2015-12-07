@@ -1,17 +1,6 @@
-import createElement from './virtual-dom/createElement'
+import createElement from './createElement'
 import { render, unmount } from './render'
 import { Component, createClass, findDOMNode } from './component'
-import { info } from './util'
-import {
-	createStore,
-	createLogger,
-	createDispatch,
-	createHandler,
-	combineHandlers,
-	constants,
-	mapValues,
-	types
-} from 'refer'
 
 let check = () => check
 check.isRequired = check
@@ -40,7 +29,6 @@ let Children = {
 }
 
 export default {
-	info,
 	Component,
 	createClass,
 	Children,
@@ -49,13 +37,5 @@ export default {
 	PropTypes,
 	unmount,
 	unmountComponentAtNode: unmount,
-	createElement,
-	createStore,
-	createLogger,
-	createDispatch,
-	createHandler,
-	combineHandlers,
-	constants,
-	mapValues,
-	types
+	createElement
 }

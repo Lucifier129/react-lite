@@ -1,155 +1,97 @@
-import { createStore, types, constants, mapValues } from 'refer'
-import { diff, patch, create } from './virtual-dom'
-import { getId, createCallbackStore, wrapNative, pipe, info, ATTR_ID } from './util'
+import {
+	getUid,
+	isFn,
+	isThenable,
+	isArr,
+	isObj,
+	isStr,
+	isNum,
+	pipe,
+	$on,
+	$off,
+	$trigger
+} from './util'
+import {
+	WIDGET,
+	COMPONENT_ID,
+	WILL_MOUNT,
+	DID_MOUNT,
+	WILL_UNMOUNT
+} from './constant'
+import create from './create'
+import diff from './diff'
+import patch from './patch'
 
-let { isFn, isThenable, isArr, isObj, isStr, isNum } = types
-let {
-	GET_TABLE,
-	DISPATCH,
-	SHOULD_DISPATCH,
-	WILL_UPDATE,
-	SHOULD_UPDATE,
-	DID_UPDATE,
-	THROW_ERROR,
-	ASYNC_START,
-	ASYNC_END,
-	SYNC
-} = constants
-
-let didMounts = info.didMounts = createCallbackStore('didMounts')
-export let clearDidMounts = didMounts.clear
-
-let unmounts = info.unmounts = {}
-let callUnmount = node => {
-	let id = node.getAttribute(ATTR_ID)
-	if (id && isFn(unmounts[id])) {
-		unmounts[id]()
-		delete unmounts[id]
-	}
-}
-export let callUnmounts = (nextNode, node) => {
-	//if node is undefined, it would be call by removeChild
-	if (!node) {
-		node = nextNode
-	}
-	if (node.nodeType === 3) {
+let components = {}
+let removeComponent = id => {
+	let component = components[id]
+	if (!component) {
 		return
 	}
-	let attr = node && node.getAttribute(ATTR_ID)
-	if (!attr) {
+	if (isArr(component)) {
+		return component.forEach(item => {
+			item.componentWillUnmount()
+			delete components[item.$id]
+		})
+	}
+	component.componentWillUnmount()
+	delete components[id]
+}
+let checkUnmount = (node, newNode) => {
+	if (!node || node.nodeType === 3) {
 		return
 	}
-	//if nextNode exist，it must be calling by replaceChild method 
-	if (nextNode && nextNode.nodeName) {
-		nextNode.setAttribute(ATTR_ID, attr)
-		node.nextNode = nextNode
-	} else {
-		callUnmount(node)
-	}
-	let widgets = node.querySelectorAll(`[${ ATTR_ID }]`)
-	Array.prototype.slice.call(widgets).forEach(callUnmount)
-}
-let checkUnmounts = patch => {
-	let NodeProto = Node.prototype
-	let resetRemove = wrapNative(NodeProto, 'removeChild', callUnmounts)
-	let resetReplace = wrapNative(NodeProto, 'replaceChild', callUnmounts)
-	patch()
-	resetRemove()
-	resetReplace()
-}
-
-export let richPatch = (node, patches) => {
-	checkUnmounts(() => patch(node, patches))
-	clearDidMounts()
-}
-
-let refsStore = info.refsStore = {}
-let clearRefs = id => {
-	if (id in refsStore) {
-		delete refsStore[id]
-	}
-}
-let getDOMNode = (refs, refKey, refValue) => {
-	let selector = `[data-refid="${ refValue }"]`
-	Object.defineProperty(refs, refKey, {
-		get() {
-			let node = document.body.querySelector(selector)
-			if (node) {
-				node.getDOMNode = () => node
-			}
-			return node
-		}
-	})
-}
-
-let compId
-let oldCompId
-let setCompId = newCompId => {
-	oldCompId = compId
-	compId = newCompId
-}
-let resetCompId = () => compId = oldCompId
-export let collectRef = (refKey, refValue) => {
-	if (compId == null || !refValue) {
+	let id = node.getAttribute(COMPONENT_ID)
+	if (!id) {
 		return
 	}
-	let refs = refsStore[compId] = refsStore[compId] || {}
-	if (isStr(refValue)) {
-		let refid = `${compId}-${refValue}`
-		getDOMNode(refs, refKey, refid)
-		return refid
+	let component = components[id]
+	if (!component) {
+		return
 	}
-	refs[refKey] = refValue
+	// if newNode is existed, it must be calling replaceChild function
+	if (!newNode) {
+		removeComponent(id)
+	}
+	let componentNodes = node.querySelectorAll(`[${ COMPONENT_ID }]`)
+	Array.prototype.slice.call(componentNodes).forEach(child => checkUnmount(child))
 }
-let getRefs = id => refsStore[id] || {}
-export let findDOMNode = node => node || node.getDOMNode()
+
+$on(WILL_UNMOUNT, checkUnmount)
 
 export class Widget {
 	constructor(Component, props) {
-		this.type = 'WIDGET'
+		this.type = WIDGET
 		this.Component = Component
 		this.props = props
 	}
 	init() {
 		let { props, Component } = this
-		let component = this.component = new Component(props || Component.defaultProps)
-		if (isStr(props.ref)) {
-			collectRef(props.ref, component)
-		}
-		let id = component.$id = getId()
-		setCompId(id)
+		props = { ...props, ...Component.defaultProps }
+		let component = this.component = new Component(props)
+		let id = component.$id = getUid()
 		let vnode = component.vnode = component.render()
 		let node = component.node = create(vnode)
-		node.setAttribute(ATTR_ID, id)
-		resetCompId()
-		component.componentWillMount()
-		component.refs = getRefs(id)
-		info.component.amount += 1
-		let willUnmount = () => {
-			info.component.mounts -= 1
-			info.component.unmounts += 1
-			clearRefs(id)
-			component.componentWillUnmount()
+		let attr = node.getAttribute(COMPONENT_ID)
+		if (!attr) {
+			node.setAttribute(COMPONENT_ID, attr = id)
 		}
-		let didMount = () => {
-			info.component.mounts += 1
-			component.componentDidMount()
-			if (isFn(unmounts[id])) {
-				unmounts[id] = pipe(willUnmount, unmounts[id])
-			} else {
-				unmounts[id] = willUnmount
+		if (components[attr]) {
+			if (!isArr(components[attr])) {
+				components[attr] = [components[attr]]
 			}
+			components[attr].splice(0, 0, component)
+		} else {
+			components[attr] = component
 		}
-		didMounts.push(didMount)
+		component.componentWillMount()
+		$on(DID_MOUNT, () => component.componentDidMount())
 		return node
 	}
 	update(previous) {
 		let component = this.component = previous.component
 		let { props } = this
 		let { $cache } = component
-		if (isStr(props.ref)) {
-			collectRef(props.ref, component)
-		}
 		$cache.keepSilent = true
 		component.componentWillReceiveProps(props)
 		$cache.keepSilent = false
@@ -163,60 +105,37 @@ export class Widget {
 	}
 }
 
-let getHook = component => {
-	let { $cache } = component
-	let shouldComponentUpdate = ({ nextState }) => {
-		if ($cache.keepSilent) {
-			return
-		}
-		let { props, state } = component
-		let shouldUpdate = component.shouldComponentUpdate(props, nextState)
-		if (!shouldUpdate) {
-			return
-		}
-		$cache.props = props
-		$cache.state = nextState
-		component.forceUpdate()
-	}
-	return {
-		[WILL_UPDATE]: shouldComponentUpdate
-	}
-}
-
-let setState = nextState => state => Object.assign({}, state, nextState)
 
 export class Component {
 	constructor(props) {
-		let $cache = this.$cache = {
+		this.$cache = {
 			keepSilent: false
 		}
-		let handlers = [this.getHandlers(), { setState }, getHook(this)]
-		let store = this.$store = createStore(handlers)
-		this.dispatch = store.dispatch
-		this.actions = store.actions
 		this.props = props
+		this.state = {}
 		this.refs = {}
 	}
 	getDOMNode() {
 		return this.node
 	}
-	getHandlers() {
-		return {}
-	}
-	get state() {
-		return this.$store.getState()
-	}
-	set state(nextState) {
-		this.$store.replaceState(nextState, true)
-	}
 	setState(nextState, callback) {
-		let { $store, state, props } = this
+		let { $cache, state, props } = this
 		if (isFn(nextState)) {
 			nextState = nextState(state, props)
 		}
-		this.$store.dispatch('setState', nextState)
-		if (isFn(callback)) {
-			callback()
+		this.state = { ...this.state, ...nextState }
+		let forceUpdate = () => {
+			this.forceUpdate()
+			if (isFn(callback)) {
+				callback()
+			}
+		}
+		if (!$cache.keepSilent) {
+			if (isFn(requestAnimationFrame)) {
+				requestAnimationFrame(forceUpdate)
+			} else {
+				setTimeout(forceUpdate, 0)
+			}
 		}
 	}
 	shouldComponentUpdate(nextProps, nextState) {
@@ -236,18 +155,16 @@ export class Component {
 		this.componentWillUpdate(nextProps, nextState)
 		this.props = nextProps
 		this.state = nextState
-		setCompId(id)
-		clearRefs(id)
 		let nextVnode = this.render()
 		let patches = diff(vnode, nextVnode)
-		richPatch(node, patches)
-		resetCompId()
+		let newNode = patch(node, patches)
 		//update this.node, if component render new element
-		if (node.nextNode) {
-			this.node = node.nextNode
-			node.innerHTML = ''
+		if (newNode !== node) {
+			newNode.setAttribute(COMPONENT_ID, id)
+			this.node = newNode
 		}
-		this.refs = getRefs(id)
+		$trigger(DID_MOUNT)
+		$off(DID_MOUNT)
 		this.vnode = nextVnode
 		this.componentDidUpdate(props, state)
 		if (isFn(callback)) {
@@ -255,6 +172,8 @@ export class Component {
 		}
 	}
 }
+
+export let findDOMNode = node => node.nodeName ? node : node.getDOMNode()
 
 let combineMixin = (proto, mixin) => {
 	for (let key in mixin) {
@@ -299,8 +218,8 @@ export let createClass = options => {
 		mixins = mixins.concat(mixinsForDefaultProps)
 	}
 	let Klass = class extends Component {
-		constructor(props, context) {
-			super(props, context)
+		constructor(props) {
+			super(props)
 			bindContext(this, Klass.prototype)
 			if (isObj(defaultProps)) {
 				mixinsForDefaultProps.componentWillReceiveProps(props)
@@ -312,9 +231,11 @@ export let createClass = options => {
 	}
 	combineMixins(Klass.prototype, mixins.concat(options))
 	if (isObj(options.statics)) {
-		Object.assign(Klass, options.statics)
+		for (let key in options.statics) {
+			if (options.statics.hasOwnProperty(key)) {
+				Klass[key] = options.statics[key]
+			}
+		}
 	}
 	return Klass
 }
-
-

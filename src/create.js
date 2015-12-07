@@ -1,5 +1,5 @@
-import { isStr, isFn, isObj, isArr, isNum, isBln, setProps } from './util'
-import { WIDGET } from './constant'
+import { isStr, isFn, isObj, isArr, isNum, isBln, setProps, appendChild } from './util'
+import { WIDGET, WILL_MOUNT, DID_MOUNT } from './constant'
 
 let widgetElems = []
 
@@ -7,10 +7,6 @@ let widgetElems = []
 * 根据 tagName props attrs 创建 real-dom
 */
 let create = vnode => {
-
-	if (isBln(vnode)) {
-		return
-	}
 
 	if (vnode == null) {
 		return document.createElement('noscript')
@@ -53,6 +49,6 @@ export let addChild = (elem, child) => {
 	}
 	let childNode = create(child)
 	if (childNode !== undefined) {
-		elem.appendChild(childNode)
+		appendChild(elem, childNode)
 	}
 }

@@ -1,5 +1,5 @@
-import { isStr, isObj, isFn, isArr } from './util'
-import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET } from './constant'
+import { isStr, isObj, isFn, isArr, isNum } from './util'
+import { CREATE, REMOVE, REPLACE, PROPS, WIDGET } from './constant'
 
 /**
 * diff vnode and newVnode
@@ -16,9 +16,6 @@ let diff = (vnode, newVnode) => {
 		case vnode == null:
 			type = CREATE
 			break
-		case (isStr(vnode) || isStr(newVnode)) && vnode !== newVnode:
-			type = REPLACE
-			break
 		case vnode.tagName !== newVnode.tagName:
 			type = REPLACE
 			break
@@ -29,7 +26,14 @@ let diff = (vnode, newVnode) => {
 			type = REPLACE
 			break
 		case !!(vnode.props || newVnode.props):
-			type = PROPS
+			if (newVnode.props && newVnode.props.key && newVnode.props.key !== vnode.props.key) {
+				type = REPLACE
+			} else {
+				type = PROPS
+			}
+			break
+		case (isStr(vnode) || isNum(vnode) || isStr(newVnode) || isNum(newVnode)) && vnode != newVnode:
+			type = REPLACE
 			break
 	}
 	if (!type || type === PROPS) {
