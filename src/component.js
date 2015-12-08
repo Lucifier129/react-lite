@@ -1,10 +1,10 @@
 import {
 	getUid,
 	isFn,
-	isThenable,
 	isArr,
 	isObj,
 	isStr,
+	toArray,
 	isNum,
 	pipe,
 	$on,
@@ -54,7 +54,7 @@ let checkUnmount = (node, newNode) => {
 		removeComponent(id)
 	}
 	let componentNodes = node.querySelectorAll(`[${ COMPONENT_ID }]`)
-	Array.prototype.slice.call(componentNodes).forEach(child => checkUnmount(child))
+	toArray(componentNodes).forEach(child => checkUnmount(child))
 }
 
 $on(WILL_UNMOUNT, checkUnmount)

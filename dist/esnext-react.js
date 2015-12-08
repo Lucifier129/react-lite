@@ -186,6 +186,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.pipe = pipe;
+	var toArray = Array.from || function (obj) {
+		return Array.prototype.slice.call(obj);
+	};
+
+	exports.toArray = toArray;
 	var getUid = function getUid() {
 		return Math.random().toString(36).substr(2);
 	};
@@ -550,7 +555,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			removeComponent(id);
 		}
 		var componentNodes = node.querySelectorAll('[' + _constant.COMPONENT_ID + ']');
-		Array.prototype.slice.call(componentNodes).forEach(function (child) {
+		_util.toArray(componentNodes).forEach(function (child) {
 			return checkUnmount(child);
 		});
 	};
@@ -944,7 +949,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		switch (childrenType) {
 			case _constant.REMOVE:
-				node.innerHTML = '';
+				_util.toArray(node.childNodes).forEach(function (child) {
+					return _util.removeChild(node, child);
+				});
 				break;
 			case _constant.CREATE:
 				patches.newChildren.forEach(function (child) {
@@ -952,7 +959,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				});
 				break;
 			case _constant.REPLACE:
-				var children = Array.prototype.slice.call(node.childNodes);
+				var children = _util.toArray(node.childNodes);
 				patches.childrenPatches.forEach(function (childPatches, index) {
 					patch(children[index], childPatches, node);
 				});

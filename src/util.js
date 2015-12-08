@@ -15,6 +15,8 @@ export let pipe = (fn1, fn2) => function(...args) {
 	return fn2.apply(this, args)
 }
 
+export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
+
 export let getUid = () => Math.random().toString(36).substr(2)
 
 let $events = {}

@@ -2,6 +2,7 @@ import {
 	isStr,
 	isObj,
 	isFn,
+	toArray,
 	setProps,
 	setStyleValue,
 	removeProps,
@@ -47,13 +48,13 @@ let patch = (node, patches, parent) => {
 
 	switch (childrenType) {
 		case REMOVE:
-			node.innerHTML = ''
+			toArray(node.childNodes).forEach(child => removeChild(node, child))
 			break
 		case CREATE:
 			patches.newChildren.forEach(child => addChild(node, child))
 			break
 		case REPLACE:
-			let children = Array.prototype.slice.call(node.childNodes)
+			let children = toArray(node.childNodes)
 			patches.childrenPatches.forEach((childPatches, index) => {
 				patch(children[index], childPatches, node)	
 			})
