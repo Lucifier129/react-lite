@@ -18,10 +18,6 @@ import { initComponent } from './component'
 * 根据 tagName props attrs 创建 real-dom
 */
 let create = vnode => {
-
-	if (isBln(vnode)) {
-		return
-	}
 	if (vnode == null) {
 		return document.createElement('noscript')
 	}
@@ -43,7 +39,7 @@ let create = vnode => {
 	}
 
 	let elem = document.createElement(tagName)
-	if (isObj(props)) {
+	if (props) {
 		setProps(elem, props)
 	}
 	if (children && children.length > 0) {

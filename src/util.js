@@ -20,11 +20,15 @@ export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
 export let getUid = () => Math.random().toString(36).substr(2)
 
 export let mergeProps = (props, children) => {
-	if (props && children.length > 0) {
+	if (props && children && children.length > 0) {
 		props.children = children.length === 1 ? children[0] : children 
 	}
 	return props
 }
+
+export let nextFrame = isFn(window.requestAnimationFrame)
+	? fn => requestAnimationFrame(fn)
+	: fn => setTimeout(fn, 0)
 
 let $events = {}
 
@@ -33,20 +37,28 @@ export let $on = (name, callback) => {
 	events.push(callback)
 }
 
-export let $off = (name, callback) => {
-	if (!isFn(callback)) {
-		$events[name] = []
-		return
-	}
-	let index = $events[name].indexOf(callback)
-	if (index !== -1) {
-		$events[name].splice(index, 1)
-	}
-}
+// export let $off = (name, callback) => {
+// 	if (!isFn(callback)) {
+// 		$events[name] = []
+// 		return
+// 	}
+// 	let index = $events[name].indexOf(callback)
+// 	if (index !== -1) {
+// 		$events[name].splice(index, 1)
+// 	}
+// }
 
 export let $trigger = (name, ...args) => {
 	if (isArr($events[name])) {
 		$events[name].forEach(callback => callback(...args))
+	}
+}
+
+export let $triggerOnce = (name, ...args) => {
+	let events = $events[name]
+	$events[name] = []
+	if (isArr(events)) {
+		events.forEach(callback => callback(...args))
 	}
 }
 

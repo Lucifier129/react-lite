@@ -46,16 +46,12 @@ let diff = (vnode, newVnode) => {
 export default diff
 
 let diffChildren = (children, newChildren) => {
-	children = getFlatChildren([], children)
-	newChildren = getFlatChildren([], newChildren)
 	let childrenType
 	let childrenPatches
-	if (children.length === 0) {
-		if (newChildren.length > 0) {
-			childrenType = CREATE
-		}
-	} else if (newChildren.length === 0) {
+	if (!newChildren) {
 		childrenType = REMOVE
+	} else if (!children) {
+		childrenType = CREATE
 	} else {
 		childrenPatches = []
 		let maxLen = Math.max(children.length, newChildren.length)
@@ -69,16 +65,4 @@ let diffChildren = (children, newChildren) => {
 	if (childrenType) {
 		return { childrenType, newChildren }
 	}
-}
-
-let getFlatChildren = (store, children) => {
-	if (isArr(children)) {
-		children.forEach(item => {
-			if (isArr(item)) {
-				return getFlatChildren(store, item)
-			}
-			store.push(item)
-		})
-	}
-	return store
 }

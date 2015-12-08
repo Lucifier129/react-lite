@@ -8,8 +8,8 @@ import {
 	isNum,
 	pipe,
 	$on,
-	$off,
-	$trigger
+	$triggerOnce,
+	nextFrame
 } from './util'
 import {
 	WIDGET,
@@ -86,7 +86,6 @@ export let updateComponent = (component, props) => {
 	props = { ...props, ...component.constructor.defaultProps }
 	let { $cache } = component
 	$cache.keepSilent = true
-	console.log(props)
 	component.componentWillReceiveProps(props)
 	$cache.keepSilent = false
 	let shouldUpdate = component.shouldComponentUpdate(props, component.state)
@@ -116,18 +115,14 @@ export class Component {
 			nextState = nextState(state, props)
 		}
 		this.state = { ...this.state, ...nextState }
-		let forceUpdate = () => {
+		let updateView = () => {
 			this.forceUpdate()
 			if (isFn(callback)) {
 				callback()
 			}
 		}
 		if (!$cache.keepSilent) {
-			if (isFn(requestAnimationFrame)) {
-				requestAnimationFrame(forceUpdate)
-			} else {
-				setTimeout(forceUpdate, 0)
-			}
+			nextFrame(updateView)
 		}
 	}
 	shouldComponentUpdate(nextProps, nextState) {
@@ -155,8 +150,7 @@ export class Component {
 			newNode.setAttribute(COMPONENT_ID, id)
 			this.node = newNode
 		}
-		$trigger(DID_MOUNT)
-		$off(DID_MOUNT)
+		$triggerOnce(DID_MOUNT)
 		this.vnode = nextVnode
 		this.componentDidUpdate(props, state)
 		if (isFn(callback)) {

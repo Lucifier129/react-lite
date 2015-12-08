@@ -1,7 +1,7 @@
 import create from './create'
 import diff from './diff'
 import patch from './patch'
-import { isFn, getUid, appendChild, removeChild, $trigger, $off } from './util'
+import { isFn, getUid, appendChild, removeChild, $triggerOnce } from './util'
 import { COMPONENT_ID, DID_MOUNT } from './constant'
 
 let store = {}
@@ -17,9 +17,8 @@ export let render = (vnode, container, callback) => {
 		store[id] = vnode
 		container.innerHTML = ''
 		appendChild(container, node)
-		$trigger(DID_MOUNT)
-		$off(DID_MOUNT)
 	}
+	$triggerOnce(DID_MOUNT)
 	if (isFn(callback)) {
 		callback()
 	}

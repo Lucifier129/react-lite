@@ -42,7 +42,7 @@ let patch = (node, patches, parent) => {
 			replaceChild(parent, newNode, node)
 			break
 		case PROPS:
-			applyProps(node, vnode.props, newVnode.props)
+			patchProps(node, vnode.props, newVnode.props)
 			break
 		case UPDATE:
 			updateComponent(vnode.component, mergeProps(newVnode.props, newVnode.children))
@@ -70,15 +70,18 @@ let patch = (node, patches, parent) => {
 
 export default patch
 
-let applyProps = (node, props, newProps) => {
-	if (props == null && isObj(newProps)) {
+let patchProps = (node, props, newProps) => {
+	if (props == null && newProps) {
 		return setProps(node, newProps)
-	} else if (newProps == null && isObj(props)) {
+	} else if (newProps == null && props) {
 		return Object.keys(props).each(key => removeProp(node, key))
 	}
 	Object.keys({ ...props, ...newProps }).forEach(key => {
 		let value = props[key]
 		let newValue = newProps[key]
+		if (newValue === value || key === 'key') {
+			return
+		}
 		switch (true) {
 			case key === 'style':
 				patchStyle(node, props.style, newProps.style)
@@ -86,21 +89,21 @@ let applyProps = (node, props, newProps) => {
 			case isEventKey(key):
 				if (!isFn(newValue)) {
 					removeEvent(node, key)
-				} else if (newValue !== value) {
+				} else {
 					setEvent(node, key, newValue)
 				}
 				break
 			case key in node:
 				if (newValue === undefined) {
 					removeProp(node, key)
-				} else if (newValue !== value) {
+				} else {
 					node[key] = newValue
 				}
 				break
 			default:
 				if (newValue === undefined) {
 					node.removeAttribute(key)
-				} else if (key !== 'key') {
+				} else {
 					node.setAttribute(key, newValue)
 				}
 		}

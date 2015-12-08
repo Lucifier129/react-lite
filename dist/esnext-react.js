@@ -202,13 +202,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.getUid = getUid;
 	var mergeProps = function mergeProps(props, children) {
-		if (props && children.length > 0) {
+		if (props && children && children.length > 0) {
 			props.children = children.length === 1 ? children[0] : children;
 		}
 		return props;
 	};
 
 	exports.mergeProps = mergeProps;
+	var nextFrame = isFn(window.requestAnimationFrame) ? function (fn) {
+		return requestAnimationFrame(fn);
+	} : function (fn) {
+		return setTimeout(fn, 0);
+	};
+
+	exports.nextFrame = nextFrame;
 	var $events = {};
 
 	var $on = function $on(name, callback) {
@@ -217,18 +224,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.$on = $on;
-	var $off = function $off(name, callback) {
-		if (!isFn(callback)) {
-			$events[name] = [];
-			return;
-		}
-		var index = $events[name].indexOf(callback);
-		if (index !== -1) {
-			$events[name].splice(index, 1);
-		}
-	};
+	// export let $off = (name, callback) => {
+	// 	if (!isFn(callback)) {
+	// 		$events[name] = []
+	// 		return
+	// 	}
+	// 	let index = $events[name].indexOf(callback)
+	// 	if (index !== -1) {
+	// 		$events[name].splice(index, 1)
+	// 	}
+	// }
 
-	exports.$off = $off;
 	var $trigger = function $trigger(name) {
 		for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
 			args[_key2 - 1] = arguments[_key2];
@@ -242,6 +248,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.$trigger = $trigger;
+	var $triggerOnce = function $triggerOnce(name) {
+		for (var _len3 = arguments.length, args = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+			args[_key3 - 1] = arguments[_key3];
+		}
+
+		var events = $events[name];
+		$events[name] = [];
+		if (isArr(events)) {
+			events.forEach(function (callback) {
+				return callback.apply(undefined, args);
+			});
+		}
+	};
+
+	exports.$triggerOnce = $triggerOnce;
 	var appendChild = function appendChild(node, child) {
 		node.appendChild(child);
 	};
@@ -526,7 +547,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		var $cache = component.$cache;
 
 		$cache.keepSilent = true;
-		console.log(props);
 		component.componentWillReceiveProps(props);
 		$cache.keepSilent = false;
 		var shouldUpdate = component.shouldComponentUpdate(props, component.state);
@@ -567,18 +587,14 @@ return /******/ (function(modules) { // webpackBootstrap
 				nextState = nextState(state, props);
 			}
 			this.state = _extends({}, this.state, nextState);
-			var forceUpdate = function forceUpdate() {
+			var updateView = function updateView() {
 				_this.forceUpdate();
 				if (_util.isFn(callback)) {
 					callback();
 				}
 			};
 			if (!$cache.keepSilent) {
-				if (_util.isFn(requestAnimationFrame)) {
-					requestAnimationFrame(forceUpdate);
-				} else {
-					setTimeout(forceUpdate, 0);
-				}
+				_util.nextFrame(updateView);
 			}
 		};
 
@@ -620,8 +636,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				newNode.setAttribute(_constant.COMPONENT_ID, id);
 				this.node = newNode;
 			}
-			_util.$trigger(_constant.DID_MOUNT);
-			_util.$off(_constant.DID_MOUNT);
+			_util.$triggerOnce(_constant.DID_MOUNT);
 			this.vnode = nextVnode;
 			this.componentDidUpdate(props, state);
 			if (_util.isFn(callback)) {
@@ -736,9 +751,6 @@ return /******/ (function(modules) { // webpackBootstrap
 			var vnode = _x;
 			_again = false;
 
-			if (_util.isBln(vnode)) {
-				return;
-			}
 			if (vnode == null) {
 				return document.createElement('noscript');
 			}
@@ -771,7 +783,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 
 			var elem = document.createElement(tagName);
-			if (_util.isObj(props)) {
+			if (props) {
 				_util.setProps(elem, props);
 			}
 			if (children && children.length > 0) {
@@ -856,16 +868,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports['default'] = diff;
 
 	var diffChildren = function diffChildren(children, newChildren) {
-		children = getFlatChildren([], children);
-		newChildren = getFlatChildren([], newChildren);
 		var childrenType = undefined;
 		var childrenPatches = undefined;
-		if (children.length === 0) {
-			if (newChildren.length > 0) {
-				childrenType = _constant.CREATE;
-			}
-		} else if (newChildren.length === 0) {
+		if (!newChildren) {
 			childrenType = _constant.REMOVE;
+		} else if (!children) {
+			childrenType = _constant.CREATE;
 		} else {
 			childrenPatches = [];
 			var maxLen = Math.max(children.length, newChildren.length);
@@ -879,18 +887,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (childrenType) {
 			return { childrenType: childrenType, newChildren: newChildren };
 		}
-	};
-
-	var getFlatChildren = function getFlatChildren(store, children) {
-		if (_util.isArr(children)) {
-			children.forEach(function (item) {
-				if (_util.isArr(item)) {
-					return getFlatChildren(store, item);
-				}
-				store.push(item);
-			});
-		}
-		return store;
 	};
 	module.exports = exports['default'];
 
@@ -943,7 +939,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				_util.replaceChild(parent, newNode, node);
 				break;
 			case _constant.PROPS:
-				applyProps(node, vnode.props, newVnode.props);
+				patchProps(node, vnode.props, newVnode.props);
 				break;
 			case _constant.UPDATE:
 				_component.updateComponent(vnode.component, _util.mergeProps(newVnode.props, newVnode.children));
@@ -975,10 +971,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports['default'] = patch;
 
-	var applyProps = function applyProps(node, props, newProps) {
-		if (props == null && _util.isObj(newProps)) {
+	var patchProps = function patchProps(node, props, newProps) {
+		if (props == null && newProps) {
 			return _util.setProps(node, newProps);
-		} else if (newProps == null && _util.isObj(props)) {
+		} else if (newProps == null && props) {
 			return Object.keys(props).each(function (key) {
 				return _util.removeProp(node, key);
 			});
@@ -986,6 +982,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		Object.keys(_extends({}, props, newProps)).forEach(function (key) {
 			var value = props[key];
 			var newValue = newProps[key];
+			if (newValue === value || key === 'key') {
+				return;
+			}
 			switch (true) {
 				case key === 'style':
 					patchStyle(node, props.style, newProps.style);
@@ -993,21 +992,21 @@ return /******/ (function(modules) { // webpackBootstrap
 				case _util.isEventKey(key):
 					if (!_util.isFn(newValue)) {
 						_util.removeEvent(node, key);
-					} else if (newValue !== value) {
+					} else {
 						_util.setEvent(node, key, newValue);
 					}
 					break;
 				case key in node:
 					if (newValue === undefined) {
 						_util.removeProp(node, key);
-					} else if (newValue !== value) {
+					} else {
 						node[key] = newValue;
 					}
 					break;
 				default:
 					if (newValue === undefined) {
 						node.removeAttribute(key);
-					} else if (key !== 'key') {
+					} else {
 						node.setAttribute(key, newValue);
 					}
 			}
@@ -1029,26 +1028,43 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 7 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
+	'use strict';
 
 	exports.__esModule = true;
+
+	var _util = __webpack_require__(2);
 
 	var createElement = function createElement(tagName, props) {
 		for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
 			children[_key - 2] = arguments[_key];
 		}
 
-		return {
-			tagName: tagName,
-			props: props,
-			children: children
-		};
+		var vnode = { tagName: tagName, props: props };
+		children = getFlatChildren([], children);
+		if (children.length) {
+			vnode.children = children;
+		}
+		return vnode;
 	};
 
-	exports["default"] = createElement;
-	module.exports = exports["default"];
+	exports['default'] = createElement;
+
+	var getFlatChildren = function getFlatChildren(store, children) {
+		if (_util.isArr(children)) {
+			children.forEach(function (item) {
+				if (_util.isArr(item)) {
+					return getFlatChildren(store, item);
+				}
+				if (!_util.isBln(item)) {
+					store.push(item);
+				}
+			});
+		}
+		return store;
+	};
+	module.exports = exports['default'];
 
 /***/ },
 /* 8 */
@@ -1089,9 +1105,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			store[id] = vnode;
 			container.innerHTML = '';
 			_util.appendChild(container, node);
-			_util.$trigger(_constant.DID_MOUNT);
-			_util.$off(_constant.DID_MOUNT);
 		}
+		_util.$triggerOnce(_constant.DID_MOUNT);
 		if (_util.isFn(callback)) {
 			callback();
 		}
