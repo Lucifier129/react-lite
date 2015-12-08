@@ -8,8 +8,8 @@ export let isNum = isType('Number')
 export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
-export let isThenable = obj => obj != null && isFn(obj.then)
-
+export let isComponent = obj => isFn(obj)
+export let isComponentClass = obj => isFn(obj) && isFn(obj.prototype.render)
 export let pipe = (fn1, fn2) => function(...args) {
 	fn1.apply(this, args)
 	return fn2.apply(this, args)
@@ -18,6 +18,13 @@ export let pipe = (fn1, fn2) => function(...args) {
 export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
 
 export let getUid = () => Math.random().toString(36).substr(2)
+
+export let mergeProps = (props, children) => {
+	if (props && children.length > 0) {
+		props.children = children.length === 1 ? children[0] : children 
+	}
+	return props
+}
 
 let $events = {}
 

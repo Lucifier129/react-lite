@@ -1,36 +1,47 @@
-import { isStr, isFn, isObj, isArr, isNum, isBln, setProps, appendChild } from './util'
+import {
+	isStr,
+	isFn,
+	isObj,
+	isArr,
+	isNum,
+	isBln,
+	isComponentClass,
+	isComponent,
+	setProps,
+	appendChild,
+	mergeProps
+} from './util'
 import { WIDGET, WILL_MOUNT, DID_MOUNT } from './constant'
-
-let widgetElems = []
+import { initComponent } from './component'
 
 /**
 * 根据 tagName props attrs 创建 real-dom
 */
 let create = vnode => {
 
+	if (isBln(vnode)) {
+		return
+	}
 	if (vnode == null) {
 		return document.createElement('noscript')
 	}
-
 	if (isStr(vnode) || isNum(vnode)) {
 		return document.createTextNode(vnode)
 	}
 
-	if (vnode.type === WIDGET) {
-		return vnode.init()
-	}
-
 	let { tagName, props, children } = vnode
-
-	if (isFn(tagName)) {
-		props.children = children
-		vnode = tagName(props)
+	if (isComponent(tagName)) {
+		let Component = tagName
+		props = mergeProps(props, children)
+		if (isComponentClass(Component)) {
+			let { node, component } = initComponent(Component, props)
+			vnode.component = component
+			return node
+		}
+		vnode = Component(props)
 		return create(vnode)
 	}
 
-	if (tagName == null) {
-		debugger
-	}
 	let elem = document.createElement(tagName)
 	if (isObj(props)) {
 		setProps(elem, props)

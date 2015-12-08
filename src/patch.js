@@ -11,10 +11,13 @@ import {
 	isEventKey,
 	appendChild,
 	removeChild,
-	replaceChild
+	replaceChild,
+	mergeProps,
+	removeProp
 } from './util'
-import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET } from './constant'
+import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET, UPDATE } from './constant'
 import create, { addChild } from './create'
+import { updateComponent } from './component'
 
 /**
 * patch dom
@@ -41,8 +44,9 @@ let patch = (node, patches, parent) => {
 		case PROPS:
 			applyProps(node, vnode.props, newVnode.props)
 			break
-		case WIDGET:
-			newVnode.update(vnode, node)
+		case UPDATE:
+			updateComponent(vnode.component, mergeProps(newVnode.props, newVnode.children))
+			newVnode.component = vnode.component
 			break
 	}
 

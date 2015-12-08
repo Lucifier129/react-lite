@@ -59,52 +59,44 @@ let checkUnmount = (node, newNode) => {
 
 $on(WILL_UNMOUNT, checkUnmount)
 
-export class Widget {
-	constructor(Component, props) {
-		this.type = WIDGET
-		this.Component = Component
-		this.props = props
+export let initComponent = (Component, props) => {
+	props = { ...props, ...Component.defaultProps }
+	let component = new Component(props)
+	let id = component.$id = getUid()
+	let vnode = component.vnode = component.render()
+	let node = component.node = create(vnode)
+	let attr = node.getAttribute(COMPONENT_ID)
+	if (!attr) {
+		node.setAttribute(COMPONENT_ID, attr = id)
 	}
-	init() {
-		let { props, Component } = this
-		props = { ...props, ...Component.defaultProps }
-		let component = this.component = new Component(props)
-		let id = component.$id = getUid()
-		let vnode = component.vnode = component.render()
-		let node = component.node = create(vnode)
-		let attr = node.getAttribute(COMPONENT_ID)
-		if (!attr) {
-			node.setAttribute(COMPONENT_ID, attr = id)
+	if (components[attr]) {
+		if (!isArr(components[attr])) {
+			components[attr] = [components[attr]]
 		}
-		if (components[attr]) {
-			if (!isArr(components[attr])) {
-				components[attr] = [components[attr]]
-			}
-			components[attr].splice(0, 0, component)
-		} else {
-			components[attr] = component
-		}
-		component.componentWillMount()
-		$on(DID_MOUNT, () => component.componentDidMount())
-		return node
+		components[attr].splice(0, 0, component)
+	} else {
+		components[attr] = component
 	}
-	update(previous) {
-		let component = this.component = previous.component
-		let { props } = this
-		let { $cache } = component
-		$cache.keepSilent = true
-		component.componentWillReceiveProps(props)
-		$cache.keepSilent = false
-		let shouldUpdate = component.shouldComponentUpdate(props, component.state)
-		if (!shouldUpdate) {
-			return
-		}
-		$cache.props = props
-		$cache.state = component.state
-		component.forceUpdate()
-	}
+	component.componentWillMount()
+	$on(DID_MOUNT, () => component.componentDidMount())
+	return { component, node }
 }
 
+export let updateComponent = (component, props) => {
+	props = { ...props, ...component.constructor.defaultProps }
+	let { $cache } = component
+	$cache.keepSilent = true
+	console.log(props)
+	component.componentWillReceiveProps(props)
+	$cache.keepSilent = false
+	let shouldUpdate = component.shouldComponentUpdate(props, component.state)
+	if (!shouldUpdate) {
+		return
+	}
+	$cache.props = props
+	$cache.state = component.state
+	component.forceUpdate()
+}
 
 export class Component {
 	constructor(props) {
