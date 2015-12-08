@@ -162,10 +162,7 @@ export class Component {
 export let findDOMNode = node => node.nodeName ? node : node.getDOMNode()
 
 let combineMixin = (proto, mixin) => {
-	for (let key in mixin) {
-		if (!mixin.hasOwnProperty(key)) {
-			continue
-		}
+	Object.keys(mixin).forEach(key => {
 		let source = mixin[key]
 		let currentValue = proto[key]
 		if (currentValue === undefined) {
@@ -173,18 +170,18 @@ let combineMixin = (proto, mixin) => {
 		} else if (isFn(currentValue) && isFn(source)) {
 			proto[key] = pipe(currentValue, source)
 		}
-	}
+	})
 }
 let combineMixins = (proto, mixins) => {
 	mixins.forEach(mixin => combineMixin(proto, mixin))
 }
 
 let bindContext = (obj, source) => {
-	for (let key in source) {
-		if (source.hasOwnProperty(key) && isFn(source[key])) {
+	Object.keys(source).forEach(key => {
+		if (isFn(source[key])) {
 			obj[key] = source[key].bind(obj)
 		}
-	}
+	})
 }
 
 export let createClass = options => {
@@ -194,11 +191,11 @@ export let createClass = options => {
 	if (isObj(defaultProps)) {
 		mixinsForDefaultProps = {
 			componentWillReceiveProps(nextProps) {
-				for (let key in defaultProps) {
-					if (!(key in nextProps)) {
+				Object.keys(defaultProps).forEach(key => {
+					if (nextProps[key] === undefined) {
 						nextProps[key] = defaultProps[key]
 					}
-				}
+				})
 			}
 		}
 		mixins = mixins.concat(mixinsForDefaultProps)
@@ -217,11 +214,9 @@ export let createClass = options => {
 	}
 	combineMixins(Klass.prototype, mixins.concat(options))
 	if (isObj(options.statics)) {
-		for (let key in options.statics) {
-			if (options.statics.hasOwnProperty(key)) {
-				Klass[key] = options.statics[key]
-			}
-		}
+		Object.keys(options.statics).forEach(key => {
+			Klass[key] = options.statics[key]
+		})
 	}
 	return Klass
 }

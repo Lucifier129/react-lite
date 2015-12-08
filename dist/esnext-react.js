@@ -654,18 +654,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.findDOMNode = findDOMNode;
 	var combineMixin = function combineMixin(proto, mixin) {
-		for (var key in mixin) {
-			if (!mixin.hasOwnProperty(key)) {
-				continue;
-			}
-			var _source = mixin[key];
+		Object.keys(mixin).forEach(function (key) {
+			var source = mixin[key];
 			var currentValue = proto[key];
 			if (currentValue === undefined) {
-				proto[key] = _source;
-			} else if (_util.isFn(currentValue) && _util.isFn(_source)) {
-				proto[key] = _util.pipe(currentValue, _source);
+				proto[key] = source;
+			} else if (_util.isFn(currentValue) && _util.isFn(source)) {
+				proto[key] = _util.pipe(currentValue, source);
 			}
-		}
+		});
 	};
 	var combineMixins = function combineMixins(proto, mixins) {
 		mixins.forEach(function (mixin) {
@@ -674,11 +671,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	var bindContext = function bindContext(obj, source) {
-		for (var key in source) {
-			if (source.hasOwnProperty(key) && _util.isFn(source[key])) {
+		Object.keys(source).forEach(function (key) {
+			if (_util.isFn(source[key])) {
 				obj[key] = source[key].bind(obj);
 			}
-		}
+		});
 	};
 
 	var createClass = function createClass(options) {
@@ -688,11 +685,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (_util.isObj(defaultProps)) {
 			mixinsForDefaultProps = {
 				componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
-					for (var key in defaultProps) {
-						if (!(key in nextProps)) {
+					Object.keys(defaultProps).forEach(function (key) {
+						if (nextProps[key] === undefined) {
 							nextProps[key] = defaultProps[key];
 						}
-					}
+					});
 				}
 			};
 			mixins = mixins.concat(mixinsForDefaultProps);
@@ -717,11 +714,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		})(Component);
 		combineMixins(Klass.prototype, mixins.concat(options));
 		if (_util.isObj(options.statics)) {
-			for (var key in options.statics) {
-				if (options.statics.hasOwnProperty(key)) {
-					Klass[key] = options.statics[key];
-				}
-			}
+			Object.keys(options.statics).forEach(function (key) {
+				Klass[key] = options.statics[key];
+			});
 		}
 		return Klass;
 	};
