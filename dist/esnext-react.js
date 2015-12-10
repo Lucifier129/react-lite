@@ -216,16 +216,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.mergeProps = mergeProps;
 	var mapChildren = function mapChildren(children, callback) {
-		var record = arguments.length <= 2 || arguments[2] === undefined ? { index: 0 } : arguments[2];
+		var record = arguments.length <= 2 || arguments[2] === undefined ? { index: 0, store: [] } : arguments[2];
+		var store = record.store;
 
 		children.forEach(function (child) {
 			if (isArr(child)) {
 				mapChildren(child, callback, record);
 			} else if (!isBln(child)) {
+				store.push(child);
 				callback(child, record.index);
 				record.index += 1;
 			}
 		});
+		return store;
 	};
 
 	exports.mapChildren = mapChildren;
@@ -792,14 +795,9 @@ return /******/ (function(modules) { // webpackBootstrap
 				_util.setProps(elem, props);
 			}
 			if (children && children.length > 0) {
-				(function () {
-					var $children = [];
-					_util.mapChildren(children, function (child) {
-						$children.push(child);
-						addChild(elem, child);
-					});
-					vnode.children = $children;
-				})();
+				vnode.children = _util.mapChildren(children, function (child) {
+					return addChild(elem, child);
+				});
 			}
 			return elem;
 		}
@@ -940,32 +938,24 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		switch (childrenType) {
 			case _constant.REMOVE:
-				_util.toArray(node.childNodes).forEach(function (child) {
-					return _util.removeChild(node, child);
-				});
+				while (node.childNodes.length) {
+					_util.removeChild(node, node.firstChild);
+				}
 				break;
 			case _constant.CREATE:
-				_util.mapChildren(patches.newChildren, function (child) {
+				newVnode.children = _util.mapChildren(patches.newChildren, function (child) {
 					return _create.addChild(node, child);
 				});
 				break;
 			case _constant.REPLACE:
 				var childNodes = _util.toArray(node.childNodes);
-				var children = vnode.children;
-				var newChildren = newVnode.children;
-				var $newChildren = [];
-
-				_util.mapChildren(newChildren, function (newChild, i) {
-					$newChildren.push(newChild);
-					var patches = _diff2['default'](children[i], newChild);
+				newVnode.children = _util.mapChildren(newVnode.children, function (newChild, i) {
+					var patches = _diff2['default'](vnode.children[i], newChild);
 					patch(childNodes[i], patches, node);
 				});
-
-				while (node.childNodes.length > $newChildren.length) {
+				while (node.childNodes.length > newVnode.children.length) {
 					_util.removeChild(node, node.lastChild);
 				}
-
-				newVnode.children = $newChildren;
 				break;
 		}
 

@@ -43,12 +43,7 @@ let create = vnode => {
 		setProps(elem, props)
 	}
 	if (children && children.length > 0) {
-		let $children = []
-		mapChildren(children, child => {
-			$children.push(child)
-			addChild(elem, child)
-		})
-		vnode.children = $children
+		vnode.children = mapChildren(children, child => addChild(elem, child))
 	}
 	return elem
 }
