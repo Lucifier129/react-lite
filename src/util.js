@@ -30,15 +30,18 @@ export let mergeProps = (props, children) => {
 	return props
 }
 
-export let mapChildren = (children, callback, record = { index: 0 }) => {
+export let mapChildren = (children, callback, record = { index: 0, store: [] }) => {
+	let { store } = record
 	children.forEach(child => {
 		if (isArr(child)) {
 			mapChildren(child, callback, record)
 		} else if (!isBln(child)) {
+			store.push(child)
 			callback(child, record.index)
 			record.index += 1
 		}
 	})
+	return store
 }
 
 export let hasKey = obj => obj && obj.props && obj.props.key

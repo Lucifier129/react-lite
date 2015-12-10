@@ -55,28 +55,22 @@ let patch = (node, patches, parent) => {
 
 	switch (childrenType) {
 		case REMOVE:
-			toArray(node.childNodes).forEach(child => removeChild(node, child))
+			while (node.childNodes.length) {
+				removeChild(node, node.firstChild)
+			}
 			break
 		case CREATE:
-			mapChildren(patches.newChildren, child => addChild(node, child))
+			newVnode.children = mapChildren(patches.newChildren, child => addChild(node, child))
 			break
 		case REPLACE:
 			let childNodes = toArray(node.childNodes)
-			let children = vnode.children
-			let newChildren = newVnode.children
-			let $newChildren = []
-
-			mapChildren(newChildren, (newChild, i) => {
-				$newChildren.push(newChild)
-				let patches = diff(children[i], newChild)
+			newVnode.children = mapChildren(newVnode.children, (newChild, i) => {
+				let patches = diff(vnode.children[i], newChild)
 				patch(childNodes[i], patches, node)
 			})
-
-			while (node.childNodes.length > $newChildren.length) {
+			while (node.childNodes.length > newVnode.children.length) {
 				removeChild(node, node.lastChild)
 			}
-
-			newVnode.children = $newChildren
 			break
 	}
 
