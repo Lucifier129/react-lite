@@ -1,5 +1,17 @@
-import { isStr, isObj, isFn, isArr, isNum } from './util'
-import { CREATE, REMOVE, REPLACE, PROPS, WIDGET } from './constant'
+import {
+	isStr,
+	isObj,
+	isFn,
+	isArr,
+	isNum,
+	isUndefined,
+	isComponent,
+	isComponentClass,
+	mapChildren,
+	hasKey,
+	collectChildren
+} from './util'
+import { CREATE, REMOVE, REPLACE, PROPS, UPDATE } from './constant'
 
 /**
 * diff vnode and newVnode
@@ -9,79 +21,47 @@ let diff = (vnode, newVnode) => {
 	let type
 	switch (true) {
 		case vnode === newVnode:
-			return
-		case newVnode == null:
+			return null
+		case isUndefined(newVnode):
 			type = REMOVE
 			break
-		case vnode == null:
+		case isUndefined(vnode):
 			type = CREATE
 			break
-		case vnode.tagName !== newVnode.tagName:
+		case vnode === null || newVnode === null || vnode.tagName !== newVnode.tagName:
 			type = REPLACE
 			break
-		case vnode.type === WIDGET && newVnode.type === WIDGET:
-			type = WIDGET
-			break
-		case vnode.type === WIDGET || newVnode.type === WIDGET:
-			type = REPLACE
+		case isComponentClass(vnode.tagName):
+			type = UPDATE
 			break
 		case !!(vnode.props || newVnode.props):
-			if (newVnode.props && newVnode.props.key && newVnode.props.key !== vnode.props.key) {
+			if (hasKey(newVnode) && newVnode.props.key !== vnode.props.key) {
 				type = REPLACE
 			} else {
 				type = PROPS
 			}
 			break
-		case (isStr(vnode) || isNum(vnode) || isStr(newVnode) || isNum(newVnode)) && vnode != newVnode:
+		case !isObj(vnode) && !isObj(newVnode) && vnode != newVnode:
 			type = REPLACE
 			break
 	}
 	if (!type || type === PROPS) {
-		children = diffChildren(vnode.children, newVnode.children)
-		if (children) {
-			return { type, vnode, newVnode, ...children }
-		}
+		let childrenType = diffChildren(vnode.children, newVnode.children)
+		return { type, vnode, newVnode, childrenType }
 	}
-
 	return type ? { type, vnode, newVnode } : null
 }
 
 export default diff
 
 let diffChildren = (children, newChildren) => {
-	children = getFlatChildren([], children)
-	newChildren = getFlatChildren([], newChildren)
 	let childrenType
-	let childrenPatches
-	if (children.length === 0) {
-		if (newChildren.length > 0) {
-			childrenType = CREATE
-		}
-	} else if (newChildren.length === 0) {
+	if (!newChildren) {
 		childrenType = REMOVE
+	} else if (!children) {
+		childrenType = CREATE
 	} else {
-		childrenPatches = []
-		let maxLen = Math.max(children.length, newChildren.length)
-		for (let i = 0; i < maxLen; i++) {
-			childrenPatches.push(diff(children[i], newChildren[i]))
-		}
 		childrenType = REPLACE
-		return { childrenType, childrenPatches }
 	}
-
-	if (childrenType) {
-		return { childrenType, newChildren }
-	}
-}
-
-let getFlatChildren = (store, children) => {
-	if (isArr(children)) {
-		children.forEach(item => {
-			if (isArr(item)) {
-				return getFlatChildren(store, item)
-			}
-			store.push(item)
-		})
-	}
-	return store
+	return childrenType
 }

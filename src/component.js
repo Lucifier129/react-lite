@@ -8,8 +8,8 @@ import {
 	isNum,
 	pipe,
 	$on,
-	$off,
-	$trigger
+	$triggerOnce,
+	nextFrame
 } from './util'
 import {
 	WIDGET,
@@ -42,15 +42,8 @@ let checkUnmount = (node, newNode) => {
 		return
 	}
 	let id = node.getAttribute(COMPONENT_ID)
-	if (!id) {
-		return
-	}
-	let component = components[id]
-	if (!component) {
-		return
-	}
 	// if newNode is existed, it must be calling replaceChild function
-	if (!newNode) {
+	if (id && !newNode) {
 		removeComponent(id)
 	}
 	let componentNodes = node.querySelectorAll(`[${ COMPONENT_ID }]`)
@@ -59,52 +52,43 @@ let checkUnmount = (node, newNode) => {
 
 $on(WILL_UNMOUNT, checkUnmount)
 
-export class Widget {
-	constructor(Component, props) {
-		this.type = WIDGET
-		this.Component = Component
-		this.props = props
+export let initComponent = (Component, props) => {
+	props = { ...props, ...Component.defaultProps }
+	let component = new Component(props)
+	let id = component.$id = getUid()
+	let vnode = component.vnode = component.render()
+	let node = component.node = create(vnode)
+	let attr = node.getAttribute(COMPONENT_ID)
+	if (!attr) {
+		node.setAttribute(COMPONENT_ID, attr = id)
 	}
-	init() {
-		let { props, Component } = this
-		props = { ...props, ...Component.defaultProps }
-		let component = this.component = new Component(props)
-		let id = component.$id = getUid()
-		let vnode = component.vnode = component.render()
-		let node = component.node = create(vnode)
-		let attr = node.getAttribute(COMPONENT_ID)
-		if (!attr) {
-			node.setAttribute(COMPONENT_ID, attr = id)
+	if (components[attr]) {
+		if (!isArr(components[attr])) {
+			components[attr] = [components[attr]]
 		}
-		if (components[attr]) {
-			if (!isArr(components[attr])) {
-				components[attr] = [components[attr]]
-			}
-			components[attr].splice(0, 0, component)
-		} else {
-			components[attr] = component
-		}
-		component.componentWillMount()
-		$on(DID_MOUNT, () => component.componentDidMount())
-		return node
+		components[attr].splice(0, 0, component)
+	} else {
+		components[attr] = component
 	}
-	update(previous) {
-		let component = this.component = previous.component
-		let { props } = this
-		let { $cache } = component
-		$cache.keepSilent = true
-		component.componentWillReceiveProps(props)
-		$cache.keepSilent = false
-		let shouldUpdate = component.shouldComponentUpdate(props, component.state)
-		if (!shouldUpdate) {
-			return
-		}
-		$cache.props = props
-		$cache.state = component.state
-		component.forceUpdate()
-	}
+	component.componentWillMount()
+	$on(DID_MOUNT, () => component.componentDidMount())
+	return { component, node }
 }
 
+export let updateComponent = (component, props) => {
+	props = { ...props, ...component.constructor.defaultProps }
+	let { $cache } = component
+	$cache.keepSilent = true
+	component.componentWillReceiveProps(props)
+	$cache.keepSilent = false
+	let shouldUpdate = component.shouldComponentUpdate(props, component.state)
+	if (!shouldUpdate) {
+		return
+	}
+	$cache.props = props
+	$cache.state = component.state
+	component.forceUpdate()
+}
 
 export class Component {
 	constructor(props) {
@@ -123,19 +107,20 @@ export class Component {
 		if (isFn(nextState)) {
 			nextState = nextState(state, props)
 		}
-		this.state = { ...this.state, ...nextState }
-		let forceUpdate = () => {
+		nextState = { ...this.state, ...nextState }
+		let shouldUpdate = this.shouldComponentUpdate(nextState, props)
+		this.state = nextState
+		if (!shouldUpdate) {
+			return
+		}
+		let updateView = () => {
 			this.forceUpdate()
 			if (isFn(callback)) {
 				callback()
 			}
 		}
 		if (!$cache.keepSilent) {
-			if (isFn(requestAnimationFrame)) {
-				requestAnimationFrame(forceUpdate)
-			} else {
-				setTimeout(forceUpdate, 0)
-			}
+			nextFrame(updateView)
 		}
 	}
 	shouldComponentUpdate(nextProps, nextState) {
@@ -163,8 +148,7 @@ export class Component {
 			newNode.setAttribute(COMPONENT_ID, id)
 			this.node = newNode
 		}
-		$trigger(DID_MOUNT)
-		$off(DID_MOUNT)
+		$triggerOnce(DID_MOUNT)
 		this.vnode = nextVnode
 		this.componentDidUpdate(props, state)
 		if (isFn(callback)) {
@@ -176,10 +160,7 @@ export class Component {
 export let findDOMNode = node => node.nodeName ? node : node.getDOMNode()
 
 let combineMixin = (proto, mixin) => {
-	for (let key in mixin) {
-		if (!mixin.hasOwnProperty(key)) {
-			continue
-		}
+	Object.keys(mixin).forEach(key => {
 		let source = mixin[key]
 		let currentValue = proto[key]
 		if (currentValue === undefined) {
@@ -187,18 +168,18 @@ let combineMixin = (proto, mixin) => {
 		} else if (isFn(currentValue) && isFn(source)) {
 			proto[key] = pipe(currentValue, source)
 		}
-	}
+	})
 }
 let combineMixins = (proto, mixins) => {
 	mixins.forEach(mixin => combineMixin(proto, mixin))
 }
 
 let bindContext = (obj, source) => {
-	for (let key in source) {
-		if (source.hasOwnProperty(key) && isFn(source[key])) {
+	Object.keys(source).forEach(key => {
+		if (isFn(source[key])) {
 			obj[key] = source[key].bind(obj)
 		}
-	}
+	})
 }
 
 export let createClass = options => {
@@ -208,11 +189,11 @@ export let createClass = options => {
 	if (isObj(defaultProps)) {
 		mixinsForDefaultProps = {
 			componentWillReceiveProps(nextProps) {
-				for (let key in defaultProps) {
-					if (!(key in nextProps)) {
+				Object.keys(defaultProps).forEach(key => {
+					if (nextProps[key] === undefined) {
 						nextProps[key] = defaultProps[key]
 					}
-				}
+				})
 			}
 		}
 		mixins = mixins.concat(mixinsForDefaultProps)
@@ -231,11 +212,9 @@ export let createClass = options => {
 	}
 	combineMixins(Klass.prototype, mixins.concat(options))
 	if (isObj(options.statics)) {
-		for (let key in options.statics) {
-			if (options.statics.hasOwnProperty(key)) {
-				Klass[key] = options.statics[key]
-			}
-		}
+		Object.keys(options.statics).forEach(key => {
+			Klass[key] = options.statics[key]
+		})
 	}
 	return Klass
 }

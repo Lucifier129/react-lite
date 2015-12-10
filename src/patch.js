@@ -2,6 +2,7 @@ import {
 	isStr,
 	isObj,
 	isFn,
+	isUndefined,
 	toArray,
 	setProps,
 	setStyleValue,
@@ -11,10 +12,15 @@ import {
 	isEventKey,
 	appendChild,
 	removeChild,
-	replaceChild
+	replaceChild,
+	mergeProps,
+	removeProp,
+	mapChildren
 } from './util'
-import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET } from './constant'
+import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET, UPDATE } from './constant'
 import create, { addChild } from './create'
+import { updateComponent } from './component'
+import diff from './diff'
 
 /**
 * patch dom
@@ -39,10 +45,11 @@ let patch = (node, patches, parent) => {
 			replaceChild(parent, newNode, node)
 			break
 		case PROPS:
-			applyProps(node, vnode.props, newVnode.props)
+			patchProps(node, vnode.props, newVnode.props)
 			break
-		case WIDGET:
-			newVnode.update(vnode, node)
+		case UPDATE:
+			updateComponent(vnode.component, mergeProps(newVnode.props, newVnode.children))
+			newVnode.component = vnode.component
 			break
 	}
 
@@ -51,13 +58,25 @@ let patch = (node, patches, parent) => {
 			toArray(node.childNodes).forEach(child => removeChild(node, child))
 			break
 		case CREATE:
-			patches.newChildren.forEach(child => addChild(node, child))
+			mapChildren(patches.newChildren, child => addChild(node, child))
 			break
 		case REPLACE:
-			let children = toArray(node.childNodes)
-			patches.childrenPatches.forEach((childPatches, index) => {
-				patch(children[index], childPatches, node)	
+			let childNodes = toArray(node.childNodes)
+			let children = vnode.children
+			let newChildren = newVnode.children
+			let $newChildren = []
+
+			mapChildren(newChildren, (newChild, i) => {
+				$newChildren.push(newChild)
+				let patches = diff(children[i], newChild)
+				patch(childNodes[i], patches, node)
 			})
+
+			while (node.childNodes.length > $newChildren.length) {
+				removeChild(node, node.lastChild)
+			}
+
+			newVnode.children = $newChildren
 			break
 	}
 
@@ -66,15 +85,19 @@ let patch = (node, patches, parent) => {
 
 export default patch
 
-let applyProps = (node, props, newProps) => {
-	if (props == null && isObj(newProps)) {
+
+let patchProps = (node, props, newProps) => {
+	if (props == null && newProps) {
 		return setProps(node, newProps)
-	} else if (newProps == null && isObj(props)) {
+	} else if (newProps == null && props) {
 		return Object.keys(props).each(key => removeProp(node, key))
 	}
 	Object.keys({ ...props, ...newProps }).forEach(key => {
 		let value = props[key]
 		let newValue = newProps[key]
+		if (newValue === value || key === 'key') {
+			return
+		}
 		switch (true) {
 			case key === 'style':
 				patchStyle(node, props.style, newProps.style)
@@ -82,21 +105,21 @@ let applyProps = (node, props, newProps) => {
 			case isEventKey(key):
 				if (!isFn(newValue)) {
 					removeEvent(node, key)
-				} else if (newValue !== value) {
+				} else {
 					setEvent(node, key, newValue)
 				}
 				break
 			case key in node:
 				if (newValue === undefined) {
 					removeProp(node, key)
-				} else if (newValue !== value) {
+				} else {
 					node[key] = newValue
 				}
 				break
 			default:
 				if (newValue === undefined) {
 					node.removeAttribute(key)
-				} else if (key !== 'key') {
+				} else {
 					node.setAttribute(key, newValue)
 				}
 		}

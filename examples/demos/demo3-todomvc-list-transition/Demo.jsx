@@ -127,7 +127,6 @@ const Demo = React.createClass({
 
   render() {
     const {todos, value, selected} = this.state;
-    console.log(todos)
     return (
       <section className="todoapp">
         <header className="header">

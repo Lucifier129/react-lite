@@ -48,7 +48,7 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 	
-	var _react = __webpack_require__(4);
+	var _react = __webpack_require__(6);
 	
 	var _react2 = _interopRequireDefault(_react);
 	
@@ -76,12 +76,10 @@
 	exports.REORDER = REORDER;
 	var REPLACE = 'REPLACE';
 	exports.REPLACE = REPLACE;
-	var INSERT = 'INSERT';
-	exports.INSERT = INSERT;
 	var PROPS = 'PROPS';
 	exports.PROPS = PROPS;
-	var WIDGET = 'WIDGET';
-	exports.WIDGET = WIDGET;
+	var UPDATE = 'UPDATE';
+	exports.UPDATE = UPDATE;
 	var DID_MOUNT = 'DID_MOUNT';
 	exports.DID_MOUNT = DID_MOUNT;
 	var WILL_UNMOUNT = 'WILL_UNMOUNT';
@@ -118,11 +116,18 @@
 	exports.isBln = isBln;
 	var isArr = Array.isArray || isType('Array');
 	exports.isArr = isArr;
-	var isThenable = function isThenable(obj) {
-		return obj != null && isFn(obj.then);
+	var isComponent = function isComponent(obj) {
+		return isFn(obj);
 	};
-	
-	exports.isThenable = isThenable;
+	exports.isComponent = isComponent;
+	var isComponentClass = function isComponentClass(obj) {
+		return isFn(obj) && isFn(obj.prototype.render);
+	};
+	exports.isComponentClass = isComponentClass;
+	var isUndefined = function isUndefined(obj) {
+		return obj === void 0;
+	};
+	exports.isUndefined = isUndefined;
 	var pipe = function pipe(fn1, fn2) {
 		return function () {
 			for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -130,16 +135,54 @@
 			}
 	
 			fn1.apply(this, args);
-			return fn2.apply(this, args);
+			fn2.apply(this, args);
 		};
 	};
 	
 	exports.pipe = pipe;
+	var toArray = Array.from || function (obj) {
+		return Array.prototype.slice.call(obj);
+	};
+	exports.toArray = toArray;
+	var nextFrame = isFn(window.requestAnimationFrame) ? function (fn) {
+		return requestAnimationFrame(fn);
+	} : function (fn) {
+		return setTimeout(fn, 0);
+	};
+	
+	exports.nextFrame = nextFrame;
 	var getUid = function getUid() {
 		return Math.random().toString(36).substr(2);
 	};
 	
 	exports.getUid = getUid;
+	var mergeProps = function mergeProps(props, children) {
+		if (props && children && children.length > 0) {
+			props.children = children.length === 1 ? children[0] : children;
+		}
+		return props;
+	};
+	
+	exports.mergeProps = mergeProps;
+	var mapChildren = function mapChildren(children, callback) {
+		var record = arguments.length <= 2 || arguments[2] === undefined ? { index: 0 } : arguments[2];
+	
+		children.forEach(function (child) {
+			if (isArr(child)) {
+				mapChildren(child, callback, record);
+			} else if (!isBln(child)) {
+				callback(child, record.index);
+				record.index += 1;
+			}
+		});
+	};
+	
+	exports.mapChildren = mapChildren;
+	var hasKey = function hasKey(obj) {
+		return obj && obj.props && obj.props.key;
+	};
+	
+	exports.hasKey = hasKey;
 	var $events = {};
 	
 	var $on = function $on(name, callback) {
@@ -148,18 +191,17 @@
 	};
 	
 	exports.$on = $on;
-	var $off = function $off(name, callback) {
-		if (!isFn(callback)) {
-			$events[name] = [];
-			return;
-		}
-		var index = $events[name].indexOf(callback);
-		if (index !== -1) {
-			$events[name].splice(index, 1);
-		}
-	};
+	// export let $off = (name, callback) => {
+	// 	if (!isFn(callback)) {
+	// 		$events[name] = []
+	// 		return
+	// 	}
+	// 	let index = $events[name].indexOf(callback)
+	// 	if (index !== -1) {
+	// 		$events[name].splice(index, 1)
+	// 	}
+	// }
 	
-	exports.$off = $off;
 	var $trigger = function $trigger(name) {
 		for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
 			args[_key2 - 1] = arguments[_key2];
@@ -173,6 +215,21 @@
 	};
 	
 	exports.$trigger = $trigger;
+	var $triggerOnce = function $triggerOnce(name) {
+		for (var _len3 = arguments.length, args = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+			args[_key3 - 1] = arguments[_key3];
+		}
+	
+		var events = $events[name];
+		$events[name] = [];
+		if (isArr(events)) {
+			events.forEach(function (callback) {
+				return callback.apply(undefined, args);
+			});
+		}
+	};
+	
+	exports.$triggerOnce = $triggerOnce;
 	var appendChild = function appendChild(node, child) {
 		node.appendChild(child);
 	};
@@ -185,29 +242,26 @@
 	
 	exports.removeChild = removeChild;
 	var replaceChild = function replaceChild(node, newChild, child) {
-		$trigger(_constant.WILL_MOUNT, child, newChild);
-		if (newChild.nodeType === 3 && child.nodeType === 3) {
-			return child.replaceData(0, child.length, newChild.textContent);
-		}
 		node.replaceChild(newChild, child);
 	};
 	
 	exports.replaceChild = replaceChild;
 	var setProp = function setProp(elem, key, value) {
+		if (key === 'key') {
+			return;
+		}
 		switch (true) {
 			case key === 'style':
 				setStyle(elem, value);
 				break;
-			case /^on/.test(key):
-				setEvent(elem, key.toLowerCase(), value);
+			case isEventKey(key):
+				setEvent(elem, key, value);
 				break;
 			case key in elem:
 				elem[key] = value;
 				break;
 			default:
-				if (key !== 'key') {
-					elem.setAttribute(key, value);
-				}
+				elem.setAttribute(key, value);
 		}
 	};
 	
@@ -242,8 +296,7 @@
 				break;
 			default:
 				try {
-					elem[key] = undefined;
-					delete elem[key];
+					elem[key] = null;
 				} catch (e) {
 					//pass
 				}
@@ -363,11 +416,286 @@
 	
 	exports.__esModule = true;
 	
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	
 	var _util = __webpack_require__(2);
 	
 	var _constant = __webpack_require__(1);
 	
-	var widgetElems = [];
+	var _create = __webpack_require__(4);
+	
+	var _create2 = _interopRequireDefault(_create);
+	
+	var _diff = __webpack_require__(5);
+	
+	var _diff2 = _interopRequireDefault(_diff);
+	
+	var _patch = __webpack_require__(8);
+	
+	var _patch2 = _interopRequireDefault(_patch);
+	
+	var components = {};
+	var removeComponent = function removeComponent(id) {
+		var component = components[id];
+		if (!component) {
+			return;
+		}
+		if (_util.isArr(component)) {
+			return component.forEach(function (item) {
+				item.componentWillUnmount();
+				delete components[item.$id];
+			});
+		}
+		component.componentWillUnmount();
+		delete components[id];
+	};
+	var checkUnmount = function checkUnmount(node, newNode) {
+		if (!node || node.nodeType === 3) {
+			return;
+		}
+		var id = node.getAttribute(_constant.COMPONENT_ID);
+		// if newNode is existed, it must be calling replaceChild function
+		if (id && !newNode) {
+			removeComponent(id);
+		}
+		var componentNodes = node.querySelectorAll('[' + _constant.COMPONENT_ID + ']');
+		_util.toArray(componentNodes).forEach(function (child) {
+			return checkUnmount(child);
+		});
+	};
+	
+	_util.$on(_constant.WILL_UNMOUNT, checkUnmount);
+	
+	var initComponent = function initComponent(Component, props) {
+		props = _extends({}, props, Component.defaultProps);
+		var component = new Component(props);
+		var id = component.$id = _util.getUid();
+		var vnode = component.vnode = component.render();
+		var node = component.node = _create2['default'](vnode);
+		var attr = node.getAttribute(_constant.COMPONENT_ID);
+		if (!attr) {
+			node.setAttribute(_constant.COMPONENT_ID, attr = id);
+		}
+		if (components[attr]) {
+			if (!_util.isArr(components[attr])) {
+				components[attr] = [components[attr]];
+			}
+			components[attr].splice(0, 0, component);
+		} else {
+			components[attr] = component;
+		}
+		component.componentWillMount();
+		_util.$on(_constant.DID_MOUNT, function () {
+			return component.componentDidMount();
+		});
+		return { component: component, node: node };
+	};
+	
+	exports.initComponent = initComponent;
+	var updateComponent = function updateComponent(component, props) {
+		props = _extends({}, props, component.constructor.defaultProps);
+		var $cache = component.$cache;
+	
+		$cache.keepSilent = true;
+		component.componentWillReceiveProps(props);
+		$cache.keepSilent = false;
+		var shouldUpdate = component.shouldComponentUpdate(props, component.state);
+		if (!shouldUpdate) {
+			return;
+		}
+		$cache.props = props;
+		$cache.state = component.state;
+		component.forceUpdate();
+	};
+	
+	exports.updateComponent = updateComponent;
+	
+	var Component = (function () {
+		function Component(props) {
+			_classCallCheck(this, Component);
+	
+			this.$cache = {
+				keepSilent: false
+			};
+			this.props = props;
+			this.state = {};
+			this.refs = {};
+		}
+	
+		Component.prototype.getDOMNode = function getDOMNode() {
+			return this.node;
+		};
+	
+		Component.prototype.setState = function setState(nextState, callback) {
+			var _this = this;
+	
+			var $cache = this.$cache;
+			var state = this.state;
+			var props = this.props;
+	
+			if (_util.isFn(nextState)) {
+				nextState = nextState(state, props);
+			}
+			nextState = _extends({}, this.state, nextState);
+			var shouldUpdate = this.shouldComponentUpdate(nextState, props);
+			this.state = nextState;
+			if (!shouldUpdate) {
+				return;
+			}
+			var updateView = function updateView() {
+				_this.forceUpdate();
+				if (_util.isFn(callback)) {
+					callback();
+				}
+			};
+			if (!$cache.keepSilent) {
+				_util.nextFrame(updateView);
+			}
+		};
+	
+		Component.prototype.shouldComponentUpdate = function shouldComponentUpdate(nextProps, nextState) {
+			return true;
+		};
+	
+		Component.prototype.componentWillUpdate = function componentWillUpdate(nextProps, nextState) {};
+	
+		Component.prototype.componentDidUpdate = function componentDidUpdate(prevProps, prevState) {};
+	
+		Component.prototype.componentWillReceiveProps = function componentWillReceiveProps(nextProps) {};
+	
+		Component.prototype.componentWillMount = function componentWillMount() {};
+	
+		Component.prototype.componentDidMount = function componentDidMount() {};
+	
+		Component.prototype.componentWillUnmount = function componentWillUnmount() {};
+	
+		Component.prototype.forceUpdate = function forceUpdate(callback) {
+			var vnode = this.vnode;
+			var node = this.node;
+			var $cache = this.$cache;
+			var state = this.state;
+			var props = this.props;
+			var id = this.$id;
+	
+			var nextProps = _util.isObj($cache.props) ? $cache.props : props;
+			var nextState = _util.isObj($cache.state) ? $cache.state : state;
+			$cache.props = $cache.state = null;
+			this.componentWillUpdate(nextProps, nextState);
+			this.props = nextProps;
+			this.state = nextState;
+			var nextVnode = this.render();
+			var patches = _diff2['default'](vnode, nextVnode);
+			var newNode = _patch2['default'](node, patches);
+			//update this.node, if component render new element
+			if (newNode !== node) {
+				newNode.setAttribute(_constant.COMPONENT_ID, id);
+				this.node = newNode;
+			}
+			_util.$triggerOnce(_constant.DID_MOUNT);
+			this.vnode = nextVnode;
+			this.componentDidUpdate(props, state);
+			if (_util.isFn(callback)) {
+				callback();
+			}
+		};
+	
+		return Component;
+	})();
+	
+	exports.Component = Component;
+	var findDOMNode = function findDOMNode(node) {
+		return node.nodeName ? node : node.getDOMNode();
+	};
+	
+	exports.findDOMNode = findDOMNode;
+	var combineMixin = function combineMixin(proto, mixin) {
+		Object.keys(mixin).forEach(function (key) {
+			var source = mixin[key];
+			var currentValue = proto[key];
+			if (currentValue === undefined) {
+				proto[key] = source;
+			} else if (_util.isFn(currentValue) && _util.isFn(source)) {
+				proto[key] = _util.pipe(currentValue, source);
+			}
+		});
+	};
+	var combineMixins = function combineMixins(proto, mixins) {
+		mixins.forEach(function (mixin) {
+			return combineMixin(proto, mixin);
+		});
+	};
+	
+	var bindContext = function bindContext(obj, source) {
+		Object.keys(source).forEach(function (key) {
+			if (_util.isFn(source[key])) {
+				obj[key] = source[key].bind(obj);
+			}
+		});
+	};
+	
+	var createClass = function createClass(options) {
+		var mixins = options.mixins || [];
+		var defaultProps = _util.isFn(options.getDefaultProps) ? options.getDefaultProps() : null;
+		var mixinsForDefaultProps = undefined;
+		if (_util.isObj(defaultProps)) {
+			mixinsForDefaultProps = {
+				componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
+					Object.keys(defaultProps).forEach(function (key) {
+						if (nextProps[key] === undefined) {
+							nextProps[key] = defaultProps[key];
+						}
+					});
+				}
+			};
+			mixins = mixins.concat(mixinsForDefaultProps);
+		}
+		var Klass = (function (_Component) {
+			_inherits(Klass, _Component);
+	
+			function Klass(props) {
+				_classCallCheck(this, Klass);
+	
+				_Component.call(this, props);
+				bindContext(this, Klass.prototype);
+				if (_util.isObj(defaultProps)) {
+					mixinsForDefaultProps.componentWillReceiveProps(props);
+				}
+				if (_util.isFn(this.getInitialState)) {
+					this.state = this.getInitialState();
+				}
+			}
+	
+			return Klass;
+		})(Component);
+		combineMixins(Klass.prototype, mixins.concat(options));
+		if (_util.isObj(options.statics)) {
+			Object.keys(options.statics).forEach(function (key) {
+				Klass[key] = options.statics[key];
+			});
+		}
+		return Klass;
+	};
+	exports.createClass = createClass;
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	exports.__esModule = true;
+	
+	var _util = __webpack_require__(2);
+	
+	var _constant = __webpack_require__(1);
+	
+	var _component = __webpack_require__(3);
 	
 	/**
 	* 根据 tagName props attrs 创建 real-dom
@@ -379,43 +707,48 @@
 			var vnode = _x;
 			_again = false;
 	
-			if (vnode == null) {
+			if (vnode === null) {
 				return document.createElement('noscript');
 			}
-	
-			if (_util.isStr(vnode) || _util.isNum(vnode)) {
+			if (!_util.isObj(vnode)) {
 				return document.createTextNode(vnode);
 			}
 	
-			if (vnode.type === _constant.WIDGET) {
-				return vnode.init();
-			}
+			var tagName = vnode.tagName;
+			var props = vnode.props;
+			var children = vnode.children;
 	
-			var _vnode = vnode;
-			var tagName = _vnode.tagName;
-			var props = _vnode.props;
-			var children = _vnode.children;
+			if (_util.isComponent(tagName)) {
+				var Component = tagName;
+				props = _util.mergeProps(props, children);
+				if (_util.isComponentClass(Component)) {
+					var _initComponent = _component.initComponent(Component, props);
 	
-			if (_util.isFn(tagName)) {
-				props.children = children;
-				vnode = tagName(props);
-				_x = vnode;
+					var node = _initComponent.node;
+					var component = _initComponent.component;
+	
+					vnode.component = component;
+					return node;
+				}
+				_x = Component(props);
 				_again = true;
-				_vnode = tagName = props = children = undefined;
+				tagName = props = children = Component = _initComponent = node = component = undefined;
 				continue _function;
 			}
 	
-			if (tagName == null) {
-				debugger;
-			}
 			var elem = document.createElement(tagName);
-			if (_util.isObj(props)) {
+			if (props) {
 				_util.setProps(elem, props);
 			}
 			if (children && children.length > 0) {
-				children.forEach(function (child) {
-					return addChild(elem, child);
-				});
+				(function () {
+					var $children = [];
+					_util.mapChildren(children, function (child) {
+						$children.push(child);
+						addChild(elem, child);
+					});
+					vnode.children = $children;
+				})();
 			}
 			return elem;
 		}
@@ -423,20 +756,78 @@
 	
 	exports['default'] = create;
 	var addChild = function addChild(elem, child) {
-		if (_util.isArr(child)) {
-			return child.forEach(function (item) {
-				return addChild(elem, item);
-			});
-		}
-		var childNode = create(child);
-		if (childNode !== undefined) {
-			_util.appendChild(elem, childNode);
-		}
+		_util.appendChild(elem, create(child));
 	};
 	exports.addChild = addChild;
 
 /***/ },
-/* 4 */
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	exports.__esModule = true;
+	
+	var _util = __webpack_require__(2);
+	
+	var _constant = __webpack_require__(1);
+	
+	/**
+	* diff vnode and newVnode
+	*/
+	var diff = function diff(vnode, newVnode) {
+		var children = undefined;
+		var type = undefined;
+		switch (true) {
+			case vnode === newVnode:
+				return null;
+			case _util.isUndefined(newVnode):
+				type = _constant.REMOVE;
+				break;
+			case _util.isUndefined(vnode):
+				type = _constant.CREATE;
+				break;
+			case vnode === null || newVnode === null || vnode.tagName !== newVnode.tagName:
+				type = _constant.REPLACE;
+				break;
+			case _util.isComponentClass(vnode.tagName):
+				type = _constant.UPDATE;
+				break;
+			case !!(vnode.props || newVnode.props):
+				if (_util.hasKey(newVnode) && newVnode.props.key !== vnode.props.key) {
+					type = _constant.REPLACE;
+				} else {
+					type = _constant.PROPS;
+				}
+				break;
+			case !_util.isObj(vnode) && !_util.isObj(newVnode) && vnode != newVnode:
+				type = _constant.REPLACE;
+				break;
+		}
+		if (!type || type === _constant.PROPS) {
+			var childrenType = diffChildren(vnode.children, newVnode.children);
+			return { type: type, vnode: vnode, newVnode: newVnode, childrenType: childrenType };
+		}
+		return type ? { type: type, vnode: vnode, newVnode: newVnode } : null;
+	};
+	
+	exports['default'] = diff;
+	
+	var diffChildren = function diffChildren(children, newChildren) {
+		var childrenType = undefined;
+		if (!newChildren) {
+			childrenType = _constant.REMOVE;
+		} else if (!children) {
+			childrenType = _constant.CREATE;
+		} else {
+			childrenType = _constant.REPLACE;
+		}
+		return childrenType;
+	};
+	module.exports = exports['default'];
+
+/***/ },
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -451,7 +842,7 @@
 	
 	var _render = __webpack_require__(12);
 	
-	var _component = __webpack_require__(6);
+	var _component = __webpack_require__(3);
 	
 	var check = function check() {
 	  return check;
@@ -495,7 +886,7 @@
 	module.exports = exports['default'];
 
 /***/ },
-/* 5 */
+/* 7 */
 /***/ function(module, exports) {
 
 	
@@ -510,408 +901,6 @@
 	  stiff: [210, 20]
 	};
 	module.exports = exports["default"];
-
-/***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	exports.__esModule = true;
-	
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-	
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-	
-	var _util = __webpack_require__(2);
-	
-	var _constant = __webpack_require__(1);
-	
-	var _create = __webpack_require__(3);
-	
-	var _create2 = _interopRequireDefault(_create);
-	
-	var _diff = __webpack_require__(7);
-	
-	var _diff2 = _interopRequireDefault(_diff);
-	
-	var _patch = __webpack_require__(8);
-	
-	var _patch2 = _interopRequireDefault(_patch);
-	
-	var components = {};
-	var removeComponent = function removeComponent(id) {
-		var component = components[id];
-		if (!component) {
-			return;
-		}
-		if (_util.isArr(component)) {
-			return component.forEach(function (item) {
-				item.componentWillUnmount();
-				delete components[item.$id];
-			});
-		}
-		component.componentWillUnmount();
-		delete components[id];
-	};
-	var checkUnmount = function checkUnmount(node, newNode) {
-		if (!node || node.nodeType === 3) {
-			return;
-		}
-		var id = node.getAttribute(_constant.COMPONENT_ID);
-		if (!id) {
-			return;
-		}
-		var component = components[id];
-		if (!component) {
-			return;
-		}
-		// if newNode is existed, it must be calling replaceChild function
-		if (!newNode) {
-			removeComponent(id);
-		}
-		var componentNodes = node.querySelectorAll('[' + _constant.COMPONENT_ID + ']');
-		Array.prototype.slice.call(componentNodes).forEach(function (child) {
-			return checkUnmount(child);
-		});
-	};
-	
-	_util.$on(_constant.WILL_UNMOUNT, checkUnmount);
-	
-	var Widget = (function () {
-		function Widget(Component, props) {
-			_classCallCheck(this, Widget);
-	
-			this.type = _constant.WIDGET;
-			this.Component = Component;
-			this.props = props;
-		}
-	
-		Widget.prototype.init = function init() {
-			var props = this.props;
-			var Component = this.Component;
-	
-			props = _extends({}, props, Component.defaultProps);
-			var component = this.component = new Component(props);
-			var id = component.$id = _util.getUid();
-			var vnode = component.vnode = component.render();
-			var node = component.node = _create2['default'](vnode);
-			var attr = node.getAttribute(_constant.COMPONENT_ID);
-			if (!attr) {
-				node.setAttribute(_constant.COMPONENT_ID, attr = id);
-			}
-			if (components[attr]) {
-				if (!_util.isArr(components[attr])) {
-					components[attr] = [components[attr]];
-				}
-				components[attr].splice(0, 0, component);
-			} else {
-				components[attr] = component;
-			}
-			component.componentWillMount();
-			_util.$on(_constant.DID_MOUNT, function () {
-				return component.componentDidMount();
-			});
-			return node;
-		};
-	
-		Widget.prototype.update = function update(previous) {
-			var component = this.component = previous.component;
-			var props = this.props;
-			var $cache = component.$cache;
-	
-			$cache.keepSilent = true;
-			component.componentWillReceiveProps(props);
-			$cache.keepSilent = false;
-			var shouldUpdate = component.shouldComponentUpdate(props, component.state);
-			if (!shouldUpdate) {
-				return;
-			}
-			$cache.props = props;
-			$cache.state = component.state;
-			component.forceUpdate();
-		};
-	
-		return Widget;
-	})();
-	
-	exports.Widget = Widget;
-	
-	var Component = (function () {
-		function Component(props) {
-			_classCallCheck(this, Component);
-	
-			this.$cache = {
-				keepSilent: false
-			};
-			this.props = props;
-			this.state = {};
-			this.refs = {};
-		}
-	
-		Component.prototype.getDOMNode = function getDOMNode() {
-			return this.node;
-		};
-	
-		Component.prototype.setState = function setState(nextState, callback) {
-			var _this = this;
-	
-			var $cache = this.$cache;
-			var state = this.state;
-			var props = this.props;
-	
-			if (_util.isFn(nextState)) {
-				nextState = nextState(state, props);
-			}
-			this.state = _extends({}, this.state, nextState);
-			var forceUpdate = function forceUpdate() {
-				_this.forceUpdate();
-				if (_util.isFn(callback)) {
-					callback();
-				}
-			};
-			if (!$cache.keepSilent) {
-				if (_util.isFn(requestAnimationFrame)) {
-					requestAnimationFrame(forceUpdate);
-				} else {
-					setTimeout(forceUpdate, 0);
-				}
-			}
-		};
-	
-		Component.prototype.shouldComponentUpdate = function shouldComponentUpdate(nextProps, nextState) {
-			return true;
-		};
-	
-		Component.prototype.componentWillUpdate = function componentWillUpdate(nextProps, nextState) {};
-	
-		Component.prototype.componentDidUpdate = function componentDidUpdate(prevProps, prevState) {};
-	
-		Component.prototype.componentWillReceiveProps = function componentWillReceiveProps(nextProps) {};
-	
-		Component.prototype.componentWillMount = function componentWillMount() {};
-	
-		Component.prototype.componentDidMount = function componentDidMount() {};
-	
-		Component.prototype.componentWillUnmount = function componentWillUnmount() {};
-	
-		Component.prototype.forceUpdate = function forceUpdate(callback) {
-			var vnode = this.vnode;
-			var node = this.node;
-			var $cache = this.$cache;
-			var state = this.state;
-			var props = this.props;
-			var id = this.$id;
-	
-			var nextProps = _util.isObj($cache.props) ? $cache.props : props;
-			var nextState = _util.isObj($cache.state) ? $cache.state : state;
-			$cache.props = $cache.state = null;
-			this.componentWillUpdate(nextProps, nextState);
-			this.props = nextProps;
-			this.state = nextState;
-			var nextVnode = this.render();
-			var patches = _diff2['default'](vnode, nextVnode);
-			var newNode = _patch2['default'](node, patches);
-			//update this.node, if component render new element
-			if (newNode !== node) {
-				newNode.setAttribute(_constant.COMPONENT_ID, id);
-				this.node = newNode;
-			}
-			_util.$trigger(_constant.DID_MOUNT);
-			_util.$off(_constant.DID_MOUNT);
-			this.vnode = nextVnode;
-			this.componentDidUpdate(props, state);
-			if (_util.isFn(callback)) {
-				callback();
-			}
-		};
-	
-		return Component;
-	})();
-	
-	exports.Component = Component;
-	var findDOMNode = function findDOMNode(node) {
-		return node.nodeName ? node : node.getDOMNode();
-	};
-	
-	exports.findDOMNode = findDOMNode;
-	var combineMixin = function combineMixin(proto, mixin) {
-		for (var key in mixin) {
-			if (!mixin.hasOwnProperty(key)) {
-				continue;
-			}
-			var _source = mixin[key];
-			var currentValue = proto[key];
-			if (currentValue === undefined) {
-				proto[key] = _source;
-			} else if (_util.isFn(currentValue) && _util.isFn(_source)) {
-				proto[key] = _util.pipe(currentValue, _source);
-			}
-		}
-	};
-	var combineMixins = function combineMixins(proto, mixins) {
-		mixins.forEach(function (mixin) {
-			return combineMixin(proto, mixin);
-		});
-	};
-	
-	var bindContext = function bindContext(obj, source) {
-		for (var key in source) {
-			if (source.hasOwnProperty(key) && _util.isFn(source[key])) {
-				obj[key] = source[key].bind(obj);
-			}
-		}
-	};
-	
-	var createClass = function createClass(options) {
-		var mixins = options.mixins || [];
-		var defaultProps = _util.isFn(options.getDefaultProps) ? options.getDefaultProps() : null;
-		var mixinsForDefaultProps = undefined;
-		if (_util.isObj(defaultProps)) {
-			mixinsForDefaultProps = {
-				componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
-					for (var key in defaultProps) {
-						if (!(key in nextProps)) {
-							nextProps[key] = defaultProps[key];
-						}
-					}
-				}
-			};
-			mixins = mixins.concat(mixinsForDefaultProps);
-		}
-		var Klass = (function (_Component) {
-			_inherits(Klass, _Component);
-	
-			function Klass(props) {
-				_classCallCheck(this, Klass);
-	
-				_Component.call(this, props);
-				bindContext(this, Klass.prototype);
-				if (_util.isObj(defaultProps)) {
-					mixinsForDefaultProps.componentWillReceiveProps(props);
-				}
-				if (_util.isFn(this.getInitialState)) {
-					this.state = this.getInitialState();
-				}
-			}
-	
-			return Klass;
-		})(Component);
-		combineMixins(Klass.prototype, mixins.concat(options));
-		if (_util.isObj(options.statics)) {
-			for (var key in options.statics) {
-				if (options.statics.hasOwnProperty(key)) {
-					Klass[key] = options.statics[key];
-				}
-			}
-		}
-		return Klass;
-	};
-	exports.createClass = createClass;
-
-/***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	exports.__esModule = true;
-	
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-	
-	var _util = __webpack_require__(2);
-	
-	var _constant = __webpack_require__(1);
-	
-	/**
-	* diff vnode and newVnode
-	*/
-	var diff = function diff(vnode, newVnode) {
-		var children = undefined;
-		var type = undefined;
-		switch (true) {
-			case vnode === newVnode:
-				return;
-			case newVnode == null:
-				type = _constant.REMOVE;
-				break;
-			case vnode == null:
-				type = _constant.CREATE;
-				break;
-			case vnode.tagName !== newVnode.tagName:
-				type = _constant.REPLACE;
-				break;
-			case vnode.type === _constant.WIDGET && newVnode.type === _constant.WIDGET:
-				type = _constant.WIDGET;
-				break;
-			case vnode.type === _constant.WIDGET || newVnode.type === _constant.WIDGET:
-				type = _constant.REPLACE;
-				break;
-			case !!(vnode.props || newVnode.props):
-				if (newVnode.props && newVnode.props.key && newVnode.props.key !== vnode.props.key) {
-					type = _constant.REPLACE;
-				} else {
-					type = _constant.PROPS;
-				}
-				break;
-			case (_util.isStr(vnode) || _util.isNum(vnode) || _util.isStr(newVnode) || _util.isNum(newVnode)) && vnode != newVnode:
-				type = _constant.REPLACE;
-				break;
-		}
-		if (!type || type === _constant.PROPS) {
-			children = diffChildren(vnode.children, newVnode.children);
-			if (children) {
-				return _extends({ type: type, vnode: vnode, newVnode: newVnode }, children);
-			}
-		}
-	
-		return type ? { type: type, vnode: vnode, newVnode: newVnode } : null;
-	};
-	
-	exports['default'] = diff;
-	
-	var diffChildren = function diffChildren(children, newChildren) {
-		children = getFlatChildren([], children);
-		newChildren = getFlatChildren([], newChildren);
-		var childrenType = undefined;
-		var childrenPatches = undefined;
-		if (children.length === 0) {
-			if (newChildren.length > 0) {
-				childrenType = _constant.CREATE;
-			}
-		} else if (newChildren.length === 0) {
-			childrenType = _constant.REMOVE;
-		} else {
-			childrenPatches = [];
-			var maxLen = Math.max(children.length, newChildren.length);
-			for (var i = 0; i < maxLen; i++) {
-				childrenPatches.push(diff(children[i], newChildren[i]));
-			}
-			childrenType = _constant.REPLACE;
-			return { childrenType: childrenType, childrenPatches: childrenPatches };
-		}
-	
-		if (childrenType) {
-			return { childrenType: childrenType, newChildren: newChildren };
-		}
-	};
-	
-	var getFlatChildren = function getFlatChildren(store, children) {
-		if (_util.isArr(children)) {
-			children.forEach(function (item) {
-				if (_util.isArr(item)) {
-					return getFlatChildren(store, item);
-				}
-				store.push(item);
-			});
-		}
-		return store;
-	};
-	module.exports = exports['default'];
 
 /***/ },
 /* 8 */
@@ -929,9 +918,15 @@
 	
 	var _constant = __webpack_require__(1);
 	
-	var _create = __webpack_require__(3);
+	var _create = __webpack_require__(4);
 	
 	var _create2 = _interopRequireDefault(_create);
+	
+	var _component = __webpack_require__(3);
+	
+	var _diff = __webpack_require__(5);
+	
+	var _diff2 = _interopRequireDefault(_diff);
 	
 	/**
 	* patch dom
@@ -960,27 +955,42 @@
 				_util.replaceChild(parent, newNode, node);
 				break;
 			case _constant.PROPS:
-				applyProps(node, vnode.props, newVnode.props);
+				patchProps(node, vnode.props, newVnode.props);
 				break;
-			case _constant.WIDGET:
-				newVnode.update(vnode, node);
+			case _constant.UPDATE:
+				_component.updateComponent(vnode.component, _util.mergeProps(newVnode.props, newVnode.children));
+				newVnode.component = vnode.component;
 				break;
 		}
 	
 		switch (childrenType) {
 			case _constant.REMOVE:
-				node.innerHTML = '';
+				_util.toArray(node.childNodes).forEach(function (child) {
+					return _util.removeChild(node, child);
+				});
 				break;
 			case _constant.CREATE:
-				patches.newChildren.forEach(function (child) {
+				_util.mapChildren(patches.newChildren, function (child) {
 					return _create.addChild(node, child);
 				});
 				break;
 			case _constant.REPLACE:
-				var children = Array.prototype.slice.call(node.childNodes);
-				patches.childrenPatches.forEach(function (childPatches, index) {
-					patch(children[index], childPatches, node);
+				var childNodes = _util.toArray(node.childNodes);
+				var children = vnode.children;
+				var newChildren = newVnode.children;
+				var $newChildren = [];
+	
+				_util.mapChildren(newChildren, function (newChild, i) {
+					$newChildren.push(newChild);
+					var patches = _diff2['default'](children[i], newChild);
+					patch(childNodes[i], patches, node);
 				});
+	
+				while (node.childNodes.length > $newChildren.length) {
+					_util.removeChild(node, node.lastChild);
+				}
+	
+				newVnode.children = $newChildren;
 				break;
 		}
 	
@@ -989,17 +999,20 @@
 	
 	exports['default'] = patch;
 	
-	var applyProps = function applyProps(node, props, newProps) {
-		if (props == null && _util.isObj(newProps)) {
+	var patchProps = function patchProps(node, props, newProps) {
+		if (props == null && newProps) {
 			return _util.setProps(node, newProps);
-		} else if (newProps == null && _util.isObj(props)) {
+		} else if (newProps == null && props) {
 			return Object.keys(props).each(function (key) {
-				return removeProp(node, key);
+				return _util.removeProp(node, key);
 			});
 		}
 		Object.keys(_extends({}, props, newProps)).forEach(function (key) {
 			var value = props[key];
 			var newValue = newProps[key];
+			if (newValue === value || key === 'key') {
+				return;
+			}
 			switch (true) {
 				case key === 'style':
 					patchStyle(node, props.style, newProps.style);
@@ -1007,21 +1020,21 @@
 				case _util.isEventKey(key):
 					if (!_util.isFn(newValue)) {
 						_util.removeEvent(node, key);
-					} else if (newValue !== value) {
+					} else {
 						_util.setEvent(node, key, newValue);
 					}
 					break;
 				case key in node:
 					if (newValue === undefined) {
-						removeProp(node, key);
-					} else if (newValue !== value) {
+						_util.removeProp(node, key);
+					} else {
 						node[key] = newValue;
 					}
 					break;
 				default:
 					if (newValue === undefined) {
 						node.removeAttribute(key);
-					} else if (key !== 'key') {
+					} else {
 						node.setAttribute(key, newValue);
 					}
 			}
@@ -1052,7 +1065,7 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 	
-	var _presets = __webpack_require__(5);
+	var _presets = __webpack_require__(7);
 	
 	var _presets2 = _interopRequireDefault(_presets);
 	
@@ -1105,41 +1118,26 @@
 
 /***/ },
 /* 11 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ function(module, exports) {
 
-	'use strict';
+	"use strict";
 	
 	exports.__esModule = true;
-	
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-	
-	var _component = __webpack_require__(6);
-	
-	var _util = __webpack_require__(2);
 	
 	var createElement = function createElement(tagName, props) {
 		for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
 			children[_key - 2] = arguments[_key];
 		}
 	
-		var isComponent = _util.isFn(tagName) && _util.isFn(tagName.prototype.render);
-		children = children.filter(function (child) {
-			return !_util.isBln(child);
-		});
-		if (isComponent) {
-			return new _component.Widget(tagName, _extends({}, props, {
-				children: children.length === 1 ? children[0] : children
-			}));
+		var vnode = { tagName: tagName, props: props };
+		if (children.length) {
+			vnode.children = children;
 		}
-		return {
-			tagName: tagName,
-			props: props,
-			children: children
-		};
+		return vnode;
 	};
 	
-	exports['default'] = createElement;
-	module.exports = exports['default'];
+	exports["default"] = createElement;
+	module.exports = exports["default"];
 
 /***/ },
 /* 12 */
@@ -1151,11 +1149,11 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 	
-	var _create = __webpack_require__(3);
+	var _create = __webpack_require__(4);
 	
 	var _create2 = _interopRequireDefault(_create);
 	
-	var _diff = __webpack_require__(7);
+	var _diff = __webpack_require__(5);
 	
 	var _diff2 = _interopRequireDefault(_diff);
 	
@@ -1180,9 +1178,8 @@
 			store[id] = vnode;
 			container.innerHTML = '';
 			_util.appendChild(container, node);
-			_util.$trigger(_constant.DID_MOUNT);
-			_util.$off(_constant.DID_MOUNT);
 		}
+		_util.$triggerOnce(_constant.DID_MOUNT);
 		if (_util.isFn(callback)) {
 			callback();
 		}
@@ -2048,7 +2045,7 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 	
-	var _react = __webpack_require__(4);
+	var _react = __webpack_require__(6);
 	
 	var _react2 = _interopRequireDefault(_react);
 	
@@ -2079,7 +2076,7 @@
 	
 	exports.spring = _spring3['default'];
 	
-	var _presets2 = __webpack_require__(5);
+	var _presets2 = __webpack_require__(7);
 	
 	var _presets3 = _interopRequireDefault(_presets2);
 	
@@ -2688,7 +2685,7 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 	
-	var _react = __webpack_require__(4);
+	var _react = __webpack_require__(6);
 	
 	var _react2 = _interopRequireDefault(_react);
 	
