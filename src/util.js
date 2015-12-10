@@ -1,4 +1,4 @@
-import { WIDGET, WILL_MOUNT, DID_MOUNT, WILL_UNMOUNT } from './constant'
+import { WILL_UNMOUNT } from './constant'
 
 //types.js
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
@@ -10,12 +10,16 @@ export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isComponent = obj => isFn(obj)
 export let isComponentClass = obj => isFn(obj) && isFn(obj.prototype.render)
+export let isUndefined = obj => obj === void 0
 export let pipe = (fn1, fn2) => function(...args) {
 	fn1.apply(this, args)
-	return fn2.apply(this, args)
+	fn2.apply(this, args)
 }
 
 export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
+export let nextFrame = isFn(window.requestAnimationFrame)
+	? fn => requestAnimationFrame(fn)
+	: fn => setTimeout(fn, 0)
 
 export let getUid = () => Math.random().toString(36).substr(2)
 
@@ -26,9 +30,18 @@ export let mergeProps = (props, children) => {
 	return props
 }
 
-export let nextFrame = isFn(window.requestAnimationFrame)
-	? fn => requestAnimationFrame(fn)
-	: fn => setTimeout(fn, 0)
+export let mapChildren = (children, callback, record = { index: 0 }) => {
+	children.forEach(child => {
+		if (isArr(child)) {
+			mapChildren(child, callback, record)
+		} else if (!isBln(child)) {
+			callback(child, record.index)
+			record.index += 1
+		}
+	})
+}
+
+export let hasKey = obj => obj && obj.props && obj.props.key
 
 let $events = {}
 
@@ -72,28 +85,25 @@ export let removeChild = (node, child) => {
 }
 
 export let replaceChild = (node, newChild, child) => {
-	$trigger(WILL_MOUNT, child, newChild)
-	if (newChild.nodeType === 3 && child.nodeType === 3) {
-		return child.replaceData(0, child.length, newChild.textContent)
-	}
 	node.replaceChild(newChild, child)
 }
 
 export let setProp = (elem, key, value) => {
+	if (key === 'key') {
+		return
+	}
 	switch (true) {
 		case key === 'style':
 			setStyle(elem, value)
 			break
-		case /^on/.test(key):
-			setEvent(elem, key.toLowerCase(), value)
+		case isEventKey(key):
+			setEvent(elem, key, value)
 			break
 		case key in elem:
 			elem[key] = value
 			break
 		default:
-			if (key !== 'key') {
-				elem.setAttribute(key, value)
-			}
+			elem.setAttribute(key, value)
 	}
 }
 
@@ -122,8 +132,7 @@ export let removeProp = (elem, key) => {
 			break
 		default:
 			try {
-				elem[key] = undefined
-				delete elem[key]
+				elem[key] = null
 			} catch(e) {
 				//pass
 			}

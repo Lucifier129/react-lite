@@ -9,7 +9,8 @@ import {
 	isComponent,
 	setProps,
 	appendChild,
-	mergeProps
+	mergeProps,
+	mapChildren
 } from './util'
 import { WIDGET, WILL_MOUNT, DID_MOUNT } from './constant'
 import { initComponent } from './component'
@@ -18,10 +19,10 @@ import { initComponent } from './component'
 * 根据 tagName props attrs 创建 real-dom
 */
 let create = vnode => {
-	if (vnode == null) {
+	if (vnode === null) {
 		return document.createElement('noscript')
 	}
-	if (isStr(vnode) || isNum(vnode)) {
+	if (!isObj(vnode)) {
 		return document.createTextNode(vnode)
 	}
 
@@ -34,8 +35,7 @@ let create = vnode => {
 			vnode.component = component
 			return node
 		}
-		vnode = Component(props)
-		return create(vnode)
+		return create(Component(props))
 	}
 
 	let elem = document.createElement(tagName)
@@ -43,7 +43,12 @@ let create = vnode => {
 		setProps(elem, props)
 	}
 	if (children && children.length > 0) {
-		children.forEach(child => addChild(elem, child))
+		let $children = []
+		mapChildren(children, child => {
+			$children.push(child)
+			addChild(elem, child)
+		})
+		vnode.children = $children
 	}
 	return elem
 }
@@ -51,11 +56,5 @@ let create = vnode => {
 export default create
 
 export let addChild = (elem, child) => {
-	if (isArr(child)) {
-		return child.forEach(item => addChild(elem, item))
-	}
-	let childNode = create(child)
-	if (childNode !== undefined) {
-		appendChild(elem, childNode)
-	}
+	appendChild(elem, create(child))
 }

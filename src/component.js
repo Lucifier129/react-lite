@@ -42,15 +42,8 @@ let checkUnmount = (node, newNode) => {
 		return
 	}
 	let id = node.getAttribute(COMPONENT_ID)
-	if (!id) {
-		return
-	}
-	let component = components[id]
-	if (!component) {
-		return
-	}
 	// if newNode is existed, it must be calling replaceChild function
-	if (!newNode) {
+	if (id && !newNode) {
 		removeComponent(id)
 	}
 	let componentNodes = node.querySelectorAll(`[${ COMPONENT_ID }]`)
@@ -114,7 +107,12 @@ export class Component {
 		if (isFn(nextState)) {
 			nextState = nextState(state, props)
 		}
-		this.state = { ...this.state, ...nextState }
+		nextState = { ...this.state, ...nextState }
+		let shouldUpdate = this.shouldComponentUpdate(nextState, props)
+		this.state = nextState
+		if (!shouldUpdate) {
+			return
+		}
 		let updateView = () => {
 			this.forceUpdate()
 			if (isFn(callback)) {

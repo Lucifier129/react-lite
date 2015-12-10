@@ -2,6 +2,7 @@ import {
 	isStr,
 	isObj,
 	isFn,
+	isUndefined,
 	toArray,
 	setProps,
 	setStyleValue,
@@ -13,11 +14,13 @@ import {
 	removeChild,
 	replaceChild,
 	mergeProps,
-	removeProp
+	removeProp,
+	mapChildren
 } from './util'
 import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET, UPDATE } from './constant'
 import create, { addChild } from './create'
 import { updateComponent } from './component'
+import diff from './diff'
 
 /**
 * patch dom
@@ -55,13 +58,25 @@ let patch = (node, patches, parent) => {
 			toArray(node.childNodes).forEach(child => removeChild(node, child))
 			break
 		case CREATE:
-			patches.newChildren.forEach(child => addChild(node, child))
+			mapChildren(patches.newChildren, child => addChild(node, child))
 			break
 		case REPLACE:
-			let children = toArray(node.childNodes)
-			patches.childrenPatches.forEach((childPatches, index) => {
-				patch(children[index], childPatches, node)	
+			let childNodes = toArray(node.childNodes)
+			let children = vnode.children
+			let newChildren = newVnode.children
+			let $newChildren = []
+
+			mapChildren(newChildren, (newChild, i) => {
+				$newChildren.push(newChild)
+				let patches = diff(children[i], newChild)
+				patch(childNodes[i], patches, node)
 			})
+
+			while (node.childNodes.length > $newChildren.length) {
+				removeChild(node, node.lastChild)
+			}
+
+			newVnode.children = $newChildren
 			break
 	}
 
@@ -69,6 +84,7 @@ let patch = (node, patches, parent) => {
 }
 
 export default patch
+
 
 let patchProps = (node, props, newProps) => {
 	if (props == null && newProps) {
