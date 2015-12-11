@@ -374,6 +374,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			case key in elem:
 				elem[key] = value;
 				break;
+			case key === 'dangerouslySetInnerHTML':
+				elem.innerHTML = value.__html;
+				break;
 			default:
 				elem.setAttribute(key, value);
 		}
@@ -1057,6 +1060,11 @@ return /******/ (function(modules) { // webpackBootstrap
 						_util.removeProp(node, key);
 					} else {
 						node[key] = newValue;
+					}
+					break;
+				case key === 'dangerouslySetInnerHTML':
+					if (!value || value.__html !== newValue.__html) {
+						node.innerHTML = newValue.__html;
 					}
 					break;
 				default:

@@ -116,6 +116,11 @@ let patchProps = (node, props, newProps) => {
 					node[key] = newValue
 				}
 				break
+			case key === 'dangerouslySetInnerHTML':
+				if (!value || value.__html !== newValue.__html) {
+					node.innerHTML = newValue.__html
+				}
+				break
 			default:
 				if (newValue === undefined) {
 					removeAttr(node, key)

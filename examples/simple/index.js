@@ -75,8 +75,9 @@ const Counter = React.createClass({
 				{' '}
 				<button onClick={ () => COUNT('INCREMENT_IF_ODD') }>incrementIfOdd</button>
 				{' '}
-				<input type="text" ref="input" />
+				<label for="myinput">请输入数字: <input type="text" ref="input" id="myinput" name="myinput" /></label>
 				<button onClick={ this.getNum }>run</button>
+				<p dangerouslySetInnerHTML={{ __html: 'test dangerouslySetInnerHTML'}}></p>
 			</div>
 		)
 	}

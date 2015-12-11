@@ -198,6 +198,9 @@ export let setProp = (elem, key, value) => {
 		case key in elem:
 			elem[key] = value
 			break
+		case key === 'dangerouslySetInnerHTML':
+			elem.innerHTML = value.__html
+			break
 		default:
 			elem.setAttribute(key, value)
 	}
