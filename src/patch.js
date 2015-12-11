@@ -17,7 +17,8 @@ import {
 	removeProp,
 	mapChildren,
 	setAttr,
-	removeAttr
+	removeAttr,
+	collectRef
 } from 'util'
 import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET, UPDATE } from './constant'
 import create, { addChild } from './create'
@@ -87,6 +88,9 @@ let patchProps = (node, props, newProps) => {
 		return setProps(node, newProps)
 	} else if (newProps == null && props) {
 		return Object.keys(props).each(key => removeProp(node, key))
+	}
+	if (newProps.ref) {
+		collectRef(newProps.ref, node)
 	}
 	Object.keys({ ...props, ...newProps }).forEach(key => {
 		let value = props[key]

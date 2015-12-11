@@ -57,7 +57,7 @@ const Counter = React.createClass({
 		console.log('unmount', 'Counter')
 	},
 	getNum(e) {
-		let num = parseInt(e.target.previousSibling.value, 10)
+		let num = parseInt(this.refs.input.value, 10)
 		if (typeof num === 'number') {
 			this.toNum(num)
 		}
@@ -67,7 +67,7 @@ const Counter = React.createClass({
 		let { COUNT } = props
 		return (
 			<div id="abc">
-				<span ref="efg" data-test="abaasdf">count: { props.count }</span>
+				<span ref={Math.random() > 0.5 ? '' : 'test-ref'} data-test="abaasdf">count: { props.count }</span>
 				{' '}
 				<button onClick={ () => COUNT('INCREMENT') }>+</button>
 				{' '}

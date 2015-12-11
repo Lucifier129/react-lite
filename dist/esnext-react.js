@@ -283,6 +283,43 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.$triggerOnce = $triggerOnce;
+	var componentId = undefined;
+	var $componentId = undefined;
+	var setComponentId = function setComponentId(id) {
+		$componentId = componentId;
+		componentId = id;
+	};
+	exports.setComponentId = setComponentId;
+	var resetComponentId = function resetComponentId() {
+		componentId = $componentId;
+	};
+
+	exports.resetComponentId = resetComponentId;
+	var refsStore = {};
+	var getDOMNode = function getDOMNode() {
+		return this;
+	};
+	var getRefs = function getRefs(id) {
+		var refs = refsStore[id] || {};
+		delete refsStore[id];
+		return refs;
+	};
+	exports.getRefs = getRefs;
+	var collectRef = function collectRef(key, value) {
+		if (!componentId) {
+			return;
+		}
+		var refs = refsStore[componentId];
+		if (!refs) {
+			refs = refsStore[componentId] = {};
+		}
+		if (value.nodeName) {
+			value.getDOMNode = getDOMNode;
+		}
+		refs[key] = value;
+	};
+
+	exports.collectRef = collectRef;
 	var setAttr = function setAttr(elem, key, value) {
 		elem.setAttribute(key, value);
 	};
@@ -321,7 +358,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.replaceChild = replaceChild;
 	var setProp = function setProp(elem, key, value) {
-		if (key === 'key') {
+		if (key === 'key' || key === 'ref') {
+			if (key === 'ref' && value) {
+				collectRef(value, elem);
+			}
 			return;
 		}
 		switch (true) {
@@ -512,16 +552,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _patch2 = _interopRequireDefault(_patch);
 
-	var lifeCycleStatus = true;
-	var lifeCycleStatusCache = undefined;
-	var setLifeCycleStatus = function setLifeCycleStatus(status) {
-		lifeCycleStatusCache = lifeCycleStatus;
-		lifeCycleStatus = status;
-	};
-	var resetLifeCycleStatus = function resetLifeCycleStatus() {
-		lifeCycleStatus = lifeCycleStatusCache;
-	};
-
 	function Component(props) {
 		this.$cache = {
 			keepSilent: false
@@ -592,9 +622,12 @@ return /******/ (function(modules) { // webpackBootstrap
 			this.componentWillUpdate(nextProps, nextState);
 			this.props = nextProps;
 			this.state = nextState;
+			_util.setComponentId(id);
 			var nextVnode = this.render();
 			var patches = _diff2['default'](vnode, nextVnode);
 			var newNode = _patch2['default'](node, patches);
+			_util.resetComponentId();
+			this.refs = _util.getRefs(id);
 			// update this.node, if component render new element
 			if (newNode !== node) {
 				_util.setAttr(newNode, _constant.COMPONENT_ID, id);
@@ -714,11 +747,17 @@ return /******/ (function(modules) { // webpackBootstrap
 		var id = component.$id = _util.getUid();
 		var $cache = component.$cache;
 
+		if (props.ref) {
+			_util.collectRef(props.ref, component);
+		}
 		component.componentWillMount();
 		component.state = $cache.nextState || component.state;
 		$cache.nextState = null;
 		var vnode = component.vnode = component.render();
+		_util.setComponentId(id);
 		var node = component.node = _create2['default'](vnode);
+		_util.resetComponentId();
+		component.refs = _util.getRefs(id);
 		var attr = _util.getAttr(node, _constant.COMPONENT_ID);
 		if (!attr) {
 			_util.setAttr(node, _constant.COMPONENT_ID, attr = id);
@@ -740,6 +779,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.initComponent = initComponent;
 	var updateComponent = function updateComponent(component, props) {
 		props = _extends({}, props, component.constructor.defaultProps);
+		if (props.ref) {
+			_util.collectRef(props.ref, component);
+		}
 		var $cache = component.$cache;
 
 		$cache.keepSilent = true;
@@ -989,6 +1031,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			return Object.keys(props).each(function (key) {
 				return _util.removeProp(node, key);
 			});
+		}
+		if (newProps.ref) {
+			_util.collectRef(newProps.ref, node);
 		}
 		Object.keys(_extends({}, props, newProps)).forEach(function (key) {
 			var value = props[key];

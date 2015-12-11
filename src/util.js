@@ -78,6 +78,37 @@ export let $triggerOnce = (name, ...args) => {
 	}
 }
 
+let componentId
+let $componentId
+export let setComponentId = id => {
+	$componentId = componentId
+	componentId = id
+}
+export let resetComponentId = () => {
+	componentId = $componentId
+}
+
+let refsStore = {}
+let getDOMNode = function() { return this }
+export let getRefs = id => {
+	let refs = refsStore[id] || {}
+	delete refsStore[id]
+	return refs
+}
+export let collectRef = (key, value) => {
+	if (!componentId) {
+		return
+	}
+	let refs = refsStore[componentId]
+	if (!refs) {
+		refs = refsStore[componentId] = {}
+	}
+	if (value.nodeName) {
+		value.getDOMNode = getDOMNode
+	}
+	refs[key] = value
+}
+
 export let setAttr = (elem, key, value) => {
 	elem.setAttribute(key, value)
 }
@@ -109,7 +140,10 @@ export let replaceChild = (node, newChild, child) => {
 }
 
 export let setProp = (elem, key, value) => {
-	if (key === 'key') {
+	if (key === 'key' || key === 'ref') {
+		if (key === 'ref' && value) {
+			collectRef(value, elem)
+		}
 		return
 	}
 	switch (true) {
