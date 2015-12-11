@@ -13,7 +13,11 @@ import {
 	nextFrame,
 	setAttr,
 	getAttr,
-	querySelectorAll
+	querySelectorAll,
+	setComponentId,
+	resetComponentId,
+	getRefs,
+	collectRef
 } from 'util'
 import {
 	WIDGET,
@@ -25,17 +29,6 @@ import {
 import create from './create'
 import diff from './diff'
 import patch from './patch'
-
-
-let lifeCycleStatus = true
-let lifeCycleStatusCache
-let setLifeCycleStatus = status => {
-	lifeCycleStatusCache = lifeCycleStatus
-	lifeCycleStatus = status
-}
-let resetLifeCycleStatus = () => {
-	lifeCycleStatus = lifeCycleStatusCache
-}
 
 export function Component(props) {
 	this.$cache = {
@@ -94,9 +87,12 @@ Component.prototype = {
 		this.componentWillUpdate(nextProps, nextState)
 		this.props = nextProps
 		this.state = nextState
+		setComponentId(id)
 		let nextVnode = this.render()
 		let patches = diff(vnode, nextVnode)
 		let newNode = patch(node, patches)
+		resetComponentId()
+		this.refs = getRefs(id)
 		// update this.node, if component render new element
 		if (newNode !== node) {
 			setAttr(newNode, COMPONENT_ID, id)
@@ -207,11 +203,17 @@ export let initComponent = (Component, props) => {
 	let component = new Component(props)
 	let id = component.$id = getUid()
 	let { $cache } = component
+	if (props.ref) {
+		collectRef(props.ref, component)
+	}
 	component.componentWillMount()
 	component.state = $cache.nextState || component.state
 	$cache.nextState = null
 	let vnode = component.vnode = component.render()
+	setComponentId(id)
 	let node = component.node = create(vnode)
+	resetComponentId()
+	component.refs = getRefs(id)
 	let attr = getAttr(node, COMPONENT_ID)
 	if (!attr) {
 		setAttr(node, COMPONENT_ID, attr = id)
@@ -232,6 +234,9 @@ export let initComponent = (Component, props) => {
 
 export let updateComponent = (component, props) => {
 	props = { ...props, ...component.constructor.defaultProps }
+	if (props.ref) {
+		collectRef(props.ref, component)
+	}
 	let { $cache } = component
 	$cache.keepSilent = true
 	component.componentWillReceiveProps(props)

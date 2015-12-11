@@ -115,7 +115,7 @@
 			console.log('unmount', 'Counter');
 		},
 		getNum: function getNum(e) {
-			var num = parseInt(e.target.previousSibling.value, 10);
+			var num = parseInt(this.refs.input.value, 10);
 			if (typeof num === 'number') {
 				this.toNum(num);
 			}
@@ -129,7 +129,7 @@
 				{ id: 'abc' },
 				React.createElement(
 					'span',
-					{ ref: 'efg', 'data-test': 'abaasdf' },
+					{ ref: Math.random() > 0.5 ? '' : 'test-ref', 'data-test': 'abaasdf' },
 					'count: ',
 					props.count
 				),
