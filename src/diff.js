@@ -10,7 +10,7 @@ import {
 	mapChildren,
 	hasKey,
 	collectChildren
-} from './util'
+} from 'util'
 import { CREATE, REMOVE, REPLACE, PROPS, UPDATE } from './constant'
 
 /**

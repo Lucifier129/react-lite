@@ -1,3 +1,5 @@
+import $ from 'jquery'
+
 import { WILL_UNMOUNT } from './constant'
 
 //types.js
@@ -16,7 +18,46 @@ export let pipe = (fn1, fn2) => function(...args) {
 	return fn2.apply(this, args)
 }
 
-export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
+let arrayPrototype = Array.prototype
+let objectPrototype = Object.prototype
+
+if (!arrayPrototype.forEach) {
+	arrayPrototype.forEach = function(callback) {
+		$.each(this, (i, value) => callback(value, i, this))
+	}
+}
+
+if (!Object.create) {
+	Object.create = proto => {
+		let Fn = function() {}
+		Fn.prototype = proto
+		return new Fn()
+	}
+}
+
+if (!Object.keys) {
+	Object.keys = obj => {
+		let keys = []
+		$.each(obj, key => keys.push(key))
+		return keys
+	}
+}
+
+if (!Function.prototype.bind) {
+	Function.prototype.bind = function(context, ...initArgs) {
+		return (...args) => this.apply(context, initArgs.concat(args))
+	}
+}
+
+
+
+export let toArray = Array.from || (obj => {
+	let list = []
+	for (let i = 0, len = obj.length; i < len; i++) {
+		list.push(obj[i])
+	}
+	return list
+})
 export let nextFrame = isFn(window.requestAnimationFrame)
 	? fn => requestAnimationFrame(fn)
 	: fn => setTimeout(fn, 100 / 6)
@@ -79,19 +120,19 @@ export let $triggerOnce = (name, ...args) => {
 }
 
 export let setAttr = (elem, key, value) => {
-	elem.setAttribute(key, value)
+	$.fn.attr.call([elem], key, value)
 }
 
 export let getAttr = (elem, key) => {
-	return elem.getAttribute(key)
+	return $.fn.attr.call([elem], key)
 }
 
 export let removeAttr = (elem, key) => {
-	elem.removeAttribute(key)
+	$.fn.removeAttr.call([elem], key)
 }
 
 export let querySelectorAll = (elem, selector) => {
-	return elem.querySelectorAll(selector)
+	return $(selector, elem)
 }
 
 export let appendChild = (node, child) => {
@@ -161,19 +202,26 @@ export let removeProp = (elem, key) => {
 
 export let setEvent = (elem, key, value) => {
 	key = key.toLowerCase()
-	elem[key] = value
-	if (key === 'onchange' && !elem.oninput) {
-		elem.oninput = value
-		value.oninput = true
+	let $elem = $(elem)
+	$elem.off(`${key.substr(2)}.react`)
+	$elem.on(`${key.substr(2)}.react`, value)
+	if (key === 'onchange') {
+		$elem.off('propertychange.react')
+		$elem.on('propertychange.react', e => {
+			if (e.propertyName === 'value') {
+				value.call(elem, e)
+			}
+		})
 	}
 }
 
 export let removeEvent = (elem, key) => {
 	key = key.toLowerCase()
-	if (isFn(elem[key]) && elem[key].oninput) {
-		elem.oninput = null
+	let $elem = $(elem)
+	$elem.off(`${key.substr(2)}.react`)
+	if (key === 'onchange') {
+		$elem.off('propertychange.react')
 	}
-	elem[key] = null
 }
 
 

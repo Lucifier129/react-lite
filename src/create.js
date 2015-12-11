@@ -11,7 +11,7 @@ import {
 	appendChild,
 	mergeProps,
 	mapChildren
-} from './util'
+} from 'util'
 import { WIDGET, WILL_MOUNT, DID_MOUNT } from './constant'
 import { initComponent } from './component'
 

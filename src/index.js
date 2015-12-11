@@ -35,7 +35,6 @@ export default {
 	render,
 	findDOMNode,
 	PropTypes,
-	unmount,
 	unmountComponentAtNode: unmount,
 	createElement
 }
