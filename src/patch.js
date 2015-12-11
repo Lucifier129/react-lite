@@ -15,8 +15,10 @@ import {
 	replaceChild,
 	mergeProps,
 	removeProp,
-	mapChildren
-} from './util'
+	mapChildren,
+	setAttr,
+	removeAttr
+} from 'util'
 import { CREATE, REMOVE, REORDER, REPLACE, INSERT, PROPS, WIDGET, UPDATE } from './constant'
 import create, { addChild } from './create'
 import { updateComponent } from './component'
@@ -112,9 +114,9 @@ let patchProps = (node, props, newProps) => {
 				break
 			default:
 				if (newValue === undefined) {
-					node.removeAttribute(key)
+					removeAttr(node, key)
 				} else {
-					node.setAttribute(key, newValue)
+					setAttr(node, key, newValue)
 				}
 		}
 	})

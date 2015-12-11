@@ -8,9 +8,11 @@
     "test": "mocha --compilers js:babel/register --recursive",
     "test:watch": "npm test -- --watch",
     "build:lib": "babel src --out-dir lib",
+    "build:es3": "set BROWSER_ENV=es3&& webpack src/index.js dist/jquery-react.js --config webpack.config.development.js",
+    "build:es3:min": "set BROWSER_ENV=es3&& webpack src/index.js dist/jquery-react.min.js --config webpack.config.production.js",
     "build:umd": "webpack src/index.js dist/esnext-react.js --config webpack.config.development.js",
     "build:umd:min": "webpack src/index.js dist/esnext-react.min.js --config webpack.config.production.js",
-    "build": "npm run build:lib && npm run build:umd && npm run build:umd:min",
+    "build": "npm run build:lib && npm run build:umd && npm run build:umd:min && npm run build:es3 && npm run build:es3:min",
     "prepublish": "npm run build"
   },
   "repository": {
