@@ -214,19 +214,22 @@ export let setProps = (elem, props) => {
 
 export let isEventKey = key => /^on/.test(key)
 
+
 export let removeProp = (elem, key) => {
-	let oldValue = elem[key]
 	switch (true) {
 		case isEventKey(key):
 			removeEvent(elem, key)
 			break
-		case isFn(oldValue):
+		case !(key in elem):
+			removeAttr(elem, key)
+			break
+		case isFn(elem[key]):
 			elem[key] = null
 			break
-		case isStr(oldValue):
+		case isStr(elem[key]):
 			elem[key] = ''
 			break
-		case isBln(oldValue):
+		case isBln(elem[key]):
 			elem[key] = false
 			break
 		default:

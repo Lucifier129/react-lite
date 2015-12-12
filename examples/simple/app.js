@@ -161,7 +161,7 @@
 				React.createElement(
 					'label',
 					{ 'for': 'myinput' },
-					'请输入数字: ',
+					'input number:',
 					React.createElement('input', { type: 'text', ref: 'input', id: 'myinput', name: 'myinput' })
 				),
 				React.createElement(
@@ -169,7 +169,7 @@
 					{ onClick: this.getNum },
 					'run'
 				),
-				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML' } })
+				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } })
 			);
 		}
 	});

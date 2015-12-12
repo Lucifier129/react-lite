@@ -157,7 +157,9 @@ export let setProp = (elem, key, value) => {
 			elem[key] = value
 			break
 		case key === 'dangerouslySetInnerHTML':
-			elem.innerHTML = value.__html
+			if (elem.innerHTML !== value.__html) {
+				elem.innerHTML = value.__html
+			}
 			break
 		default:
 			elem.setAttribute(key, value)
@@ -173,18 +175,20 @@ export let setProps = (elem, props) => {
 export let isEventKey = key => /^on/.test(key)
 
 export let removeProp = (elem, key) => {
-	let oldValue = elem[key]
 	switch (true) {
 		case isEventKey(key):
 			removeEvent(elem, key)
 			break
-		case isFn(oldValue):
+		case !(key in elem):
+			removeAttr(elem, key)
+			break
+		case isFn(elem[key]):
 			elem[key] = null
 			break
-		case isStr(oldValue):
+		case isStr(elem[key]):
 			elem[key] = ''
 			break
-		case isBln(oldValue):
+		case isBln(elem[key]):
 			elem[key] = false
 			break
 		default:

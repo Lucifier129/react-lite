@@ -375,7 +375,9 @@ return /******/ (function(modules) { // webpackBootstrap
 				elem[key] = value;
 				break;
 			case key === 'dangerouslySetInnerHTML':
-				elem.innerHTML = value.__html;
+				if (elem.innerHTML !== value.__html) {
+					elem.innerHTML = value.__html;
+				}
 				break;
 			default:
 				elem.setAttribute(key, value);
@@ -397,18 +399,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.isEventKey = isEventKey;
 	var removeProp = function removeProp(elem, key) {
-		var oldValue = elem[key];
 		switch (true) {
 			case isEventKey(key):
 				removeEvent(elem, key);
 				break;
-			case isFn(oldValue):
+			case !(key in elem):
+				removeAttr(elem, key);
+				break;
+			case isFn(elem[key]):
 				elem[key] = null;
 				break;
-			case isStr(oldValue):
+			case isStr(elem[key]):
 				elem[key] = '';
 				break;
-			case isBln(oldValue):
+			case isBln(elem[key]):
 				elem[key] = false;
 				break;
 			default:
@@ -917,8 +921,12 @@ return /******/ (function(modules) { // webpackBootstrap
 				break;
 		}
 		if (!type || type === _constant.PROPS) {
-			var childrenType = diffChildren(vnode.children, newVnode.children);
-			return { type: type, vnode: vnode, newVnode: newVnode, childrenType: childrenType };
+			if (vnode.props && vnode.props.dangerouslySetInnerHTML || newVnode.props && newVnode.props.dangerouslySetInnerHTML) {
+				//pass
+			} else {
+					var childrenType = diffChildren(vnode.children, newVnode.children);
+					return { type: type, vnode: vnode, newVnode: newVnode, childrenType: childrenType };
+				}
 		}
 		return type ? { type: type, vnode: vnode, newVnode: newVnode } : null;
 	};
@@ -1035,46 +1043,30 @@ return /******/ (function(modules) { // webpackBootstrap
 				return _util.removeProp(node, key);
 			});
 		}
-		if (newProps.ref) {
-			_util.collectRef(newProps.ref, node);
+
+		for (var key in newProps) {
+			if (!newProps.hasOwnProperty(key)) {
+				continue;
+			}
+			var _newValue = newProps[key];
+			if (_util.isUndefined(_newValue)) {
+				_util.removeProp(node, key);
+			} else if (_newValue !== props[key]) {
+				_util.setProp(node, key, _newValue);
+			} else if (key === 'ref' && _newValue) {
+				_util.collectRef(_newValue, node);
+			}
+			delete props[key];
 		}
-		Object.keys(_extends({}, props, newProps)).forEach(function (key) {
-			var value = props[key];
-			var newValue = newProps[key];
-			if (newValue === value || key === 'key') {
-				return;
+
+		for (var key in props) {
+			if (!props.hasOwnProperty(key)) {
+				continue;
 			}
-			switch (true) {
-				case key === 'style':
-					patchStyle(node, props.style, newProps.style);
-					break;
-				case _util.isEventKey(key):
-					if (!_util.isFn(newValue)) {
-						_util.removeEvent(node, key);
-					} else {
-						_util.setEvent(node, key, newValue);
-					}
-					break;
-				case key in node:
-					if (newValue === undefined) {
-						_util.removeProp(node, key);
-					} else {
-						node[key] = newValue;
-					}
-					break;
-				case key === 'dangerouslySetInnerHTML':
-					if (!value || value.__html !== newValue.__html) {
-						node.innerHTML = newValue.__html;
-					}
-					break;
-				default:
-					if (newValue === undefined) {
-						_util.removeAttr(node, key);
-					} else {
-						_util.setAttr(node, key, newValue);
-					}
+			if (_util.isUndefined(newValue[key])) {
+				_util.removeProp(node, key);
 			}
-		});
+		}
 	};
 
 	var patchStyle = function patchStyle(node, style, newStyle) {

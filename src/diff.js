@@ -46,8 +46,13 @@ let diff = (vnode, newVnode) => {
 			break
 	}
 	if (!type || type === PROPS) {
-		let childrenType = diffChildren(vnode.children, newVnode.children)
-		return { type, vnode, newVnode, childrenType }
+		if (vnode.props && vnode.props.dangerouslySetInnerHTML || newVnode.props && newVnode.props.dangerouslySetInnerHTML) {
+			//pass
+		} else {
+			let childrenType = diffChildren(vnode.children, newVnode.children)
+			return { type, vnode, newVnode, childrenType }
+		}
+		
 	}
 	return type ? { type, vnode, newVnode } : null
 }
