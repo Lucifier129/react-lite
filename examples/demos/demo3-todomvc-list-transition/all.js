@@ -348,6 +348,43 @@
 				};
 	
 				exports.$triggerOnce = $triggerOnce;
+				var componentId = undefined;
+				var $componentId = undefined;
+				var setComponentId = function setComponentId(id) {
+					$componentId = componentId;
+					componentId = id;
+				};
+				exports.setComponentId = setComponentId;
+				var resetComponentId = function resetComponentId() {
+					componentId = $componentId;
+				};
+	
+				exports.resetComponentId = resetComponentId;
+				var refsStore = {};
+				var getDOMNode = function getDOMNode() {
+					return this;
+				};
+				var getRefs = function getRefs(id) {
+					var refs = refsStore[id] || {};
+					delete refsStore[id];
+					return refs;
+				};
+				exports.getRefs = getRefs;
+				var collectRef = function collectRef(key, value) {
+					if (!componentId) {
+						return;
+					}
+					var refs = refsStore[componentId];
+					if (!refs) {
+						refs = refsStore[componentId] = {};
+					}
+					if (value.nodeName) {
+						value.getDOMNode = getDOMNode;
+					}
+					refs[key] = value;
+				};
+	
+				exports.collectRef = collectRef;
 				var setAttr = function setAttr(elem, key, value) {
 					elem.setAttribute(key, value);
 				};
@@ -386,7 +423,10 @@
 	
 				exports.replaceChild = replaceChild;
 				var setProp = function setProp(elem, key, value) {
-					if (key === 'key') {
+					if (key === 'key' || key === 'ref') {
+						if (key === 'ref' && value) {
+							collectRef(value, elem);
+						}
 						return;
 					}
 					switch (true) {
@@ -398,6 +438,11 @@
 							break;
 						case key in elem:
 							elem[key] = value;
+							break;
+						case key === 'dangerouslySetInnerHTML':
+							if (elem.innerHTML !== value.__html) {
+								elem.innerHTML = value.__html;
+							}
 							break;
 						default:
 							elem.setAttribute(key, value);
@@ -419,18 +464,20 @@
 	
 				exports.isEventKey = isEventKey;
 				var removeProp = function removeProp(elem, key) {
-					var oldValue = elem[key];
 					switch (true) {
 						case isEventKey(key):
 							removeEvent(elem, key);
 							break;
-						case isFn(oldValue):
+						case !(key in elem):
+							removeAttr(elem, key);
+							break;
+						case isFn(elem[key]):
 							elem[key] = null;
 							break;
-						case isStr(oldValue):
+						case isStr(elem[key]):
 							elem[key] = '';
 							break;
-						case isBln(oldValue):
+						case isBln(elem[key]):
 							elem[key] = false;
 							break;
 						default:
@@ -588,16 +635,6 @@
 	
 				var _patch2 = _interopRequireDefault(_patch);
 	
-				var lifeCycleStatus = true;
-				var lifeCycleStatusCache = undefined;
-				var setLifeCycleStatus = function setLifeCycleStatus(status) {
-					lifeCycleStatusCache = lifeCycleStatus;
-					lifeCycleStatus = status;
-				};
-				var resetLifeCycleStatus = function resetLifeCycleStatus() {
-					lifeCycleStatus = lifeCycleStatusCache;
-				};
-	
 				function Component(props) {
 					this.$cache = {
 						keepSilent: false
@@ -668,9 +705,12 @@
 						this.componentWillUpdate(nextProps, nextState);
 						this.props = nextProps;
 						this.state = nextState;
+						_util.setComponentId(id);
 						var nextVnode = this.render();
 						var patches = _diff2['default'](vnode, nextVnode);
 						var newNode = _patch2['default'](node, patches);
+						_util.resetComponentId();
+						this.refs = _util.getRefs(id);
 						// update this.node, if component render new element
 						if (newNode !== node) {
 							_util.setAttr(newNode, _constant.COMPONENT_ID, id);
@@ -790,11 +830,17 @@
 					var id = component.$id = _util.getUid();
 					var $cache = component.$cache;
 	
+					if (props.ref) {
+						_util.collectRef(props.ref, component);
+					}
 					component.componentWillMount();
 					component.state = $cache.nextState || component.state;
 					$cache.nextState = null;
 					var vnode = component.vnode = component.render();
+					_util.setComponentId(id);
 					var node = component.node = _create2['default'](vnode);
+					_util.resetComponentId();
+					component.refs = _util.getRefs(id);
 					var attr = _util.getAttr(node, _constant.COMPONENT_ID);
 					if (!attr) {
 						_util.setAttr(node, _constant.COMPONENT_ID, attr = id);
@@ -816,6 +862,9 @@
 				exports.initComponent = initComponent;
 				var updateComponent = function updateComponent(component, props) {
 					props = _extends({}, props, component.constructor.defaultProps);
+					if (props.ref) {
+						_util.collectRef(props.ref, component);
+					}
 					var $cache = component.$cache;
 	
 					$cache.keepSilent = true;
@@ -950,8 +999,12 @@
 							break;
 					}
 					if (!type || type === _constant.PROPS) {
-						var childrenType = diffChildren(vnode.children, newVnode.children);
-						return { type: type, vnode: vnode, newVnode: newVnode, childrenType: childrenType };
+						if (vnode.props && vnode.props.dangerouslySetInnerHTML || newVnode.props && newVnode.props.dangerouslySetInnerHTML) {
+							//pass
+						} else {
+								var childrenType = diffChildren(vnode.children, newVnode.children);
+								return { type: type, vnode: vnode, newVnode: newVnode, childrenType: childrenType };
+							}
 					}
 					return type ? { type: type, vnode: vnode, newVnode: newVnode } : null;
 				};
@@ -1079,38 +1132,30 @@
 							return _util.removeProp(node, key);
 						});
 					}
-					Object.keys(_extends({}, props, newProps)).forEach(function (key) {
-						var value = props[key];
-						var newValue = newProps[key];
-						if (newValue === value || key === 'key') {
-							return;
+	
+					for (var key in newProps) {
+						if (!newProps.hasOwnProperty(key)) {
+							continue;
 						}
-						switch (true) {
-							case key === 'style':
-								patchStyle(node, props.style, newProps.style);
-								break;
-							case _util.isEventKey(key):
-								if (!_util.isFn(newValue)) {
-									_util.removeEvent(node, key);
-								} else {
-									_util.setEvent(node, key, newValue);
-								}
-								break;
-							case key in node:
-								if (newValue === undefined) {
-									_util.removeProp(node, key);
-								} else {
-									node[key] = newValue;
-								}
-								break;
-							default:
-								if (newValue === undefined) {
-									_util.removeAttr(node, key);
-								} else {
-									_util.setAttr(node, key, newValue);
-								}
+						var _newValue = newProps[key];
+						if (_util.isUndefined(_newValue)) {
+							_util.removeProp(node, key);
+						} else if (_newValue !== props[key]) {
+							_util.setProp(node, key, _newValue);
+						} else if (key === 'ref' && _newValue) {
+							_util.collectRef(_newValue, node);
 						}
-					});
+						delete props[key];
+					}
+	
+					for (var key in props) {
+						if (!props.hasOwnProperty(key)) {
+							continue;
+						}
+						if (_util.isUndefined(newValue[key])) {
+							_util.removeProp(node, key);
+						}
+					}
 				};
 	
 				var patchStyle = function patchStyle(node, style, newStyle) {
@@ -2016,7 +2061,6 @@
 	        indexB = _x5,
 	        onRemove = _x6,
 	        accum = _x7;
-	    endA = endB = keyA = keyB = fill = fill = undefined;
 	    _again = false;
 	
 	    var endA = indexA === arrA.length;
@@ -2039,6 +2083,7 @@
 	      _x6 = onRemove;
 	      _x7 = accum;
 	      _again = true;
+	      endA = endB = keyA = keyB = undefined;
 	      continue _function;
 	    }
 	
@@ -2055,6 +2100,7 @@
 	      _x6 = onRemove;
 	      _x7 = accum;
 	      _again = true;
+	      endA = endB = keyA = keyB = fill = undefined;
 	      continue _function;
 	    }
 	
@@ -2068,6 +2114,7 @@
 	      _x6 = onRemove;
 	      _x7 = accum;
 	      _again = true;
+	      endA = endB = keyA = keyB = fill = undefined;
 	      continue _function;
 	    }
 	
@@ -2084,6 +2131,7 @@
 	      _x6 = onRemove;
 	      _x7 = accum;
 	      _again = true;
+	      endA = endB = keyA = keyB = fill = fill = undefined;
 	      continue _function;
 	    }
 	
@@ -2095,6 +2143,7 @@
 	    _x6 = onRemove;
 	    _x7 = accum;
 	    _again = true;
+	    endA = endB = keyA = keyB = fill = fill = undefined;
 	    continue _function;
 	  }
 	}
@@ -2791,6 +2840,7 @@
 	                    ),
 	                    _react2['default'].createElement('button', {
 	                      className: 'destroy',
+	                      'data-date': date,
 	                      onClick: _this.handleDestroy.bind(null, date)
 	                    })
 	                  )

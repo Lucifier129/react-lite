@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("jquery"));
+		module.exports = factory();
 	else if(typeof define === 'function' && define.amd)
-		define(["jquery"], factory);
+		define([], factory);
 	else if(typeof exports === 'object')
-		exports["React"] = factory(require("jquery"));
+		exports["React"] = factory();
 	else
-		root["React"] = factory(root["jQuery"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_9__) {
+		root["React"] = factory();
+})(this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -145,12 +145,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.__esModule = true;
 
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-	var _jquery = __webpack_require__(9);
-
-	var _jquery2 = _interopRequireDefault(_jquery);
-
 	var _constant = __webpack_require__(1);
 
 	//types.js
@@ -196,61 +190,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.pipe = pipe;
-	var arrayPrototype = Array.prototype;
-	var objectPrototype = Object.prototype;
-
-	if (!arrayPrototype.forEach) {
-		arrayPrototype.forEach = function (callback) {
-			var _this = this;
-
-			_jquery2['default'].each(this, function (i, value) {
-				return callback(value, i, _this);
-			});
-		};
-	}
-
-	if (!Object.create) {
-		Object.create = function (proto) {
-			var Fn = function Fn() {};
-			Fn.prototype = proto;
-			return new Fn();
-		};
-	}
-
-	if (!Object.keys) {
-		Object.keys = function (obj) {
-			var keys = [];
-			_jquery2['default'].each(obj, function (key) {
-				return keys.push(key);
-			});
-			return keys;
-		};
-	}
-
-	if (!Function.prototype.bind) {
-		Function.prototype.bind = function (context) {
-			var _this2 = this;
-
-			for (var _len2 = arguments.length, initArgs = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-				initArgs[_key2 - 1] = arguments[_key2];
-			}
-
-			return function () {
-				for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-					args[_key3] = arguments[_key3];
-				}
-
-				return _this2.apply(context, initArgs.concat(args));
-			};
-		};
-	}
-
 	var toArray = Array.from || function (obj) {
-		var list = [];
-		for (var i = 0, len = obj.length; i < len; i++) {
-			list.push(obj[i]);
-		}
-		return list;
+		return Array.prototype.slice.call(obj);
 	};
 	exports.toArray = toArray;
 	var nextFrame = isFn(window.requestAnimationFrame) ? function (fn) {
@@ -315,8 +256,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	// }
 
 	var $trigger = function $trigger(name) {
-		for (var _len4 = arguments.length, args = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
-			args[_key4 - 1] = arguments[_key4];
+		for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+			args[_key2 - 1] = arguments[_key2];
 		}
 
 		if (isArr($events[name])) {
@@ -328,8 +269,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.$trigger = $trigger;
 	var $triggerOnce = function $triggerOnce(name) {
-		for (var _len5 = arguments.length, args = Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
-			args[_key5 - 1] = arguments[_key5];
+		for (var _len3 = arguments.length, args = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+			args[_key3 - 1] = arguments[_key3];
 		}
 
 		var events = $events[name];
@@ -380,22 +321,22 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.collectRef = collectRef;
 	var setAttr = function setAttr(elem, key, value) {
-		_jquery2['default'].fn.attr.call([elem], key, value);
+		elem.setAttribute(key, value);
 	};
 
 	exports.setAttr = setAttr;
 	var getAttr = function getAttr(elem, key) {
-		return _jquery2['default'].fn.attr.call([elem], key);
+		return elem.getAttribute(key);
 	};
 
 	exports.getAttr = getAttr;
 	var removeAttr = function removeAttr(elem, key) {
-		_jquery2['default'].fn.removeAttr.call([elem], key);
+		elem.removeAttribute(key);
 	};
 
 	exports.removeAttr = removeAttr;
 	var querySelectorAll = function querySelectorAll(elem, selector) {
-		return _jquery2['default'](selector, elem);
+		return elem.querySelectorAll(selector);
 	};
 
 	exports.querySelectorAll = querySelectorAll;
@@ -433,6 +374,11 @@ return /******/ (function(modules) { // webpackBootstrap
 			case key in elem:
 				elem[key] = value;
 				break;
+			case key === 'dangerouslySetInnerHTML':
+				if (elem.innerHTML !== value.__html) {
+					elem.innerHTML = value.__html;
+				}
+				break;
 			default:
 				elem.setAttribute(key, value);
 		}
@@ -453,18 +399,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.isEventKey = isEventKey;
 	var removeProp = function removeProp(elem, key) {
-		var oldValue = elem[key];
 		switch (true) {
 			case isEventKey(key):
 				removeEvent(elem, key);
 				break;
-			case isFn(oldValue):
+			case !(key in elem):
+				removeAttr(elem, key);
+				break;
+			case isFn(elem[key]):
 				elem[key] = null;
 				break;
-			case isStr(oldValue):
+			case isStr(elem[key]):
 				elem[key] = '';
 				break;
-			case isBln(oldValue):
+			case isBln(elem[key]):
 				elem[key] = false;
 				break;
 			default:
@@ -479,27 +427,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.removeProp = removeProp;
 	var setEvent = function setEvent(elem, key, value) {
 		key = key.toLowerCase();
-		var $elem = _jquery2['default'](elem);
-		$elem.off(key.substr(2) + '.react');
-		$elem.on(key.substr(2) + '.react', value);
-		if (key === 'onchange') {
-			$elem.off('propertychange.react');
-			$elem.on('propertychange.react', function (e) {
-				if (e.propertyName === 'value') {
-					value.call(elem, e);
-				}
-			});
+		elem[key] = value;
+		if (key === 'onchange' && !elem.oninput) {
+			elem.oninput = value;
+			value.oninput = true;
 		}
 	};
 
 	exports.setEvent = setEvent;
 	var removeEvent = function removeEvent(elem, key) {
 		key = key.toLowerCase();
-		var $elem = _jquery2['default'](elem);
-		$elem.off(key.substr(2) + '.react');
-		if (key === 'onchange') {
-			$elem.off('propertychange.react');
+		if (isFn(elem[key]) && elem[key].oninput) {
+			elem.oninput = null;
 		}
+		elem[key] = null;
 	};
 
 	exports.removeEvent = removeEvent;
@@ -980,8 +921,12 @@ return /******/ (function(modules) { // webpackBootstrap
 				break;
 		}
 		if (!type || type === _constant.PROPS) {
-			var childrenType = diffChildren(vnode.children, newVnode.children);
-			return { type: type, vnode: vnode, newVnode: newVnode, childrenType: childrenType };
+			if (vnode.props && vnode.props.dangerouslySetInnerHTML || newVnode.props && newVnode.props.dangerouslySetInnerHTML) {
+				//pass
+			} else {
+					var childrenType = diffChildren(vnode.children, newVnode.children);
+					return { type: type, vnode: vnode, newVnode: newVnode, childrenType: childrenType };
+				}
 		}
 		return type ? { type: type, vnode: vnode, newVnode: newVnode } : null;
 	};
@@ -1098,41 +1043,30 @@ return /******/ (function(modules) { // webpackBootstrap
 				return _util.removeProp(node, key);
 			});
 		}
-		if (newProps.ref) {
-			_util.collectRef(newProps.ref, node);
+
+		for (var key in newProps) {
+			if (!newProps.hasOwnProperty(key)) {
+				continue;
+			}
+			var _newValue = newProps[key];
+			if (_util.isUndefined(_newValue)) {
+				_util.removeProp(node, key);
+			} else if (_newValue !== props[key]) {
+				_util.setProp(node, key, _newValue);
+			} else if (key === 'ref' && _newValue) {
+				_util.collectRef(_newValue, node);
+			}
+			delete props[key];
 		}
-		Object.keys(_extends({}, props, newProps)).forEach(function (key) {
-			var value = props[key];
-			var newValue = newProps[key];
-			if (newValue === value || key === 'key') {
-				return;
+
+		for (var key in props) {
+			if (!props.hasOwnProperty(key)) {
+				continue;
 			}
-			switch (true) {
-				case key === 'style':
-					patchStyle(node, props.style, newProps.style);
-					break;
-				case _util.isEventKey(key):
-					if (!_util.isFn(newValue)) {
-						_util.removeEvent(node, key);
-					} else {
-						_util.setEvent(node, key, newValue);
-					}
-					break;
-				case key in node:
-					if (newValue === undefined) {
-						_util.removeProp(node, key);
-					} else {
-						node[key] = newValue;
-					}
-					break;
-				default:
-					if (newValue === undefined) {
-						_util.removeAttr(node, key);
-					} else {
-						_util.setAttr(node, key, newValue);
-					}
+			if (_util.isUndefined(newValue[key])) {
+				_util.removeProp(node, key);
 			}
-		});
+		}
 	};
 
 	var patchStyle = function patchStyle(node, style, newStyle) {
@@ -1229,12 +1163,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	};
 	exports.unmount = unmount;
-
-/***/ },
-/* 9 */
-/***/ function(module, exports) {
-
-	module.exports = __WEBPACK_EXTERNAL_MODULE_9__;
 
 /***/ }
 /******/ ])

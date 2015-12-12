@@ -4,6 +4,7 @@ import {
 	isFn,
 	isUndefined,
 	toArray,
+	setProp,
 	setProps,
 	setStyleValue,
 	removeProps,
@@ -89,41 +90,30 @@ let patchProps = (node, props, newProps) => {
 	} else if (newProps == null && props) {
 		return Object.keys(props).each(key => removeProp(node, key))
 	}
-	if (newProps.ref) {
-		collectRef(newProps.ref, node)
-	}
-	Object.keys({ ...props, ...newProps }).forEach(key => {
-		let value = props[key]
+
+	for (let key in newProps) {
+		if (!newProps.hasOwnProperty(key)) {
+			continue
+		}
 		let newValue = newProps[key]
-		if (newValue === value || key === 'key') {
-			return
+		if (isUndefined(newValue)) {
+			removeProp(node, key)
+		} else if (newValue !== props[key]) {
+			setProp(node, key, newValue)
+		} else if (key === 'ref' && newValue) {
+			collectRef(newValue, node)
 		}
-		switch (true) {
-			case key === 'style':
-				patchStyle(node, props.style, newProps.style)
-				break
-			case isEventKey(key):
-				if (!isFn(newValue)) {
-					removeEvent(node, key)
-				} else {
-					setEvent(node, key, newValue)
-				}
-				break
-			case key in node:
-				if (newValue === undefined) {
-					removeProp(node, key)
-				} else {
-					node[key] = newValue
-				}
-				break
-			default:
-				if (newValue === undefined) {
-					removeAttr(node, key)
-				} else {
-					setAttr(node, key, newValue)
-				}
+		delete props[key]
+	}
+
+	for (let key in props) {
+		if (!props.hasOwnProperty(key)) {
+			continue
 		}
-	})
+		if (isUndefined(newValue[key])) {
+			removeProp(node, key)
+		}
+	}
 }
 
 let patchStyle = (node, style, newStyle) => {

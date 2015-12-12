@@ -75,8 +75,9 @@ const Counter = React.createClass({
 				{' '}
 				<button onClick={ () => COUNT('INCREMENT_IF_ODD') }>incrementIfOdd</button>
 				{' '}
-				<input type="text" ref="input" />
+				<label for="myinput">input number:<input type="text" ref="input" id="myinput" name="myinput" /></label>
 				<button onClick={ this.getNum }>run</button>
+				<p dangerouslySetInnerHTML={{ __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2)}}></p>
 			</div>
 		)
 	}

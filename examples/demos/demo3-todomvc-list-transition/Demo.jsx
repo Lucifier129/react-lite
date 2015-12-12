@@ -162,6 +162,7 @@ const Demo = React.createClass({
                         <label>{text}</label>
                         <button
                           className="destroy"
+                          data-date={date}
                           onClick={this.handleDestroy.bind(null, date)}
                         />
                       </div>
@@ -175,7 +176,9 @@ const Demo = React.createClass({
         <footer className="footer">
           <span className="todo-count">
             <strong>
-              {Object.keys(todos).filter(key => !todos[key].isDone).length}
+              {
+                Object.keys(todos).filter(key => !todos[key].isDone).length
+              }
             </strong> item left
           </span>
           <ul className="filters">
