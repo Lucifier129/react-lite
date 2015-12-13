@@ -1,6 +1,6 @@
-# esnext-react
+# react-lite
 React under 30k.
-esnext-react is an implementation of React that optimizes for small script size.
+react-lite is an implementation of React that optimizes for small script size.
 
 It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering. If you want to
