@@ -1,17 +1,11 @@
+import { CREATE, REMOVE, REPLACE, PROPS, UPDATE } from './constant'
 import {
-	isStr,
 	isObj,
-	isFn,
-	isArr,
-	isNum,
 	isUndefined,
-	isComponent,
 	isComponentClass,
 	mapChildren,
-	hasKey,
-	collectChildren
+	hasKey
 } from 'util'
-import { CREATE, REMOVE, REPLACE, PROPS, UPDATE } from './constant'
 
 /**
 * diff vnode and newVnode

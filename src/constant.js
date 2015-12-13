@@ -1,12 +1,14 @@
 /**
 * 常量
 */
-export const CREATE = 'CREATE'
-export const REMOVE = 'REMOVE'
-export const REORDER = 'REORDER'
-export const REPLACE = 'REPLACE'
-export const PROPS = 'PROPS'
-export const UPDATE = 'UPDATE'
-export const DID_MOUNT = 'DID_MOUNT'
-export const WILL_UNMOUNT = 'WILL_UNMOUNT'
-export const COMPONENT_ID = 'data-esnextid'
+export default {
+	CREATE: 1,
+	REMOVE: 2,
+	REORDER: 3,
+	REPLACE: 4,
+	PROPS: 5,
+	UPDATE: 6,
+	DID_MOUNT: 7,
+	WILL_UNMOUNT: 8,
+	COMPONENT_ID: 'data-esnextid'
+}

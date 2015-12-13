@@ -1,10 +1,6 @@
+import { initComponent } from './component'
 import {
-	isStr,
-	isFn,
 	isObj,
-	isArr,
-	isNum,
-	isBln,
 	isComponentClass,
 	isComponent,
 	setProps,
@@ -12,8 +8,6 @@ import {
 	mergeProps,
 	mapChildren
 } from 'util'
-import { WIDGET, WILL_MOUNT, DID_MOUNT } from './constant'
-import { initComponent } from './component'
 
 /**
 * 根据 tagName props attrs 创建 real-dom

@@ -75,13 +75,39 @@ const Counter = React.createClass({
 				{' '}
 				<button onClick={ () => COUNT('INCREMENT_IF_ODD') }>incrementIfOdd</button>
 				{' '}
-				<label for="myinput">input number:<input type="text" ref="input" id="myinput" name="myinput" /></label>
+				<label htmlFor="myinput">input number:<input type="text" ref="input" id="myinput" name="myinput" /></label>
 				<button onClick={ this.getNum }>run</button>
 				<p dangerouslySetInnerHTML={{ __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2)}}></p>
 			</div>
 		)
 	}
 })
+
+var Example = React.createClass({
+  getInitialState() {
+    return {
+      val: 0
+    };
+  },
+
+  componentDidMount() {
+    this.setState({val: this.state.val + 1});
+    console.log('didMount', this.state.val);    // log 1
+    this.setState({val: this.state.val + 1});
+    console.log('didMount', this.state.val);    // log 2
+
+    setTimeout(() => {
+      this.setState({val: this.state.val + 1});
+      console.log('setTimeout:', this.state.val);  // log 3
+      this.setState({val: this.state.val + 1});
+      console.log('setTimeout:', this.state.val);  // log 4
+    }, 0);
+  },
+
+  render() {
+    return <p>{this.state.val}</p>;
+  }
+});
 
 const Wrap = React.createClass({
 	getInitialState() {
@@ -104,22 +130,23 @@ const Wrap = React.createClass({
 			break
 		}
 		this.setState({ count })
+
 	},
 	componentWillMount() {
 		console.time('Wrap mount')
-		let state = this.state
-		this.setState({
-			count: this.props.count
-		})
-		console.log('componentWillMount:setState', state === this.state)
+		// let state = this.state
+		// this.setState({
+		// 	count: this.props.count
+		// })
+		// console.log('componentWillMount:setState', state === this.state)
 	},
 	componentDidMount() {
 		console.timeEnd('Wrap mount')
-		// let state = this.state
-		// this.setState({
-		// 	count: this.props.count * 2
-		// })
-		// console.log('componentDidMount:setState', state === this.state)
+		let state = this.state
+		this.setState({
+			count: this.props.count * 2
+		})
+		console.log('componentDidMount:setState', state === this.state)
 	},
 	componentWillUpdate() {
 		// debugger
@@ -146,7 +173,10 @@ const Wrap = React.createClass({
 		// let count = Math.random() > 0.5
 		// ? <Counter ref="counter" count={ this.state.count } COUNT={ this.COUNT } />
 		// : null
-		return <div><Counter ref="counter" count={ this.state.count } COUNT={ this.COUNT } /></div>
+		return <div>
+				<Counter ref="counter" count={ this.state.count } COUNT={ this.COUNT } />
+				<Example />
+			</div>
 	}
 })
 

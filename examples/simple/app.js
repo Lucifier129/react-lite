@@ -160,7 +160,7 @@
 				' ',
 				React.createElement(
 					'label',
-					{ 'for': 'myinput' },
+					{ htmlFor: 'myinput' },
 					'input number:',
 					React.createElement('input', { type: 'text', ref: 'input', id: 'myinput', name: 'myinput' })
 				),
@@ -170,6 +170,40 @@
 					'run'
 				),
 				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } })
+			);
+		}
+	});
+
+	var Example = React.createClass({
+		displayName: 'Example',
+
+		getInitialState: function getInitialState() {
+			return {
+				val: 0
+			};
+		},
+
+		componentDidMount: function componentDidMount() {
+			var _this2 = this;
+
+			this.setState({ val: this.state.val + 1 });
+			console.log('didMount', this.state.val); // log 1
+			this.setState({ val: this.state.val + 1 });
+			console.log('didMount', this.state.val); // log 2
+
+			setTimeout(function () {
+				_this2.setState({ val: _this2.state.val + 1 });
+				console.log('setTimeout:', _this2.state.val); // log 3
+				_this2.setState({ val: _this2.state.val + 1 });
+				console.log('setTimeout:', _this2.state.val); // log 4
+			}, 0);
+		},
+
+		render: function render() {
+			return React.createElement(
+				'p',
+				null,
+				this.state.val
 			);
 		}
 	});
@@ -201,19 +235,19 @@
 		},
 		componentWillMount: function componentWillMount() {
 			console.time('Wrap mount');
-			var state = this.state;
-			this.setState({
-				count: this.props.count
-			});
-			console.log('componentWillMount:setState', state === this.state);
+			// let state = this.state
+			// this.setState({
+			// 	count: this.props.count
+			// })
+			// console.log('componentWillMount:setState', state === this.state)
 		},
 		componentDidMount: function componentDidMount() {
 			console.timeEnd('Wrap mount');
-			// let state = this.state
-			// this.setState({
-			// 	count: this.props.count * 2
-			// })
-			// console.log('componentDidMount:setState', state === this.state)
+			var state = this.state;
+			this.setState({
+				count: this.props.count * 2
+			});
+			console.log('componentDidMount:setState', state === this.state);
 		},
 		componentWillUpdate: function componentWillUpdate() {
 			// debugger
@@ -243,7 +277,8 @@
 			return React.createElement(
 				'div',
 				null,
-				React.createElement(Counter, { ref: 'counter', count: this.state.count, COUNT: this.COUNT })
+				React.createElement(Counter, { ref: 'counter', count: this.state.count, COUNT: this.COUNT }),
+				React.createElement(Example, null)
 			);
 		}
 	});

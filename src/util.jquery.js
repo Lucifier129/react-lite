@@ -1,22 +1,5 @@
 import $ from 'jquery'
-
 import { WILL_UNMOUNT } from './constant'
-
-//types.js
-export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
-export let isObj = isType('Object')
-export let isStr = isType('String')
-export let isNum = isType('Number')
-export let isFn = isType('Function')
-export let isBln = isType('Boolean')
-export let isArr = Array.isArray || isType('Array')
-export let isComponent = obj => isFn(obj)
-export let isComponentClass = obj => isFn(obj) && isFn(obj.prototype.render)
-export let isUndefined = obj => obj === void 0
-export let pipe = (fn1, fn2) => function(...args) {
-	fn1.apply(this, args)
-	return fn2.apply(this, args)
-}
 
 let arrayPrototype = Array.prototype
 let objectPrototype = Object.prototype
@@ -50,14 +33,89 @@ if (!Function.prototype.bind) {
 }
 
 
+export let setAttr = (elem, key, value) => {
+	$.fn.attr.call([elem], key, value)
+}
+
+export let getAttr = (elem, key) => {
+	return $.fn.attr.call([elem], key)
+}
+
+export let removeAttr = (elem, key) => {
+	$.fn.removeAttr.call([elem], key)
+}
+
+export let querySelectorAll = (elem, selector) => {
+	return $(selector, elem)
+}
+
+export let setEvent = (elem, key, value) => {
+	if (!isFn(value)) {
+		return
+	}
+	key = key.toLowerCase()
+	let $elem = $(elem)
+	let eventName = `${ key.substr(2) }.react`
+	$elem.off(eventName)
+	$elem.on(eventName, value)
+	if (key !== 'onchange') {
+		return
+	}
+	if ('oninput' in elem) {
+		$elem.off('oninput.onchange')
+		$elem.on('oninput.onchange', value)
+		return
+	}
+	elem.onpropertychange = e => {
+		if (e.propertyName === 'value') {
+			$elem.trigger(eventName)
+		}
+	}
+}
+
+export let removeEvent = (elem, key) => {
+	key = key.toLowerCase()
+	let $elem = $(elem)
+	let eventName = `${ key.substr(2) }.react`
+	$elem.off(eventName)
+	if (key !== 'onchange') {
+		return
+	}
+	if ('oninput' in elem) {
+		$elem.off('oninput.onchange')
+		return
+	}
+	elem.onpropertychange = null
+}
 
 export let toArray = Array.from || (obj => {
-	let list = []
-	for (let i = 0, len = obj.length; i < len; i++) {
-		list.push(obj[i])
+	try {
+		return Array.prototype.slice.call(obj)
+	} catch(e) {
+		let list = []
+		for (let i = 0, len = obj.length; i < len; i++) {
+			list.push(obj[i])
+		}
+		return list
 	}
-	return list
 })
+
+//types.js
+export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
+export let isObj = isType('Object')
+export let isStr = isType('String')
+export let isNum = isType('Number')
+export let isFn = isType('Function')
+export let isBln = isType('Boolean')
+export let isArr = Array.isArray || isType('Array')
+export let isComponent = obj => isFn(obj)
+export let isComponentClass = obj => isFn(obj) && isFn(obj.prototype.render)
+export let isUndefined = obj => obj === undefined
+export let pipe = (fn1, fn2) => function(...args) {
+	fn1.apply(this, args)
+	return fn2.apply(this, args)
+}
+
 export let nextFrame = isFn(window.requestAnimationFrame)
 	? fn => requestAnimationFrame(fn)
 	: fn => setTimeout(fn, 100 / 6)
@@ -65,8 +123,13 @@ export let nextFrame = isFn(window.requestAnimationFrame)
 export let getUid = () => Math.random().toString(36).substr(2)
 
 export let mergeProps = (props, children) => {
-	if (props && children && children.length > 0) {
-		props.children = children.length === 1 ? children[0] : children 
+	if (children && children.length) {
+		children = children.length === 1 ? children[0] : children
+		if (props) {
+			props.children = children
+		} else {
+			props = { children }
+		}
 	}
 	return props
 }
@@ -94,17 +157,6 @@ export let $on = (name, callback) => {
 	events.push(callback)
 }
 
-// export let $off = (name, callback) => {
-// 	if (!isFn(callback)) {
-// 		$events[name] = []
-// 		return
-// 	}
-// 	let index = $events[name].indexOf(callback)
-// 	if (index !== -1) {
-// 		$events[name].splice(index, 1)
-// 	}
-// }
-
 export let $trigger = (name, ...args) => {
 	if (isArr($events[name])) {
 		$events[name].forEach(callback => callback(...args))
@@ -118,7 +170,6 @@ export let $triggerOnce = (name, ...args) => {
 		events.forEach(callback => callback(...args))
 	}
 }
-
 
 let componentId
 let $componentId
@@ -151,22 +202,6 @@ export let collectRef = (key, value) => {
 	refs[key] = value
 }
 
-export let setAttr = (elem, key, value) => {
-	$.fn.attr.call([elem], key, value)
-}
-
-export let getAttr = (elem, key) => {
-	return $.fn.attr.call([elem], key)
-}
-
-export let removeAttr = (elem, key) => {
-	$.fn.removeAttr.call([elem], key)
-}
-
-export let querySelectorAll = (elem, selector) => {
-	return $(selector, elem)
-}
-
 export let appendChild = (node, child) => {
 	node.appendChild(child)
 }
@@ -182,13 +217,14 @@ export let replaceChild = (node, newChild, child) => {
 }
 
 export let setProp = (elem, key, value) => {
-	if (key === 'key' || key === 'ref') {
-		if (key === 'ref' && value) {
-			collectRef(value, elem)
-		}
-		return
-	}
 	switch (true) {
+		case key === 'key':
+			break
+		case key === 'ref':
+			if (value) {
+				collectRef(value, elem)
+			}
+			break
 		case key === 'style':
 			setStyle(elem, value)
 			break
@@ -199,7 +235,9 @@ export let setProp = (elem, key, value) => {
 			elem[key] = value
 			break
 		case key === 'dangerouslySetInnerHTML':
-			elem.innerHTML = value.__html
+			if (elem.innerHTML !== value.__html) {
+				elem.innerHTML = value.__html
+			}
 			break
 		default:
 			elem.setAttribute(key, value)
@@ -213,7 +251,6 @@ export let setProps = (elem, props) => {
 }
 
 export let isEventKey = key => /^on/.test(key)
-
 
 export let removeProp = (elem, key) => {
 	switch (true) {
@@ -241,30 +278,45 @@ export let removeProp = (elem, key) => {
 	}
 }
 
-export let setEvent = (elem, key, value) => {
-	key = key.toLowerCase()
-	let $elem = $(elem)
-	$elem.off(`${key.substr(2)}.react`)
-	$elem.on(`${key.substr(2)}.react`, value)
-	if (key === 'onchange') {
-		$elem.off('propertychange.react')
-		$elem.on('propertychange.react', e => {
-			if (e.propertyName === 'value') {
-				value.call(elem, e)
+export let patchProps = (node, props, newProps) => {
+	if (!props && newProps) {
+		return setProps(node, newProps)
+	} else if (!newProps && props) {
+		return Object.keys(props).each(key => {
+			if (key === 'style') {
+				removeStyle(node, props[key])
+			} else {
+				removeProp(node, key)
 			}
 		})
 	}
-}
 
-export let removeEvent = (elem, key) => {
-	key = key.toLowerCase()
-	let $elem = $(elem)
-	$elem.off(`${key.substr(2)}.react`)
-	if (key === 'onchange') {
-		$elem.off('propertychange.react')
+	for (let key in newProps) {
+		if (!newProps.hasOwnProperty(key)) {
+			continue
+		}
+		let newValue = newProps[key]
+		if (key === 'style') {
+			patchStyle(props.style, newProps.style)
+		} else if (isUndefined(newValue)) {
+			removeProp(node, key)
+		} else if (newValue !== props[key]) {
+			setProp(node, key, newValue)
+		} else if (key === 'ref' && newValue) {
+			collectRef(newValue, node)
+		}
+		delete props[key]
+	}
+
+	for (let key in props) {
+		if (!props.hasOwnProperty(key)) {
+			continue
+		}
+		if (isUndefined(newValue[key])) {
+			removeProp(node, key)
+		}
 	}
 }
-
 
 export let removeStyle = (elem, style) => {
 	if (!isObj(style)) {
@@ -280,6 +332,24 @@ export let setStyle = (elem, style) => {
 	Object.keys(style).forEach(key => {
 		setStyleValue(elem.style, key, style[key])
 	})
+}
+
+export let patchStyle = (elem, style, newStyle) => {
+	if (!newStyle && style) {
+		removeStyle(elem, style)
+	} else if (newStyle && !style) {
+		setStyle(elem, newStyle)
+	} else {
+		let domStyle = elem.style
+		Object.keys({ ...style, ...newStyle }).forEach(key => {
+			let value = newStyle[key]
+			if (isUndefined(value)) {
+				domStyle[key] = ''
+			} else if (value !== style[key]) {
+				setStyleValue(domStyle, key, value)
+			}
+		})
+	}
 }
 
 const isUnitlessNumber = {
@@ -341,3 +411,10 @@ export let setStyleValue = (style, key, value) => {
 		style[key] = value
 	}
 }
+
+
+
+
+
+
+

@@ -1,3 +1,11 @@
+import create from './create'
+import diff from './diff'
+import patch from './patch'
+import {
+	COMPONENT_ID,
+	DID_MOUNT,
+	WILL_UNMOUNT
+} from './constant'
 import {
 	getUid,
 	isFn,
@@ -5,7 +13,6 @@ import {
 	isObj,
 	isStr,
 	toArray,
-	isNum,
 	isUndefined,
 	pipe,
 	$on,
@@ -19,16 +26,6 @@ import {
 	getRefs,
 	collectRef
 } from 'util'
-import {
-	WIDGET,
-	COMPONENT_ID,
-	WILL_MOUNT,
-	DID_MOUNT,
-	WILL_UNMOUNT
-} from './constant'
-import create from './create'
-import diff from './diff'
-import patch from './patch'
 
 export function Component(props) {
 	this.$cache = {
@@ -49,23 +46,18 @@ Component.prototype = {
 		if (isFn(nextState)) {
 			nextState = nextState(state, props)
 		}
-		if (!node) {
-			$cache.nextState = { ...this.state, ...nextState }
+		let { keepSilent } = $cache
+		nextState = { ...this.state, ...nextState }
+		if (keepSilent) {
+			$cache.nextState = nextState
 			return
 		}
-		let { keepSilent } = $cache
-		let updateView = () => {
-			let shouldUpdate = false
-			if (!keepSilent) {
-				shouldUpdate = this.shouldComponentUpdate(nextState, props)
-			}
-			this.state = { ...this.state, ...nextState }
-			if (shouldUpdate === false) {
-				return
-			}
-			this.forceUpdate(callback)
+		let shouldUpdate = this.shouldComponentUpdate(nextState, props)
+		this.state = nextState
+		if (shouldUpdate === false) {
+			return
 		}
-		nextFrame(updateView)
+		this.forceUpdate(callback)
 	},
 	shouldComponentUpdate(nextProps, nextState) {
 		return true
@@ -81,8 +73,8 @@ Component.prototype = {
 		if (!node) {
 			return
 		}
-		let nextProps = isObj($cache.props) ? $cache.props : props
-		let nextState = isObj($cache.state) ? $cache.state : state
+		let nextProps = $cache.props || props
+		let nextState = $cache.state || state
 		$cache.props = $cache.state = null
 		this.componentWillUpdate(nextProps, nextState)
 		this.props = nextProps
@@ -206,7 +198,9 @@ export let initComponent = (Component, props) => {
 	if (props.ref) {
 		collectRef(props.ref, component)
 	}
+	$cache.keepSilent = true
 	component.componentWillMount()
+	$cache.keepSilent = false
 	component.state = $cache.nextState || component.state
 	$cache.nextState = null
 	let vnode = component.vnode = component.render()
@@ -227,7 +221,17 @@ export let initComponent = (Component, props) => {
 		components[attr] = component
 	}
 	$on(DID_MOUNT, () => {
+		$cache.keepSilent = true
 		component.componentDidMount()
+		$cache.keepSilent = false
+		if ($cache.nextState) {
+			let nextState = $cache.nextState
+			$cache.nextState = null
+			nextFrame(() => {
+				component.state = nextState
+				component.forceUpdate()
+			})
+		}
 	})
 	return { component, node }
 }
@@ -241,6 +245,10 @@ export let updateComponent = (component, props) => {
 	$cache.keepSilent = true
 	component.componentWillReceiveProps(props)
 	$cache.keepSilent = false
+	if ($cache.nextState) {
+		component.state = $cache.nextState
+		$cache.nextState = null
+	}
 	let shouldUpdate = component.shouldComponentUpdate(props, component.state)
 	if (!shouldUpdate) {
 		return

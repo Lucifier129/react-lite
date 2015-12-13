@@ -182,24 +182,18 @@
 				'use strict';
 	
 				exports.__esModule = true;
-				var CREATE = 'CREATE';
-				exports.CREATE = CREATE;
-				var REMOVE = 'REMOVE';
-				exports.REMOVE = REMOVE;
-				var REORDER = 'REORDER';
-				exports.REORDER = REORDER;
-				var REPLACE = 'REPLACE';
-				exports.REPLACE = REPLACE;
-				var PROPS = 'PROPS';
-				exports.PROPS = PROPS;
-				var UPDATE = 'UPDATE';
-				exports.UPDATE = UPDATE;
-				var DID_MOUNT = 'DID_MOUNT';
-				exports.DID_MOUNT = DID_MOUNT;
-				var WILL_UNMOUNT = 'WILL_UNMOUNT';
-				exports.WILL_UNMOUNT = WILL_UNMOUNT;
-				var COMPONENT_ID = 'data-esnextid';
-				exports.COMPONENT_ID = COMPONENT_ID;
+				exports['default'] = {
+					CREATE: 1,
+					REMOVE: 2,
+					REORDER: 3,
+					REPLACE: 4,
+					PROPS: 5,
+					UPDATE: 6,
+					DID_MOUNT: 7,
+					WILL_UNMOUNT: 8,
+					COMPONENT_ID: 'data-esnextid'
+				};
+				module.exports = exports['default'];
 	
 				/***/
 			},
@@ -210,8 +204,62 @@
 	
 				exports.__esModule = true;
 	
+				var _extends = Object.assign || function (target) {
+					for (var i = 1; i < arguments.length; i++) {
+						var source = arguments[i];for (var key in source) {
+							if (Object.prototype.hasOwnProperty.call(source, key)) {
+								target[key] = source[key];
+							}
+						}
+					}return target;
+				};
+	
 				var _constant = __webpack_require__(1);
 	
+				var setAttr = function setAttr(elem, key, value) {
+					elem.setAttribute(key, value);
+				};
+	
+				exports.setAttr = setAttr;
+				var getAttr = function getAttr(elem, key) {
+					return elem.getAttribute(key);
+				};
+	
+				exports.getAttr = getAttr;
+				var removeAttr = function removeAttr(elem, key) {
+					elem.removeAttribute(key);
+				};
+	
+				exports.removeAttr = removeAttr;
+				var querySelectorAll = function querySelectorAll(elem, selector) {
+					return elem.querySelectorAll(selector);
+				};
+	
+				exports.querySelectorAll = querySelectorAll;
+				var setEvent = function setEvent(elem, key, value) {
+					key = key.toLowerCase();
+					elem[key] = value;
+					if (key === 'onchange') {
+						elem.oninput = value;
+						value.oninput = true;
+					}
+				};
+	
+				exports.setEvent = setEvent;
+				var removeEvent = function removeEvent(elem, key) {
+					key = key.toLowerCase();
+					elem[key] = null;
+					if (key === 'onchange') {
+						elem.oninput = null;
+					}
+				};
+	
+				exports.removeEvent = removeEvent;
+				var toArray = Array.from || function (obj) {
+					return Array.prototype.slice.call(obj);
+				};
+	
+				exports.toArray = toArray;
 				//types.js
 				var isType = function isType(type) {
 					return function (obj) {
@@ -240,7 +288,7 @@
 				};
 				exports.isComponentClass = isComponentClass;
 				var isUndefined = function isUndefined(obj) {
-					return obj === void 0;
+					return obj === undefined;
 				};
 				exports.isUndefined = isUndefined;
 				var pipe = function pipe(fn1, fn2) {
@@ -255,10 +303,6 @@
 				};
 	
 				exports.pipe = pipe;
-				var toArray = Array.from || function (obj) {
-					return Array.prototype.slice.call(obj);
-				};
-				exports.toArray = toArray;
 				var nextFrame = isFn(window.requestAnimationFrame) ? function (fn) {
 					return requestAnimationFrame(fn);
 				} : function (fn) {
@@ -272,8 +316,13 @@
 	
 				exports.getUid = getUid;
 				var mergeProps = function mergeProps(props, children) {
-					if (props && children && children.length > 0) {
-						props.children = children.length === 1 ? children[0] : children;
+					if (children && children.length) {
+						children = children.length === 1 ? children[0] : children;
+						if (props) {
+							props.children = children;
+						} else {
+							props = { children: children };
+						}
 					}
 					return props;
 				};
@@ -309,17 +358,6 @@
 				};
 	
 				exports.$on = $on;
-				// export let $off = (name, callback) => {
-				// 	if (!isFn(callback)) {
-				// 		$events[name] = []
-				// 		return
-				// 	}
-				// 	let index = $events[name].indexOf(callback)
-				// 	if (index !== -1) {
-				// 		$events[name].splice(index, 1)
-				// 	}
-				// }
-	
 				var $trigger = function $trigger(name) {
 					for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
 						args[_key2 - 1] = arguments[_key2];
@@ -385,26 +423,6 @@
 				};
 	
 				exports.collectRef = collectRef;
-				var setAttr = function setAttr(elem, key, value) {
-					elem.setAttribute(key, value);
-				};
-	
-				exports.setAttr = setAttr;
-				var getAttr = function getAttr(elem, key) {
-					return elem.getAttribute(key);
-				};
-	
-				exports.getAttr = getAttr;
-				var removeAttr = function removeAttr(elem, key) {
-					elem.removeAttribute(key);
-				};
-	
-				exports.removeAttr = removeAttr;
-				var querySelectorAll = function querySelectorAll(elem, selector) {
-					return elem.querySelectorAll(selector);
-				};
-	
-				exports.querySelectorAll = querySelectorAll;
 				var appendChild = function appendChild(node, child) {
 					node.appendChild(child);
 				};
@@ -423,13 +441,14 @@
 	
 				exports.replaceChild = replaceChild;
 				var setProp = function setProp(elem, key, value) {
-					if (key === 'key' || key === 'ref') {
-						if (key === 'ref' && value) {
-							collectRef(value, elem);
-						}
-						return;
-					}
 					switch (true) {
+						case key === 'key':
+							break;
+						case key === 'ref':
+							if (value) {
+								collectRef(value, elem);
+							}
+							break;
 						case key === 'style':
 							setStyle(elem, value);
 							break;
@@ -490,25 +509,47 @@
 				};
 	
 				exports.removeProp = removeProp;
-				var setEvent = function setEvent(elem, key, value) {
-					key = key.toLowerCase();
-					elem[key] = value;
-					if (key === 'onchange' && !elem.oninput) {
-						elem.oninput = value;
-						value.oninput = true;
+				var patchProps = function patchProps(node, props, newProps) {
+					if (!props && newProps) {
+						return setProps(node, newProps);
+					} else if (!newProps && props) {
+						return Object.keys(props).each(function (key) {
+							if (key === 'style') {
+								removeStyle(node, props[key]);
+							} else {
+								removeProp(node, key);
+							}
+						});
+					}
+	
+					for (var key in newProps) {
+						if (!newProps.hasOwnProperty(key)) {
+							continue;
+						}
+						var _newValue = newProps[key];
+						if (key === 'style') {
+							patchStyle(node, props.style, newProps.style);
+						} else if (isUndefined(_newValue)) {
+							removeProp(node, key);
+						} else if (_newValue !== props[key]) {
+							setProp(node, key, _newValue);
+						} else if (key === 'ref' && _newValue) {
+							collectRef(_newValue, node);
+						}
+						delete props[key];
+					}
+	
+					for (var key in props) {
+						if (!props.hasOwnProperty(key)) {
+							continue;
+						}
+						if (isUndefined(newValue[key])) {
+							removeProp(node, key);
+						}
 					}
 				};
 	
-				exports.setEvent = setEvent;
-				var removeEvent = function removeEvent(elem, key) {
-					key = key.toLowerCase();
-					if (isFn(elem[key]) && elem[key].oninput) {
-						elem.oninput = null;
-					}
-					elem[key] = null;
-				};
-	
-				exports.removeEvent = removeEvent;
+				exports.patchProps = patchProps;
 				var removeStyle = function removeStyle(elem, style) {
 					if (!isObj(style)) {
 						return;
@@ -529,6 +570,27 @@
 				};
 	
 				exports.setStyle = setStyle;
+				var patchStyle = function patchStyle(elem, style, newStyle) {
+					if (!newStyle && style) {
+						removeStyle(elem, style);
+					} else if (newStyle && !style) {
+						setStyle(elem, newStyle);
+					} else {
+						(function () {
+							var domStyle = elem.style;
+							Object.keys(_extends({}, style, newStyle)).forEach(function (key) {
+								var value = newStyle[key];
+								if (isUndefined(value)) {
+									domStyle[key] = '';
+								} else if (value !== style[key]) {
+									setStyleValue(domStyle, key, value);
+								}
+							});
+						})();
+					}
+				};
+	
+				exports.patchStyle = patchStyle;
 				var isUnitlessNumber = {
 					animationIterationCount: true,
 					boxFlex: true,
@@ -619,10 +681,6 @@
 					return obj && obj.__esModule ? obj : { 'default': obj };
 				}
 	
-				var _util = __webpack_require__(2);
-	
-				var _constant = __webpack_require__(1);
-	
 				var _create = __webpack_require__(4);
 	
 				var _create2 = _interopRequireDefault(_create);
@@ -634,6 +692,10 @@
 				var _patch = __webpack_require__(6);
 	
 				var _patch2 = _interopRequireDefault(_patch);
+	
+				var _constant = __webpack_require__(1);
+	
+				var _util = __webpack_require__(2);
 	
 				function Component(props) {
 					this.$cache = {
@@ -650,8 +712,6 @@
 						return this.node;
 					},
 					setState: function setState(nextState, callback) {
-						var _this = this;
-	
 						var $cache = this.$cache;
 						var state = this.state;
 						var props = this.props;
@@ -660,24 +720,19 @@
 						if (_util.isFn(nextState)) {
 							nextState = nextState(state, props);
 						}
-						if (!node) {
-							$cache.nextState = _extends({}, this.state, nextState);
-							return;
-						}
 						var keepSilent = $cache.keepSilent;
 	
-						var updateView = function updateView() {
-							var shouldUpdate = false;
-							if (!keepSilent) {
-								shouldUpdate = _this.shouldComponentUpdate(nextState, props);
-							}
-							_this.state = _extends({}, _this.state, nextState);
-							if (shouldUpdate === false) {
-								return;
-							}
-							_this.forceUpdate(callback);
-						};
-						_util.nextFrame(updateView);
+						nextState = _extends({}, this.state, nextState);
+						if (keepSilent) {
+							$cache.nextState = nextState;
+							return;
+						}
+						var shouldUpdate = this.shouldComponentUpdate(nextState, props);
+						this.state = nextState;
+						if (shouldUpdate === false) {
+							return;
+						}
+						this.forceUpdate(callback);
 					},
 					shouldComponentUpdate: function shouldComponentUpdate(nextProps, nextState) {
 						return true;
@@ -699,8 +754,8 @@
 						if (!node) {
 							return;
 						}
-						var nextProps = _util.isObj($cache.props) ? $cache.props : props;
-						var nextState = _util.isObj($cache.state) ? $cache.state : state;
+						var nextProps = $cache.props || props;
+						var nextState = $cache.state || state;
 						$cache.props = $cache.state = null;
 						this.componentWillUpdate(nextProps, nextState);
 						this.props = nextProps;
@@ -833,7 +888,9 @@
 					if (props.ref) {
 						_util.collectRef(props.ref, component);
 					}
+					$cache.keepSilent = true;
 					component.componentWillMount();
+					$cache.keepSilent = false;
 					component.state = $cache.nextState || component.state;
 					$cache.nextState = null;
 					var vnode = component.vnode = component.render();
@@ -854,7 +911,19 @@
 						components[attr] = component;
 					}
 					_util.$on(_constant.DID_MOUNT, function () {
+						$cache.keepSilent = true;
 						component.componentDidMount();
+						$cache.keepSilent = false;
+						if ($cache.nextState) {
+							(function () {
+								var nextState = $cache.nextState;
+								$cache.nextState = null;
+								_util.nextFrame(function () {
+									component.state = nextState;
+									component.forceUpdate();
+								});
+							})();
+						}
 					});
 					return { component: component, node: node };
 				};
@@ -870,6 +939,10 @@
 					$cache.keepSilent = true;
 					component.componentWillReceiveProps(props);
 					$cache.keepSilent = false;
+					if ($cache.nextState) {
+						component.state = $cache.nextState;
+						$cache.nextState = null;
+					}
 					var shouldUpdate = component.shouldComponentUpdate(props, component.state);
 					if (!shouldUpdate) {
 						return;
@@ -889,11 +962,9 @@
 	
 				exports.__esModule = true;
 	
-				var _util = __webpack_require__(2);
-	
-				var _constant = __webpack_require__(1);
-	
 				var _component = __webpack_require__(3);
+	
+				var _util = __webpack_require__(2);
 	
 				/**
 	   * 根据 tagName props attrs 创建 real-dom
@@ -962,9 +1033,9 @@
 	
 				exports.__esModule = true;
 	
-				var _util = __webpack_require__(2);
-	
 				var _constant = __webpack_require__(1);
+	
+				var _util = __webpack_require__(2);
 	
 				/**
 	   * diff vnode and newVnode
@@ -1033,21 +1104,9 @@
 	
 				exports.__esModule = true;
 	
-				var _extends = Object.assign || function (target) {
-					for (var i = 1; i < arguments.length; i++) {
-						var source = arguments[i];for (var key in source) {
-							if (Object.prototype.hasOwnProperty.call(source, key)) {
-								target[key] = source[key];
-							}
-						}
-					}return target;
-				};
-	
 				function _interopRequireDefault(obj) {
 					return obj && obj.__esModule ? obj : { 'default': obj };
 				}
-	
-				var _util = __webpack_require__(2);
 	
 				var _constant = __webpack_require__(1);
 	
@@ -1060,6 +1119,8 @@
 				var _diff = __webpack_require__(5);
 	
 				var _diff2 = _interopRequireDefault(_diff);
+	
+				var _util = __webpack_require__(2);
 	
 				/**
 	   * patch dom
@@ -1088,7 +1149,7 @@
 							_util.replaceChild(parent, newNode, node);
 							break;
 						case _constant.PROPS:
-							patchProps(node, vnode.props, newVnode.props);
+							_util.patchProps(node, vnode.props, newVnode.props);
 							break;
 						case _constant.UPDATE:
 							_component.updateComponent(vnode.component, _util.mergeProps(newVnode.props, newVnode.children));
@@ -1098,7 +1159,7 @@
 	
 					switch (childrenType) {
 						case _constant.REMOVE:
-							while (node.childNodes.length) {
+							while (node.firstChild) {
 								_util.removeChild(node, node.firstChild);
 							}
 							break;
@@ -1108,10 +1169,9 @@
 							});
 							break;
 						case _constant.REPLACE:
-							var childNodes = _util.toArray(node.childNodes);
 							newVnode.children = _util.mapChildren(newVnode.children, function (newChild, i) {
 								var patches = _diff2['default'](vnode.children[i], newChild);
-								patch(childNodes[i], patches, node);
+								patch(node.childNodes[i], patches, node);
 							});
 							while (node.childNodes.length > newVnode.children.length) {
 								_util.removeChild(node, node.lastChild);
@@ -1123,52 +1183,6 @@
 				};
 	
 				exports['default'] = patch;
-	
-				var patchProps = function patchProps(node, props, newProps) {
-					if (props == null && newProps) {
-						return _util.setProps(node, newProps);
-					} else if (newProps == null && props) {
-						return Object.keys(props).each(function (key) {
-							return _util.removeProp(node, key);
-						});
-					}
-	
-					for (var key in newProps) {
-						if (!newProps.hasOwnProperty(key)) {
-							continue;
-						}
-						var _newValue = newProps[key];
-						if (_util.isUndefined(_newValue)) {
-							_util.removeProp(node, key);
-						} else if (_newValue !== props[key]) {
-							_util.setProp(node, key, _newValue);
-						} else if (key === 'ref' && _newValue) {
-							_util.collectRef(_newValue, node);
-						}
-						delete props[key];
-					}
-	
-					for (var key in props) {
-						if (!props.hasOwnProperty(key)) {
-							continue;
-						}
-						if (_util.isUndefined(newValue[key])) {
-							_util.removeProp(node, key);
-						}
-					}
-				};
-	
-				var patchStyle = function patchStyle(node, style, newStyle) {
-					var domStyle = node.style;
-					Object.keys(_extends({}, style, newStyle)).forEach(function (key) {
-						var value = newStyle[key];
-						if (value === undefined) {
-							domStyle[key] = '';
-						} else if (value !== style[key]) {
-							_util.setStyleValue(domStyle, key, value);
-						}
-					});
-				};
 				module.exports = exports['default'];
 	
 				/***/

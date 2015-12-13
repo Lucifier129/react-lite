@@ -9906,7 +9906,9 @@ var ReactEventListener = {
     if (!element) {
       return null;
     }
-    return EventListener.listen(element, handlerBaseName, ReactEventListener.dispatchEvent.bind(null, topLevelType));
+    return EventListener.listen(element, handlerBaseName, function(nativeEvent) {
+      return ReactEventListener.dispatchEvent(topLevelType, nativeEvent)
+    });
   },
 
   /**
@@ -9924,7 +9926,9 @@ var ReactEventListener = {
     if (!element) {
       return null;
     }
-    return EventListener.capture(element, handlerBaseName, ReactEventListener.dispatchEvent.bind(null, topLevelType));
+    return EventListener.capture(element, handlerBaseName, function(nativeEvent) {
+      return ReactEventListener.dispatchEvent(topLevelType, nativeEvent)
+    });
   },
 
   monitorScrollValue: function (refresh) {
