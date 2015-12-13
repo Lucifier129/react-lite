@@ -91,13 +91,13 @@ var Example = React.createClass({
   },
 
   componentDidMount() {
-    this.setState({val: this.state.val + 1});
+     console.log('didMount', this.setState({val: this.state.val + 1}));
     console.log('didMount', this.state.val);    // log 1
     this.setState({val: this.state.val + 1});
     console.log('didMount', this.state.val);    // log 2
 
     setTimeout(() => {
-      this.setState({val: this.state.val + 1});
+      console.log('setTimeout', this.setState({val: this.state.val + 1}));
       console.log('setTimeout:', this.state.val);  // log 3
       this.setState({val: this.state.val + 1});
       console.log('setTimeout:', this.state.val);  // log 4

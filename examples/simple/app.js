@@ -186,13 +186,13 @@
 		componentDidMount: function componentDidMount() {
 			var _this2 = this;
 
-			this.setState({ val: this.state.val + 1 });
+			console.log('didMount', this.setState({ val: this.state.val + 1 }));
 			console.log('didMount', this.state.val); // log 1
 			this.setState({ val: this.state.val + 1 });
 			console.log('didMount', this.state.val); // log 2
 
 			setTimeout(function () {
-				_this2.setState({ val: _this2.state.val + 1 });
+				console.log('setTimeout', _this2.setState({ val: _this2.state.val + 1 }));
 				console.log('setTimeout:', _this2.state.val); // log 3
 				_this2.setState({ val: _this2.state.val + 1 });
 				console.log('setTimeout:', _this2.state.val); // log 4
