@@ -4,7 +4,8 @@ import patch from './patch'
 import {
 	COMPONENT_ID,
 	DID_MOUNT,
-	WILL_UNMOUNT
+	WILL_UNMOUNT,
+	REF_CALLBACK
 } from './constant'
 import {
 	getUid,
@@ -17,14 +18,14 @@ import {
 	pipe,
 	$on,
 	$triggerOnce,
-	nextFrame,
 	setAttr,
 	getAttr,
 	querySelectorAll,
 	setComponentId,
 	resetComponentId,
 	getRefs,
-	collectRef
+	collectRef,
+	patchRefs
 } from 'util'
 
 export function Component(props) {
@@ -84,7 +85,10 @@ Component.prototype = {
 		let patches = diff(vnode, nextVnode)
 		let newNode = patch(node, patches)
 		resetComponentId()
+		let refs = this.refs
 		this.refs = getRefs(id)
+		patchRefs(refs, this.refs)
+		$triggerOnce(REF_CALLBACK)
 		// update this.node, if component render new element
 		if (newNode !== node) {
 			setAttr(newNode, COMPONENT_ID, id)
@@ -208,6 +212,7 @@ export let initComponent = (Component, props) => {
 	let node = component.node = create(vnode)
 	resetComponentId()
 	component.refs = getRefs(id)
+	$triggerOnce(REF_CALLBACK)
 	let attr = getAttr(node, COMPONENT_ID)
 	if (!attr) {
 		setAttr(node, COMPONENT_ID, attr = id)
@@ -225,12 +230,13 @@ export let initComponent = (Component, props) => {
 		component.componentDidMount()
 		$cache.keepSilent = false
 		if ($cache.nextState) {
-			let nextState = $cache.nextState
+			component.state = $cache.nextState
 			$cache.nextState = null
-			nextFrame(() => {
-				component.state = nextState
-				component.forceUpdate()
-			})
+			let shouldUpdate = component.shouldComponentUpdate(props, component.state)
+			if (!shouldUpdate) {
+				return
+			}
+			component.forceUpdate()
 		}
 	})
 	return { component, node }
@@ -239,7 +245,7 @@ export let initComponent = (Component, props) => {
 export let updateComponent = (component, props) => {
 	props = { ...props, ...component.constructor.defaultProps }
 	if (props.ref) {
-		collectRef(props.ref, component)
+		collectRef(props.ref, component, component.props.ref)
 	}
 	let { $cache } = component
 	$cache.keepSilent = true

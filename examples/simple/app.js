@@ -115,10 +115,13 @@
 			console.log('unmount', 'Counter');
 		},
 		getNum: function getNum(e) {
-			var num = parseInt(this.refs.input.value, 10);
+			var num = parseInt(this.input.value, 10);
 			if (typeof num === 'number') {
 				this.toNum(num);
 			}
+		},
+		getInput: function getInput(input) {
+			this.input = input;
 		},
 		render: function render() {
 			var props = this.props;
@@ -162,7 +165,7 @@
 					'label',
 					{ htmlFor: 'myinput' },
 					'input number:',
-					React.createElement('input', { type: 'text', ref: 'input', id: 'myinput', name: 'myinput' })
+					React.createElement('input', { type: 'text', ref: this.getInput, id: 'myinput', name: 'myinput' })
 				),
 				React.createElement(
 					'button',
@@ -283,12 +286,23 @@
 		}
 	});
 
+	var Stateless = function Stateless() {
+		return React.createElement(
+			'div',
+			null,
+			'stateless'
+		);
+	};
+
+	var testStateless = React.render(React.createElement(Stateless, null), document.getElementById('container'));
+	console.log(testStateless);
+
 	var update = function update(count) {
-		React.render(React.createElement(Wrap, { count: count }), document.getElementById('container'));
+		return React.render(React.createElement(Wrap, { count: count }), document.getElementById('container'));
 	};
 
 	var num = 10;
-	update(num);
+	console.log(update(num));
 	// setInterval(() => {
 	// 	update(num++)
 	// }, 1000)

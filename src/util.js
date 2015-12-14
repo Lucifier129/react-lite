@@ -1,4 +1,4 @@
-import { WILL_UNMOUNT } from './constant'
+import { WILL_UNMOUNT, REF_CALLBACK } from './constant'
 
 export let setAttr = (elem, key, value) => {
 	elem.setAttribute(key, value)
@@ -51,10 +51,6 @@ export let pipe = (fn1, fn2) => function(...args) {
 	return fn2.apply(this, args)
 }
 
-export let nextFrame = isFn(window.requestAnimationFrame)
-	? fn => requestAnimationFrame(fn)
-	: fn => setTimeout(fn, 0)
-
 export let getUid = () => Math.random().toString(36).substr(2)
 
 export let mergeProps = (props, children) => {
@@ -87,9 +83,9 @@ export let hasKey = obj => obj && obj.props && obj.props.key
 
 let $events = {}
 
-export let $on = (name, callback) => {
+export let $on = (name, callback, method = 'push') => {
 	let events = $events[name] = $events[name] || []
-	events.push(callback)
+	events[method](callback)
 }
 
 export let $trigger = (name, ...args) => {
@@ -120,10 +116,10 @@ let refsStore = {}
 let getDOMNode = function() { return this }
 export let getRefs = id => {
 	let refs = refsStore[id] || {}
-	delete refsStore[id]
+	refsStore[id] = {}
 	return refs
 }
-export let collectRef = (key, value) => {
+export let collectRef = (key, value, oldKey) => {
 	if (!componentId) {
 		return
 	}
@@ -131,10 +127,30 @@ export let collectRef = (key, value) => {
 	if (!refs) {
 		refs = refsStore[componentId] = {}
 	}
+	if (isFn(key)) {
+		if (!refs.$$fn) {
+			refs.$$fn = []
+		}
+		refs.$$fn.push(key)
+		if (key !== oldKey) {
+			$on(REF_CALLBACK, () => key(value))
+		}
+	}
 	if (value.nodeName) {
 		value.getDOMNode = getDOMNode
 	}
 	refs[key] = value
+}
+
+export let patchRefs = (refs, newRefs) => {
+	if (!refs || !refs.$$fn) {
+		return
+	}
+	refs.$$fn.forEach(fn => {
+		if (!newRefs || !newRefs.$$fn || newRefs.$$fn.indexOf(fn) === -1) {
+			fn(null)
+		}
+	})
 }
 
 export let appendChild = (node, child) => {
@@ -237,8 +253,8 @@ export let patchProps = (node, props, newProps) => {
 			removeProp(node, key)
 		} else if (newValue !== props[key]) {
 			setProp(node, key, newValue)
-		} else if (key === 'ref' && newValue) {
-			collectRef(newValue, node)
+		} else if (key === 'ref') {
+			collectRef(newValue, node, props[key])
 		}
 		delete props[key]
 	}

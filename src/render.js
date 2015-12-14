@@ -1,15 +1,15 @@
 import create from './create'
 import diff from './diff'
 import patch from './patch'
-import { isFn, getUid, appendChild, removeChild, $triggerOnce, setAttr, getAttr } from 'util'
-import { COMPONENT_ID, DID_MOUNT } from './constant'
+import { isFn, isStr, getUid, appendChild, removeChild, $triggerOnce, setAttr, getAttr, isComponent, isComponentClass } from 'util'
+import { COMPONENT_ID, DID_MOUNT, REF_CALLBACK } from './constant'
 
 let store = {}
 export let render = (vnode, container, callback) => {
 	let id = getAttr(container, COMPONENT_ID)
-	if (id) {
+	if (store.hasOwnProperty(id)) {
 		let patches = diff(store[id], vnode)
-		patch(container.firstChild, patches)
+		patch(container.firstChild, patches, container)
 		store[id] = vnode
 	} else {
 		let node = create(vnode)
@@ -18,9 +18,22 @@ export let render = (vnode, container, callback) => {
 		container.innerHTML = ''
 		appendChild(container, node)
 	}
+	$triggerOnce(REF_CALLBACK)
 	$triggerOnce(DID_MOUNT)
 	if (isFn(callback)) {
 		callback()
+	}
+
+	if (!vnode) {
+		return
+	}
+
+	if (isComponentClass(vnode.tagName)) {
+		return vnode.component
+	} else if (vnode && isStr(vnode.tagName)) {
+		return container.firstChild
+	} else {
+		return null
 	}
 }
 
@@ -32,5 +45,7 @@ export let unmount = container => {
 			removeChild(container, firstChild)
 		}
 		delete store[id]
+		return true
 	}
+	return false
 }

@@ -10,5 +10,6 @@ export default {
 	UPDATE: 6,
 	DID_MOUNT: 7,
 	WILL_UNMOUNT: 8,
-	COMPONENT_ID: 'data-esnextid'
+	REF_CALLBACK: 9,
+	COMPONENT_ID: 'data-liteid'
 }

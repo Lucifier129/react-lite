@@ -57,10 +57,13 @@ const Counter = React.createClass({
 		console.log('unmount', 'Counter')
 	},
 	getNum(e) {
-		let num = parseInt(this.refs.input.value, 10)
+		let num = parseInt(this.input.value, 10)
 		if (typeof num === 'number') {
 			this.toNum(num)
 		}
+	},
+	getInput(input) {
+		this.input = input
 	},
 	render() {
 		let { props } = this
@@ -75,7 +78,7 @@ const Counter = React.createClass({
 				{' '}
 				<button onClick={ () => COUNT('INCREMENT_IF_ODD') }>incrementIfOdd</button>
 				{' '}
-				<label htmlFor="myinput">input number:<input type="text" ref="input" id="myinput" name="myinput" /></label>
+				<label htmlFor="myinput">input number:<input type="text" ref={ this.getInput } id="myinput" name="myinput" /></label>
 				<button onClick={ this.getNum }>run</button>
 				<p dangerouslySetInnerHTML={{ __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2)}}></p>
 			</div>
@@ -180,15 +183,22 @@ const Wrap = React.createClass({
 	}
 })
 
+let Stateless = function() {
+	return <div>stateless</div>
+}
+
+let testStateless = React.render(<Stateless />, document.getElementById('container'))
+console.log(testStateless)
+
 let update = count => {
-	React.render(
+	return React.render(
 		<Wrap count={ count } />,
 		document.getElementById('container')
 	)
 }
 
 let num = 10
-update(num)
+console.log(update(num))
 // setInterval(() => {
 // 	update(num++)
 // }, 1000)

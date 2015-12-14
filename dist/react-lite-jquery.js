@@ -127,7 +127,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		UPDATE: 6,
 		DID_MOUNT: 7,
 		WILL_UNMOUNT: 8,
-		COMPONENT_ID: 'data-esnextid'
+		REF_CALLBACK: 9,
+		COMPONENT_ID: 'data-liteid'
 	};
 	module.exports = exports['default'];
 
@@ -159,6 +160,12 @@ return /******/ (function(modules) { // webpackBootstrap
 			_jquery2['default'].each(this, function (i, value) {
 				return callback(value, i, _this);
 			});
+		};
+	}
+
+	if (!arrayPrototype.indexOf) {
+		arrayPrototype.indexOf = function (item) {
+			return _jquery2['default'].inArray(item, this);
 		};
 	}
 
@@ -315,13 +322,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.pipe = pipe;
-	var nextFrame = isFn(window.requestAnimationFrame) ? function (fn) {
-		return requestAnimationFrame(fn);
-	} : function (fn) {
-		return setTimeout(fn, 0);
-	};
-
-	exports.nextFrame = nextFrame;
 	var getUid = function getUid() {
 		return Math.random().toString(36).substr(2);
 	};
@@ -365,8 +365,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	var $events = {};
 
 	var $on = function $on(name, callback) {
+		var method = arguments.length <= 2 || arguments[2] === undefined ? 'push' : arguments[2];
+
 		var events = $events[name] = $events[name] || [];
-		events.push(callback);
+		events[method](callback);
 	};
 
 	exports.$on = $on;
@@ -416,17 +418,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	var getRefs = function getRefs(id) {
 		var refs = refsStore[id] || {};
-		delete refsStore[id];
+		refsStore[id] = {};
 		return refs;
 	};
 	exports.getRefs = getRefs;
-	var collectRef = function collectRef(key, value) {
+	var collectRef = function collectRef(key, value, oldKey) {
 		if (!componentId) {
 			return;
 		}
 		var refs = refsStore[componentId];
 		if (!refs) {
 			refs = refsStore[componentId] = {};
+		}
+		if (isFn(key)) {
+			if (!refs.$$fn) {
+				refs.$$fn = [];
+			}
+			refs.$$fn.push(key);
+			if (key !== oldKey) {
+				$on(_constant.REF_CALLBACK, function () {
+					return key(value);
+				});
+			}
 		}
 		if (value.nodeName) {
 			value.getDOMNode = getDOMNode;
@@ -435,6 +448,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.collectRef = collectRef;
+	var patchRefs = function patchRefs(refs, newRefs) {
+		if (!refs || !refs.$$fn) {
+			return;
+		}
+		refs.$$fn.forEach(function (fn) {
+			if (!newRefs || !newRefs.$$fn || newRefs.$$fn.indexOf(fn) === -1) {
+				fn(null);
+			}
+		});
+	};
+
+	exports.patchRefs = patchRefs;
 	var appendChild = function appendChild(node, child) {
 		node.appendChild(child);
 	};
@@ -540,13 +565,13 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 			var _newValue = newProps[key];
 			if (key === 'style') {
-				patchStyle(props.style, newProps.style);
+				patchStyle(node, props.style, newProps.style);
 			} else if (isUndefined(_newValue)) {
 				removeProp(node, key);
 			} else if (_newValue !== props[key]) {
 				setProp(node, key, _newValue);
-			} else if (key === 'ref' && _newValue) {
-				collectRef(_newValue, node);
+			} else if (key === 'ref') {
+				collectRef(_newValue, node, props[key]);
 			}
 			delete props[key];
 		}
@@ -766,7 +791,10 @@ return /******/ (function(modules) { // webpackBootstrap
 			var patches = _diff2['default'](vnode, nextVnode);
 			var newNode = _patch2['default'](node, patches);
 			_util.resetComponentId();
+			var refs = this.refs;
 			this.refs = _util.getRefs(id);
+			_util.patchRefs(refs, this.refs);
+			_util.$triggerOnce(_constant.REF_CALLBACK);
 			// update this.node, if component render new element
 			if (newNode !== node) {
 				_util.setAttr(newNode, _constant.COMPONENT_ID, id);
@@ -899,6 +927,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		var node = component.node = _create2['default'](vnode);
 		_util.resetComponentId();
 		component.refs = _util.getRefs(id);
+		_util.$triggerOnce(_constant.REF_CALLBACK);
 		var attr = _util.getAttr(node, _constant.COMPONENT_ID);
 		if (!attr) {
 			_util.setAttr(node, _constant.COMPONENT_ID, attr = id);
@@ -916,14 +945,13 @@ return /******/ (function(modules) { // webpackBootstrap
 			component.componentDidMount();
 			$cache.keepSilent = false;
 			if ($cache.nextState) {
-				(function () {
-					var nextState = $cache.nextState;
-					$cache.nextState = null;
-					_util.nextFrame(function () {
-						component.state = nextState;
-						component.forceUpdate();
-					});
-				})();
+				component.state = $cache.nextState;
+				$cache.nextState = null;
+				var shouldUpdate = component.shouldComponentUpdate(props, component.state);
+				if (!shouldUpdate) {
+					return;
+				}
+				component.forceUpdate();
 			}
 		});
 		return { component: component, node: node };
@@ -933,7 +961,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var updateComponent = function updateComponent(component, props) {
 		props = _extends({}, props, component.constructor.defaultProps);
 		if (props.ref) {
-			_util.collectRef(props.ref, component);
+			_util.collectRef(props.ref, component, component.props.ref);
 		}
 		var $cache = component.$cache;
 
@@ -1233,9 +1261,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	var store = {};
 	var render = function render(vnode, container, callback) {
 		var id = _util.getAttr(container, _constant.COMPONENT_ID);
-		if (id) {
+		if (store.hasOwnProperty(id)) {
 			var patches = _diff2['default'](store[id], vnode);
-			_patch2['default'](container.firstChild, patches);
+			_patch2['default'](container.firstChild, patches, container);
 			store[id] = vnode;
 		} else {
 			var node = _create2['default'](vnode);
@@ -1244,9 +1272,22 @@ return /******/ (function(modules) { // webpackBootstrap
 			container.innerHTML = '';
 			_util.appendChild(container, node);
 		}
+		_util.$triggerOnce(_constant.REF_CALLBACK);
 		_util.$triggerOnce(_constant.DID_MOUNT);
 		if (_util.isFn(callback)) {
 			callback();
+		}
+
+		if (!vnode) {
+			return;
+		}
+
+		if (_util.isComponentClass(vnode.tagName)) {
+			return vnode.component;
+		} else if (vnode && _util.isStr(vnode.tagName)) {
+			return container.firstChild;
+		} else {
+			return null;
 		}
 	};
 
@@ -1259,7 +1300,9 @@ return /******/ (function(modules) { // webpackBootstrap
 				_util.removeChild(container, firstChild);
 			}
 			delete store[id];
+			return true;
 		}
+		return false;
 	};
 	exports.unmount = unmount;
 
