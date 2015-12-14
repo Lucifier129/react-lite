@@ -1,5 +1,5 @@
 if (typeof requestAnimationFrame === 'undefined') {
-	window.requestAnimationFrame = fn => setTimeout(fn, 0)
+	window.requestAnimationFrame = fn => setTimeout(fn, 100 / 6)
 	window.cancelAnimationFrame = id => clearTimeout(id)
 }
 
@@ -101,7 +101,7 @@ var Example = React.createClass({
       console.log('setTimeout:', this.state.val);  // log 3
       this.setState({val: this.state.val + 1});
       console.log('setTimeout:', this.state.val);  // log 4
-    }, 0);
+    }, 4);
   },
 
   render() {

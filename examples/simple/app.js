@@ -48,7 +48,7 @@
 
 	if (typeof requestAnimationFrame === 'undefined') {
 		window.requestAnimationFrame = function (fn) {
-			return setTimeout(fn, 0);
+			return setTimeout(fn, 100 / 6);
 		};
 		window.cancelAnimationFrame = function (id) {
 			return clearTimeout(id);
@@ -196,7 +196,7 @@
 				console.log('setTimeout:', _this2.state.val); // log 3
 				_this2.setState({ val: _this2.state.val + 1 });
 				console.log('setTimeout:', _this2.state.val); // log 4
-			}, 0);
+			}, 4);
 		},
 
 		render: function render() {

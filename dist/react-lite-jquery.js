@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory();
+		module.exports = factory(require("jquery"));
 	else if(typeof define === 'function' && define.amd)
-		define([], factory);
+		define(["jquery"], factory);
 	else if(typeof exports === 'object')
-		exports["React"] = factory();
+		exports["React"] = factory(require("jquery"));
 	else
-		root["React"] = factory();
-})(this, function() {
+		root["React"] = factory(root["jQuery"]);
+})(this, function(__WEBPACK_EXTERNAL_MODULE_9__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -141,49 +141,134 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _jquery = __webpack_require__(9);
+
+	var _jquery2 = _interopRequireDefault(_jquery);
+
 	var _constant = __webpack_require__(1);
 
+	var arrayPrototype = Array.prototype;
+	var objectPrototype = Object.prototype;
+
+	if (!arrayPrototype.forEach) {
+		arrayPrototype.forEach = function (callback) {
+			var _this = this;
+
+			_jquery2['default'].each(this, function (i, value) {
+				return callback(value, i, _this);
+			});
+		};
+	}
+
+	if (!Object.create) {
+		Object.create = function (proto) {
+			var Fn = function Fn() {};
+			Fn.prototype = proto;
+			return new Fn();
+		};
+	}
+
+	if (!Object.keys) {
+		Object.keys = function (obj) {
+			var keys = [];
+			_jquery2['default'].each(obj, function (key) {
+				return keys.push(key);
+			});
+			return keys;
+		};
+	}
+
+	if (!Function.prototype.bind) {
+		Function.prototype.bind = function (context) {
+			var _this2 = this;
+
+			for (var _len = arguments.length, initArgs = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+				initArgs[_key - 1] = arguments[_key];
+			}
+
+			return function () {
+				for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+					args[_key2] = arguments[_key2];
+				}
+
+				return _this2.apply(context, initArgs.concat(args));
+			};
+		};
+	}
+
 	var setAttr = function setAttr(elem, key, value) {
-		elem.setAttribute(key, value);
+		_jquery2['default'].fn.attr.call([elem], key, value);
 	};
 
 	exports.setAttr = setAttr;
 	var getAttr = function getAttr(elem, key) {
-		return elem.getAttribute(key);
+		return _jquery2['default'].fn.attr.call([elem], key);
 	};
 
 	exports.getAttr = getAttr;
 	var removeAttr = function removeAttr(elem, key) {
-		elem.removeAttribute(key);
+		_jquery2['default'].fn.removeAttr.call([elem], key);
 	};
 
 	exports.removeAttr = removeAttr;
 	var querySelectorAll = function querySelectorAll(elem, selector) {
-		return elem.querySelectorAll(selector);
+		return _jquery2['default'](selector, elem);
 	};
 
 	exports.querySelectorAll = querySelectorAll;
 	var setEvent = function setEvent(elem, key, value) {
-		key = key.toLowerCase();
-		elem[key] = value;
-		if (key === 'onchange') {
-			elem.oninput = value;
-			value.oninput = true;
+		if (!isFn(value)) {
+			return;
 		}
+		key = key.toLowerCase();
+		var $elem = _jquery2['default'](elem);
+		var eventName = key.substr(2) + '.react';
+		$elem.off(eventName);
+		$elem.on(eventName, value);
+		if (key !== 'onchange') {
+			return;
+		}
+		if ('oninput' in elem) {
+			$elem.off('oninput.onchange');
+			$elem.on('oninput.onchange', value);
+			return;
+		}
+		elem.onpropertychange = function (e) {
+			if (e.propertyName === 'value') {
+				$elem.trigger(eventName);
+			}
+		};
 	};
 
 	exports.setEvent = setEvent;
 	var removeEvent = function removeEvent(elem, key) {
 		key = key.toLowerCase();
-		elem[key] = null;
-		if (key === 'onchange') {
-			elem.oninput = null;
+		var $elem = _jquery2['default'](elem);
+		var eventName = key.substr(2) + '.react';
+		$elem.off(eventName);
+		if (key !== 'onchange') {
+			return;
 		}
+		if ('oninput' in elem) {
+			$elem.off('oninput.onchange');
+			return;
+		}
+		elem.onpropertychange = null;
 	};
 
 	exports.removeEvent = removeEvent;
 	var toArray = Array.from || function (obj) {
-		return Array.prototype.slice.call(obj);
+		try {
+			return Array.prototype.slice.call(obj);
+		} catch (e) {
+			var list = [];
+			for (var i = 0, len = obj.length; i < len; i++) {
+				list.push(obj[i]);
+			}
+			return list;
+		}
 	};
 
 	exports.toArray = toArray;
@@ -220,8 +305,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.isUndefined = isUndefined;
 	var pipe = function pipe(fn1, fn2) {
 		return function () {
-			for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-				args[_key] = arguments[_key];
+			for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+				args[_key3] = arguments[_key3];
 			}
 
 			fn1.apply(this, args);
@@ -233,7 +318,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var nextFrame = isFn(window.requestAnimationFrame) ? function (fn) {
 		return requestAnimationFrame(fn);
 	} : function (fn) {
-		return setTimeout(fn, 100 / 6);
+		return setTimeout(fn, 0);
 	};
 
 	exports.nextFrame = nextFrame;
@@ -286,8 +371,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.$on = $on;
 	var $trigger = function $trigger(name) {
-		for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-			args[_key2 - 1] = arguments[_key2];
+		for (var _len4 = arguments.length, args = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
+			args[_key4 - 1] = arguments[_key4];
 		}
 
 		if (isArr($events[name])) {
@@ -299,8 +384,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.$trigger = $trigger;
 	var $triggerOnce = function $triggerOnce(name) {
-		for (var _len3 = arguments.length, args = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
-			args[_key3 - 1] = arguments[_key3];
+		for (var _len5 = arguments.length, args = Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
+			args[_key5 - 1] = arguments[_key5];
 		}
 
 		var events = $events[name];
@@ -455,7 +540,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 			var _newValue = newProps[key];
 			if (key === 'style') {
-				patchStyle(node, props.style, newProps.style);
+				patchStyle(props.style, newProps.style);
 			} else if (isUndefined(_newValue)) {
 				removeProp(node, key);
 			} else if (_newValue !== props[key]) {
@@ -1177,6 +1262,12 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	};
 	exports.unmount = unmount;
+
+/***/ },
+/* 9 */
+/***/ function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_9__;
 
 /***/ }
 /******/ ])

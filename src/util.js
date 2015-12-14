@@ -53,7 +53,7 @@ export let pipe = (fn1, fn2) => function(...args) {
 
 export let nextFrame = isFn(window.requestAnimationFrame)
 	? fn => requestAnimationFrame(fn)
-	: fn => setTimeout(fn, 100 / 6)
+	: fn => setTimeout(fn, 0)
 
 export let getUid = () => Math.random().toString(36).substr(2)
 

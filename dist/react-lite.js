@@ -233,7 +233,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var nextFrame = isFn(window.requestAnimationFrame) ? function (fn) {
 		return requestAnimationFrame(fn);
 	} : function (fn) {
-		return setTimeout(fn, 100 / 6);
+		return setTimeout(fn, 0);
 	};
 
 	exports.nextFrame = nextFrame;
