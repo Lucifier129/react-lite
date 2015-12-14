@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "jsnext:main": "src/index.js",
   "scripts": {
-    "test": "mocha --compilers js:babel/register --recursive",
+    "test": "jest",
     "test:watch": "npm test -- --watch",
     "build:lib": "babel src --out-dir lib",
     "build:es3": "set BROWSER_ENV=es3&& webpack src/index.js dist/react-lite-jquery.js --config webpack.config.development.js",
@@ -19,18 +19,15 @@
     "type": "git",
     "url": "https://github.com/Lucifier129/react-lite.git"
   },
+  "jest": {
+    "scriptPreprocessor": "<rootDir>/jest/preprocessor.js"
+  },
   "keywords": [
-    "refer",
-    "virtual-dom",
-    "reducer",
-    "state",
-    "predictable",
-    "functional",
-    "immutable",
-    "hot",
-    "live",
-    "replay",
-    "flux"
+    "react",
+    "lite",
+    "react-lite",
+    "component",
+    "virtual-dom"
   ],
   "author": "Jade Gu <guyingjie129@163.com> (https://github.com/Lucifier129)",
   "license": "MIT",
@@ -40,8 +37,11 @@
   "homepage": "https://github.com/Lucifier129/react-lite",
   "devDependencies": {
     "babel-core": "^5.8.25",
+    "babel-jest": "^5.3.0",
     "babel-loader": "^5.3.2",
     "babel-runtime": "^5.8.25",
+    "jest-cli": "^0.8.1",
+    "jest-webpack-alias": "^2.0.0",
     "webpack": "^1.12.2"
   },
   "npmName": "react-lite",

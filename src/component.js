@@ -197,6 +197,9 @@ $on(WILL_UNMOUNT, checkUnmount)
 export let initComponent = (Component, props) => {
 	props = { ...props, ...Component.defaultProps }
 	let component = new Component(props)
+	if (!component.props) {
+		component.props = props
+	}
 	let id = component.$id = getUid()
 	let { $cache } = component
 	if (props.ref) {

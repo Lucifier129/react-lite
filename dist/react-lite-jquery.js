@@ -303,7 +303,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	exports.isComponent = isComponent;
 	var isComponentClass = function isComponentClass(obj) {
-		return isFn(obj) && isFn(obj.prototype.render);
+		return isFn(obj) && 'forceUpdate' in obj.prototype;
 	};
 	exports.isComponentClass = isComponentClass;
 	var isUndefined = function isUndefined(obj) {
@@ -911,6 +911,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	var initComponent = function initComponent(Component, props) {
 		props = _extends({}, props, Component.defaultProps);
 		var component = new Component(props);
+		if (!component.props) {
+			component.props = props;
+		}
 		var id = component.$id = _util.getUid();
 		var $cache = component.$cache;
 

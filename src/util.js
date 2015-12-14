@@ -44,7 +44,7 @@ export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isComponent = obj => isFn(obj)
-export let isComponentClass = obj => isFn(obj) && isFn(obj.prototype.render)
+export let isComponentClass = obj => isFn(obj) && ('forceUpdate' in obj.prototype)
 export let isUndefined = obj => obj === undefined
 export let pipe = (fn1, fn2) => function(...args) {
 	fn1.apply(this, args)

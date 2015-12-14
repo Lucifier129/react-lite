@@ -19,7 +19,9 @@ module.exports = {
     },
     resolve: {
         extensions: ['', '.js'],
+        root: __dirname,
         alias: {
+            util: __dirname + '/src/util'
             // 'react': __dirname + '/src'
         }
     }
