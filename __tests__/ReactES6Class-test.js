@@ -9,7 +9,7 @@
  * @emails react-core
  */
 
- jest.dontMock('../../dist/react-lite');
+ jest.dontMock('../dist/react-lite');
 
 'use strict';
 
@@ -28,8 +28,8 @@ describe('ReactES6Class', function() {
   var renderedName = null;
 
   beforeEach(function() {
-    React = require('../../dist/react-lite');
-    ReactDOM = require('../../dist/react-lite');
+    React = require('../dist/react-lite');
+    ReactDOM = require('../dist/react-lite');
 
     container = document.createElement('div');
     attachedListener = null;
@@ -286,7 +286,6 @@ describe('ReactES6Class', function() {
         lifeCycles.push('will-unmount');
       }
       render() {
-        console.log(this.props)
         return <span className={this.props.value} />;
       }
     }

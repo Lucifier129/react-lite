@@ -80,15 +80,10 @@ Component.prototype = {
 		this.componentWillUpdate(nextProps, nextState)
 		this.props = nextProps
 		this.state = nextState
-		setComponentId(id)
 		let nextVnode = this.render()
 		let patches = diff(vnode, nextVnode)
 		let newNode = patch(node, patches)
-		resetComponentId()
-		let refs = this.refs
 		this.refs = getRefs(id)
-		patchRefs(refs, this.refs)
-		$triggerOnce(REF_CALLBACK)
 		// update this.node, if component render new element
 		if (newNode !== node) {
 			setAttr(newNode, COMPONENT_ID, id)
@@ -97,6 +92,18 @@ Component.prototype = {
 		this.vnode = nextVnode
 		$triggerOnce(DID_MOUNT)
 		this.componentDidUpdate(props, state)
+		if (isFn(props.ref) && props.ref !== nextProps.ref) {
+			props.ref(null)
+		}
+		if (nextProps.ref) {
+			if (isFn(nextProps.ref)) {
+				if (props.ref !== nextProps.ref) {
+					nextProps.ref(this)
+				}
+			} else if ($cache.parentId) {
+				attachRef($cache.parentId, nextProps.ref, this)
+			}
+		}
 		if (isFn(callback)) {
 			callback()
 		}
@@ -170,14 +177,22 @@ let removeComponent = id => {
 	if (!component) {
 		return
 	}
-	if (isArr(component)) {
-		return component.forEach(item => {
-			item.componentWillUnmount()
-			delete components[item.$id]
-		})
+	if (!isArr(component)) {
+		component = [component]
 	}
-	component.componentWillUnmount()
-	delete components[id]
+	component.forEach(item => {
+		let { props, refs } = item
+		if (isFn(props.ref)) {
+			props.ref(null)
+		}
+		if (isArr(refs.$$fn)) {
+			refs.$$fn.forEach(callback => {
+				callback(null)
+			})
+		}
+		item.componentWillUnmount()
+		delete components[item.$id]
+	})
 }
 let checkUnmount = (node, newNode) => {
 	if (!node || node.nodeType === 3) {
@@ -189,12 +204,14 @@ let checkUnmount = (node, newNode) => {
 		removeComponent(id)
 	}
 	let componentNodes = querySelectorAll(node, `[${ COMPONENT_ID }]`)
-	toArray(componentNodes).forEach(child => checkUnmount(child))
+	toArray(componentNodes).forEach(childNode => {
+		checkUnmount(childNode)
+	})
 }
 
 $on(WILL_UNMOUNT, checkUnmount)
 
-export let initComponent = (Component, props) => {
+export let initComponent = (Component, props, componentId) => {
 	props = { ...props, ...Component.defaultProps }
 	let component = new Component(props)
 	if (!component.props) {
@@ -202,20 +219,14 @@ export let initComponent = (Component, props) => {
 	}
 	let id = component.$id = getUid()
 	let { $cache } = component
-	if (props.ref) {
-		collectRef(props.ref, component)
-	}
+	$cache.parentId = componentId
 	$cache.keepSilent = true
 	component.componentWillMount()
 	$cache.keepSilent = false
 	component.state = $cache.nextState || component.state
 	$cache.nextState = null
 	let vnode = component.vnode = component.render()
-	setComponentId(id)
-	let node = component.node = create(vnode)
-	resetComponentId()
-	component.refs = getRefs(id)
-	$triggerOnce(REF_CALLBACK)
+	let node = component.node = create(vnode, id)
 	let attr = getAttr(node, COMPONENT_ID)
 	if (!attr) {
 		setAttr(node, COMPONENT_ID, attr = id)
@@ -232,6 +243,13 @@ export let initComponent = (Component, props) => {
 		$cache.keepSilent = true
 		component.componentDidMount()
 		$cache.keepSilent = false
+		if (componentId && props.ref) {
+			if (isFn(props.ref)) {
+				props.ref(component)
+			} else {
+				attachRef(componentId, props.ref, component)
+			}
+		}
 		if ($cache.nextState) {
 			component.state = $cache.nextState
 			$cache.nextState = null
@@ -247,9 +265,6 @@ export let initComponent = (Component, props) => {
 
 export let updateComponent = (component, props) => {
 	props = { ...props, ...component.constructor.defaultProps }
-	if (props.ref) {
-		collectRef(props.ref, component, component.props.ref)
-	}
 	let { $cache } = component
 	$cache.keepSilent = true
 	component.componentWillReceiveProps(props)

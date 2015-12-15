@@ -12,7 +12,7 @@ import {
 /**
 * 根据 tagName props attrs 创建 real-dom
 */
-let create = vnode => {
+let create = (vnode, componentId) => {
 	if (vnode === null) {
 		return document.createElement('noscript')
 	}
@@ -25,7 +25,7 @@ let create = vnode => {
 		let Component = tagName
 		props = mergeProps(props, children)
 		if (isComponentClass(Component)) {
-			let { node, component } = initComponent(Component, props)
+			let { node, component } = initComponent(Component, props, componentId)
 			vnode.component = component
 			return node
 		}
@@ -37,13 +37,24 @@ let create = vnode => {
 		setProps(elem, props)
 	}
 	if (children && children.length > 0) {
-		vnode.children = mapChildren(children, child => addChild(elem, child))
+		vnode.children = mapChildren(children, vchild => addChild(elem, vchild, componentId))
 	}
 	return elem
 }
 
 export default create
 
-export let addChild = (elem, child) => {
-	appendChild(elem, create(child))
+export let addChild = (elem, vchild, componentId) => {
+	let childNode = create(vchild, componentId)
+	let { props } = vchild
+	appendChild(elem, childNode, componentId, )
+	if (componentId && props && props.ref) {
+		if (isFn(props.ref)) {
+			elem.detachRef = props.ref
+			props.ref(elem)
+		} else {
+			elem.parentId = componentId
+			attachRef(componentId, props.ref, elem)
+		}
+	}
 }

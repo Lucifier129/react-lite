@@ -49,7 +49,7 @@ let patch = (node, patches, parent) => {
 			}
 			break
 		case CREATE:
-			newVnode.children = mapChildren(patches.newChildren, child => addChild(node, child))
+			newVnode.children = mapChildren(newVnode.children, child => addChild(node, child))
 			break
 		case REPLACE:
 			newVnode.children = mapChildren(newVnode.children, (newChild, i) => {
