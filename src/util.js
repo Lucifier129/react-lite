@@ -83,11 +83,9 @@ export let hasKey = obj => obj && obj.props && obj.props.key
 
 let $events = {}
 
-export let $on = (name, callback) => {
-	if (!$events[name]) {
-		$events[name] = []
-	}
-	$events[name].push(callback)
+export let $on = (name, callback, method = 'push') => {
+	let events = $events[name] = $events[name] || []
+	events[method](callback)
 }
 
 export let $trigger = (name, ...args) => {
@@ -98,7 +96,7 @@ export let $trigger = (name, ...args) => {
 
 export let $triggerOnce = (name, ...args) => {
 	let events = $events[name]
-	delete $events[name]
+	$events[name] = []
 	if (isArr(events)) {
 		events.forEach(callback => callback(...args))
 	}
@@ -125,7 +123,6 @@ export let collectRef = (key, value, oldKey) => {
 	if (!componentId) {
 		return
 	}
-	console.log(componentId, key)
 	let refs = refsStore[componentId]
 	if (!refs) {
 		refs = refsStore[componentId] = {}
@@ -136,9 +133,8 @@ export let collectRef = (key, value, oldKey) => {
 		}
 		refs.$$fn.push(key)
 		if (key !== oldKey) {
-			$on(componentId, () => key(value))
+			$on(REF_CALLBACK, () => key(value))
 		}
-		return
 	}
 	if (value.nodeName) {
 		value.getDOMNode = getDOMNode
@@ -167,7 +163,7 @@ export let removeChild = (node, child) => {
 }
 
 export let replaceChild = (node, newChild, child) => {
-	$trigger(WILL_UNMOUNT, child, newChild)
+	$trigger(WILL_UNMOUNT, child)
 	node.replaceChild(newChild, child)
 }
 
@@ -250,23 +246,15 @@ export let patchProps = (node, props, newProps) => {
 		if (!newProps.hasOwnProperty(key)) {
 			continue
 		}
-		let value = props[key]
 		let newValue = newProps[key]
 		if (key === 'style') {
 			patchStyle(node, props.style, newProps.style)
 		} else if (isUndefined(newValue)) {
 			removeProp(node, key)
-		} else if (newValue !== value) {
+		} else if (newValue !== props[key]) {
 			setProp(node, key, newValue)
 		} else if (key === 'ref') {
-			if (isFn(value) && newValue !== value) {
-				value(null)
-			}
-			if (isFn(newValue) && newValue !== value) {
-				newValue(node)
-			} else if (node.parentId) {
-				attachRef(node.parentId, newValue, node)
-			}
+			collectRef(newValue, node, props[key])
 		}
 		delete props[key]
 	}

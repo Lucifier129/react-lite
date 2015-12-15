@@ -882,13 +882,14 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (!component) {
 			return;
 		}
-		if (!_util.isArr(component)) {
-			component = [component];
+		if (_util.isArr(component)) {
+			return component.forEach(function (item) {
+				item.componentWillUnmount();
+				delete components[item.$id];
+			});
 		}
-		component.forEach(function (item) {
-			item.componentWillUnmount();
-			delete components[item.$id];
-		});
+		component.componentWillUnmount();
+		delete components[id];
 	};
 	var checkUnmount = function checkUnmount(node, newNode) {
 		if (!node || node.nodeType === 3) {
@@ -900,8 +901,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			removeComponent(id);
 		}
 		var componentNodes = _util.querySelectorAll(node, '[' + _constant.COMPONENT_ID + ']');
-		_util.toArray(componentNodes).forEach(function (childNode) {
-			checkUnmount(childNode);
+		_util.toArray(componentNodes).forEach(function (child) {
+			return checkUnmount(child);
 		});
 	};
 

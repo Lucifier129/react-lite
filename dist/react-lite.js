@@ -274,10 +274,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	var $events = {};
 
 	var $on = function $on(name, callback) {
-		if (!$events[name]) {
-			$events[name] = [];
-		}
-		$events[name].push(callback);
+		var method = arguments.length <= 2 || arguments[2] === undefined ? 'push' : arguments[2];
+
+		var events = $events[name] = $events[name] || [];
+		events[method](callback);
 	};
 
 	exports.$on = $on;
@@ -300,7 +300,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 		var events = $events[name];
-		delete $events[name];
+		$events[name] = [];
 		if (isArr(events)) {
 			events.forEach(function (callback) {
 				return callback.apply(undefined, args);
@@ -335,7 +335,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (!componentId) {
 			return;
 		}
-		console.log(componentId, key);
 		var refs = refsStore[componentId];
 		if (!refs) {
 			refs = refsStore[componentId] = {};
@@ -346,11 +345,10 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 			refs.$$fn.push(key);
 			if (key !== oldKey) {
-				$on(componentId, function () {
+				$on(_constant.REF_CALLBACK, function () {
 					return key(value);
 				});
 			}
-			return;
 		}
 		if (value.nodeName) {
 			value.getDOMNode = getDOMNode;
@@ -383,7 +381,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.removeChild = removeChild;
 	var replaceChild = function replaceChild(node, newChild, child) {
-		$trigger(_constant.WILL_UNMOUNT, child, newChild);
+		$trigger(_constant.WILL_UNMOUNT, child);
 		node.replaceChild(newChild, child);
 	};
 
@@ -705,7 +703,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			var refs = this.refs;
 			this.refs = _util.getRefs(id);
 			_util.patchRefs(refs, this.refs);
-			_util.$triggerOnce(id);
+			_util.$triggerOnce(_constant.REF_CALLBACK);
 			// update this.node, if component render new element
 			if (newNode !== node) {
 				_util.setAttr(newNode, _constant.COMPONENT_ID, id);
@@ -714,18 +712,6 @@ return /******/ (function(modules) { // webpackBootstrap
 			this.vnode = nextVnode;
 			_util.$triggerOnce(_constant.DID_MOUNT);
 			this.componentDidUpdate(props, state);
-			if (nextProps.ref) {
-				if (_util.isFn(nextProps.ref)) {
-					if (props.ref !== nextProps.ref) {
-						if (_util.isFn(props.ref)) {
-							props.ref(null);
-						}
-						nextProps.ref(this);
-					}
-				} else {
-					_util.collectRef(nextProps.ref, this);
-				}
-			}
 			if (_util.isFn(callback)) {
 				callback();
 			}
@@ -805,24 +791,14 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (!component) {
 			return;
 		}
-		if (!_util.isArr(component)) {
-			component = [component];
+		if (_util.isArr(component)) {
+			return component.forEach(function (item) {
+				item.componentWillUnmount();
+				delete components[item.$id];
+			});
 		}
-		component.forEach(function (item) {
-			var props = item.props;
-			var refs = item.refs;
-
-			if (_util.isFn(props.ref)) {
-				props.ref(null);
-			}
-			if (_util.isArr(refs.$$fn)) {
-				refs.$$fn.forEach(function (callback) {
-					callback(null);
-				});
-			}
-			item.componentWillUnmount();
-			delete components[item.$id];
-		});
+		component.componentWillUnmount();
+		delete components[id];
 	};
 	var checkUnmount = function checkUnmount(node, newNode) {
 		if (!node || node.nodeType === 3) {
@@ -834,8 +810,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			removeComponent(id);
 		}
 		var componentNodes = _util.querySelectorAll(node, '[' + _constant.COMPONENT_ID + ']');
-		_util.toArray(componentNodes).forEach(function (childNode) {
-			checkUnmount(childNode);
+		_util.toArray(componentNodes).forEach(function (child) {
+			return checkUnmount(child);
 		});
 	};
 
@@ -847,24 +823,24 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (!component.props) {
 			component.props = props;
 		}
-		if (props.ref && !_util.isFn(props.ref)) {
-			_util.collectRef(props.ref, component);
-		}
 		var id = component.$id = _util.getUid();
 		var $cache = component.$cache;
 
+		if (props.ref) {
+			_util.collectRef(props.ref, component);
+		}
 		$cache.keepSilent = true;
 		component.componentWillMount();
 		$cache.keepSilent = false;
 		component.state = $cache.nextState || component.state;
 		$cache.nextState = null;
-		_util.setComponentId(id);
 		var vnode = component.vnode = component.render();
+		_util.setComponentId(id);
 		var node = component.node = _create2['default'](vnode);
-		var attr = _util.getAttr(node, _constant.COMPONENT_ID);
 		_util.resetComponentId();
-		_util.$triggerOnce(id);
 		component.refs = _util.getRefs(id);
+		_util.$triggerOnce(_constant.REF_CALLBACK);
+		var attr = _util.getAttr(node, _constant.COMPONENT_ID);
 		if (!attr) {
 			_util.setAttr(node, _constant.COMPONENT_ID, attr = id);
 		}
@@ -880,9 +856,6 @@ return /******/ (function(modules) { // webpackBootstrap
 			$cache.keepSilent = true;
 			component.componentDidMount();
 			$cache.keepSilent = false;
-			if (_util.isFn(props.ref)) {
-				props.ref(component);
-			}
 			if ($cache.nextState) {
 				component.state = $cache.nextState;
 				$cache.nextState = null;
@@ -899,6 +872,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.initComponent = initComponent;
 	var updateComponent = function updateComponent(component, props) {
 		props = _extends({}, props, component.constructor.defaultProps);
+		if (props.ref) {
+			_util.collectRef(props.ref, component, component.props.ref);
+		}
 		var $cache = component.$cache;
 
 		$cache.keepSilent = true;
