@@ -59,42 +59,37 @@ describe('ReactComponent', function() {
   //   }).toThrow();
   // });
 
-  it('should support refs on owned components', function() {
-    var innerObj = {};
-    var outerObj = {};
+  // it('should support refs on owned components', function() {
+  //   var innerObj = {};
+  //   var outerObj = {};
 
-    var Wrapper = React.createClass({
+  //   var Wrapper = React.createClass({
 
-      getObject: function() {
-        return this.props.object;
-      },
+  //     getObject: function() {
+  //       return this.props.object;
+  //     },
 
-      componentDidMount: function() {
-        console.log(this.props.ref)
-      },
+  //     render: function() {
+  //       return <div>{this.props.children}</div>;
+  //     },
 
-      render: function() {
-        return <div>{this.props.children}</div>;
-      },
+  //   });
 
-    });
+  //   var Component = React.createClass({
+  //     render: function() {
+  //       var inner = <Wrapper object={innerObj} ref="inner" />;
+  //       var outer = <Wrapper object={outerObj} ref="outer">{inner}</Wrapper>;
+  //       return outer;
+  //     },
+  //     componentDidMount: function() {
+  //       expect(this.refs.inner.getObject()).toEqual(innerObj);
+  //       expect(this.refs.outer.getObject()).toEqual(outerObj);
+  //     },
+  //   });
 
-    var Component = React.createClass({
-      render: function() {
-        var inner = <Wrapper object={innerObj} ref="inner" />;
-        var outer = <Wrapper object={outerObj} ref="outer">{inner}</Wrapper>;
-        return outer;
-      },
-      componentDidMount: function() {
-        console.log(Object.keys(this.refs))
-        //expect(this.refs.inner.getObject()).toEqual(innerObj);
-        expect(this.refs.outer.getObject()).toEqual(outerObj);
-      },
-    });
-
-    var instance = <Component />;
-    instance = ReactTestUtils.renderIntoDocument(instance);
-  });
+  //   var instance = <Component />;
+  //   instance = ReactTestUtils.renderIntoDocument(instance);
+  // });
 
   it('should not have refs on unmounted components', function() {
     var Parent = React.createClass({
@@ -190,100 +185,100 @@ describe('ReactComponent', function() {
     expect(mounted).toBe(true);
   });
 
-  it('should call refs at the correct time', function() {
-    var log = [];
+  // it('should call refs at the correct time', function() {
+  //   var log = [];
 
-    var Inner = React.createClass({
-      render: function() {
-        log.push(`inner ${this.props.id} render`);
-        return <div />;
-      },
-      componentDidMount: function() {
-        log.push(`inner ${this.props.id} componentDidMount`);
-      },
-      componentDidUpdate: function() {
-        log.push(`inner ${this.props.id} componentDidUpdate`);
-      },
-      componentWillUnmount: function() {
-        log.push(`inner ${this.props.id} componentWillUnmount`);
-      },
-    });
+  //   var Inner = React.createClass({
+  //     render: function() {
+  //       log.push(`inner ${this.props.id} render`);
+  //       return <div />;
+  //     },
+  //     componentDidMount: function() {
+  //       log.push(`inner ${this.props.id} componentDidMount`);
+  //     },
+  //     componentDidUpdate: function() {
+  //       log.push(`inner ${this.props.id} componentDidUpdate`);
+  //     },
+  //     componentWillUnmount: function() {
+  //       log.push(`inner ${this.props.id} componentWillUnmount`);
+  //     },
+  //   });
 
-    var Outer = React.createClass({
-      render: function() {
-        return (
-          <div>
-            <Inner id={1} ref={(c) => {
-              log.push(`ref 1 got ${c ? `instance ${c.props.id}` : 'null'}`);
-            }}/>
-            <Inner id={2} ref={(c) => {
-              log.push(`ref 2 got ${c ? `instance ${c.props.id}` : 'null'}`);
-            }}/>
-          </div>
-        );
-      },
-      componentDidMount: function() {
-        log.push('outer componentDidMount');
-      },
-      componentDidUpdate: function() {
-        log.push('outer componentDidUpdate');
-      },
-      componentWillUnmount: function() {
-        log.push('outer componentWillUnmount');
-      },
-    });
+  //   var Outer = React.createClass({
+  //     render: function() {
+  //       return (
+  //         <div>
+  //           <Inner id={1} ref={(c) => {
+  //             log.push(`ref 1 got ${c ? `instance ${c.props.id}` : 'null'}`);
+  //           }}/>
+  //           <Inner id={2} ref={(c) => {
+  //             log.push(`ref 2 got ${c ? `instance ${c.props.id}` : 'null'}`);
+  //           }}/>
+  //         </div>
+  //       );
+  //     },
+  //     componentDidMount: function() {
+  //       log.push('outer componentDidMount');
+  //     },
+  //     componentDidUpdate: function() {
+  //       log.push('outer componentDidUpdate');
+  //     },
+  //     componentWillUnmount: function() {
+  //       log.push('outer componentWillUnmount');
+  //     },
+  //   });
 
-    // mount, update, unmount
-    var el = document.createElement('div');
-    log.push('start mount');
-    ReactDOM.render(<Outer />, el);
-    log.push('start update');
-    ReactDOM.render(<Outer />, el);
-    log.push('start unmount');
-    ReactDOM.unmountComponentAtNode(el);
-    console.log(log)
+  //   // mount, update, unmount
+  //   var el = document.createElement('div');
+  //   log.push('start mount');
+  //   ReactDOM.render(<Outer />, el);
+  //   log.push('start update');
+  //   ReactDOM.render(<Outer />, el);
+  //   log.push('start unmount');
+  //   ReactDOM.unmountComponentAtNode(el);
+  //   console.log(log)
 
-    /* eslint-disable indent */
-    expect(log).toEqual([
-      'start mount',
-        'inner 1 render',
-        'inner 2 render',
-        'inner 1 componentDidMount',
-        'ref 1 got instance 1',
-        'inner 2 componentDidMount',
-        'ref 2 got instance 2',
-        'outer componentDidMount',
-      'start update',
-        // Previous (equivalent) refs get cleared
-        'ref 1 got null',
-        'inner 1 render',
-        'ref 2 got null',
-        'inner 2 render',
-        'inner 1 componentDidUpdate',
-        'ref 1 got instance 1',
-        'inner 2 componentDidUpdate',
-        'ref 2 got instance 2',
-        'outer componentDidUpdate',
-      'start unmount',
-        'outer componentWillUnmount',
-        'ref 1 got null',
-        'inner 1 componentWillUnmount',
-        'ref 2 got null',
-        'inner 2 componentWillUnmount',
-    ]);
-    /* eslint-enable indent */
-  });
-
-  // it('fires the callback after a component is rendered', function() {
-  //   var callback = mocks.getMockFunction();
-  //   var container = document.createElement('div');
-  //   ReactDOM.render(<div />, container, callback);
-  //   expect(callback.mock.calls.length).toBe(1);
-  //   ReactDOM.render(<div className="foo" />, container, callback);
-  //   expect(callback.mock.calls.length).toBe(2);
-  //   ReactDOM.render(<span />, container, callback);
-  //   expect(callback.mock.calls.length).toBe(3);
+  //   /* eslint-disable indent */
+  //   expect(log).toEqual([
+  //     'start mount',
+  //       'inner 1 render',
+  //       'inner 2 render',
+  //       'inner 1 componentDidMount',
+  //       'ref 1 got instance 1',
+  //       'inner 2 componentDidMount',
+  //       'ref 2 got instance 2',
+  //       'outer componentDidMount',
+  //     'start update',
+  //       // Previous (equivalent) refs get cleared
+  //       'ref 1 got null',
+  //       'inner 1 render',
+  //       'ref 2 got null',
+  //       'inner 2 render',
+  //       'inner 1 componentDidUpdate',
+  //       'ref 1 got instance 1',
+  //       'inner 2 componentDidUpdate',
+  //       'ref 2 got instance 2',
+  //       'outer componentDidUpdate',
+  //     'start unmount',
+  //       'outer componentWillUnmount',
+  //       'ref 1 got null',
+  //       'inner 1 componentWillUnmount',
+  //       'ref 2 got null',
+  //       'inner 2 componentWillUnmount',
+  //   ]);
+  //   /* eslint-enable indent */
   // });
+
+  it('fires the callback after a component is rendered', function() {
+    var callback = mocks.getMockFunction();
+    var container = document.createElement('div');
+    ReactDOM.render(<div />, container, callback);
+    expect(callback.mock.calls.length).toBe(1);
+    ReactDOM.render(<div className="foo" />, container, callback);
+    expect(callback.mock.calls.length).toBe(2);
+    ReactDOM.render(<span />, container, callback);
+    expect(callback.mock.calls.length).toBe(3);
+  });
 
   // // it('warns when calling getDOMNode', function() {
   // //   spyOn(console, 'error');
@@ -305,20 +300,17 @@ describe('ReactComponent', function() {
   // //   );
   // // });
 
-  // it('throws usefully when rendering badly-typed elements', function() {
-  //   spyOn(console, 'error');
+  it('throws usefully when rendering badly-typed elements', function() {
+    //spyOn(console, 'error');
 
-  //   var X = undefined;
-  //   expect(() => ReactTestUtils.renderIntoDocument(<X />)).toThrow();
+    var X = undefined;
+    expect(() => ReactTestUtils.renderIntoDocument(<X />)).toThrow();
 
-  //   var Y = null;
-  //   expect(() => ReactTestUtils.renderIntoDocument(<Y />)).toThrow();
+    var Z = {};
+    expect(() => ReactTestUtils.renderIntoDocument(<Z />)).toThrow();
 
-  //   var Z = {};
-  //   expect(() => ReactTestUtils.renderIntoDocument(<Z />)).toThrow();
-
-  //   // One warning for each element creation
-  //   //expect(console.error.calls.length).toBe(3);
-  // });
+    // One warning for each element creation
+    //expect(console.error.calls.length).toBe(3);
+  });
 
 });

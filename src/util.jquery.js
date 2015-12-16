@@ -115,7 +115,7 @@ export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isComponent = obj => isFn(obj)
-export let isComponentClass = obj => isFn(obj) && ('forceUpdate' in obj.prototype)
+export let isComponentClass = obj => isFn(obj) && obj.prototype && ('forceUpdate' in obj.prototype)
 export let isUndefined = obj => obj === undefined
 export let pipe = (fn1, fn2) => function(...args) {
 	fn1.apply(this, args)
@@ -127,7 +127,7 @@ export let getUid = () => Math.random().toString(36).substr(2)
 export let mergeProps = (props, children) => {
 	if (children && children.length) {
 		children = children.length === 1 ? children[0] : children
-		if (props) {
+		if (!isUndefined(children) && props) {
 			props.children = children
 		} else {
 			props = { children }
@@ -141,7 +141,7 @@ export let mapChildren = (children, callback, record = { index: 0, store: [] }) 
 	children.forEach(child => {
 		if (isArr(child)) {
 			mapChildren(child, callback, record)
-		} else if (!isBln(child)) {
+		} else if (!isBln(child) && !isUndefined(child)) {
 			store.push(child)
 			callback(child, record.index)
 			record.index += 1
@@ -233,8 +233,8 @@ export let removeChild = (node, child) => {
 	node.removeChild(child)
 }
 
-export let replaceChild = (node, newChild, child) => {
-	$trigger(WILL_UNMOUNT, child)
+export let replaceChild = (node, newChild, child, ...args) => {
+	$trigger(WILL_UNMOUNT, child, newChild, ...args)
 	node.replaceChild(newChild, child)
 }
 
@@ -433,8 +433,6 @@ export let setStyleValue = (style, key, value) => {
 		style[key] = value
 	}
 }
-
-
 
 
 

@@ -42,10 +42,16 @@ Component.prototype = {
 	getDOMNode() {
 		return this.node
 	},
+	replaceState(nextState, callback) {
+		this.state = nextState
+		if (isFn(callback)) {
+			callback.call(this)
+		}
+	},
 	setState(nextState, callback) {
 		let { $cache, state, props, node } = this
 		if (isFn(nextState)) {
-			nextState = nextState(state, props)
+			nextState = nextState.call(this, state, props)
 		}
 		let { keepSilent } = $cache
 		nextState = { ...this.state, ...nextState }
@@ -53,7 +59,7 @@ Component.prototype = {
 			$cache.nextState = nextState
 			return
 		}
-		let shouldUpdate = this.shouldComponentUpdate(nextState, props)
+		let shouldUpdate = this.shouldComponentUpdate(props, nextState)
 		this.state = nextState
 		if (shouldUpdate === false) {
 			return
@@ -81,28 +87,47 @@ Component.prototype = {
 		this.props = nextProps
 		this.state = nextState
 		setComponentId(id)
+		let oldAttr = getAttr(node, COMPONENT_ID)
 		let nextVnode = this.render()
 		let patches = diff(vnode, nextVnode)
 		let newNode = patch(node, patches)
 		resetComponentId()
+		// update this.node, if component render new element
+		if (newNode !== node) {
+			let attr = getAttr(newNode, COMPONENT_ID)
+			if (!attr) {
+				setAttr(newNode, COMPONENT_ID, id)
+				let component = components[oldAttr]
+				if (isArr(component)) {
+					let index = component.indexOf(this)
+					components[id] = component.slice(0, index + 1)
+					component.slice(index + 1).forEach(item => {
+						item.componentWillUnmount()
+						delete components[item.$id]
+					})
+				}
+			}
+			this.node = newNode
+		}
 		let refs = this.refs
 		this.refs = getRefs(id)
 		patchRefs(refs, this.refs)
 		$triggerOnce(REF_CALLBACK)
-		// update this.node, if component render new element
-		if (newNode !== node) {
-			setAttr(newNode, COMPONENT_ID, id)
-			this.node = newNode
-		}
 		this.vnode = nextVnode
 		$triggerOnce(DID_MOUNT)
 		this.componentDidUpdate(props, state)
 		if (isFn(callback)) {
-			callback()
+			callback.call(this)
 		}
 	}
 }
-export let findDOMNode = node => node.nodeName ? node : node.getDOMNode()
+export let findDOMNode = node => {
+	node = node.nodeName ? node : node.getDOMNode()
+	if (node.nodeName.toLowerCase() === 'noscript') {
+		return null
+	}
+	return node
+}
 
 let combineMixin = (proto, mixin) => {
 	Object.keys(mixin).forEach(key => {
@@ -170,14 +195,14 @@ let removeComponent = id => {
 	if (!component) {
 		return
 	}
-	if (isArr(component)) {
-		return component.forEach(item => {
-			item.componentWillUnmount()
-			delete components[item.$id]
-		})
+	if (!isArr(component)) {
+		component = [component]
 	}
-	component.componentWillUnmount()
-	delete components[id]
+	component.forEach(item => {
+		item.componentWillUnmount()
+		delete item.refs
+		delete components[item.$id]
+	})
 }
 let checkUnmount = (node, newNode) => {
 	if (!node || node.nodeType === 3) {
@@ -185,7 +210,7 @@ let checkUnmount = (node, newNode) => {
 	}
 	let id = getAttr(node, COMPONENT_ID)
 	// if newNode is existed, it must be calling replaceChild function
-	if (id && !newNode) {
+	if (id) {
 		removeComponent(id)
 	}
 	let componentNodes = querySelectorAll(node, `[${ COMPONENT_ID }]`)

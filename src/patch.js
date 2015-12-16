@@ -3,6 +3,9 @@ import create, { addChild } from './create'
 import { updateComponent } from './component'
 import diff from './diff'
 import {
+	isObj,
+	isFn,
+	isComponent,
 	appendChild,
 	removeChild,
 	replaceChild,
@@ -34,7 +37,17 @@ let patch = (node, patches, parent) => {
 			replaceChild(parent, newNode, node)
 			break
 		case PROPS:
-			patchProps(node, vnode.props, newVnode.props)
+			if (isComponent(vnode.tagName)) {
+				let newProps = mergeProps(newVnode.props, newVnode.children)
+				newVnode.content = newVnode.tagName({...newProps, ...newVnode.tagName.defaultProps })
+				if (isObj(newVnode.content) && isFn(newVnode.content.render)) {
+					newVnode.content = newVnode.content.render()
+				}
+				let patches = diff(vnode.content, newVnode.content)
+				return patch(node, patches, parent)
+			} else {
+				patchProps(node, vnode.props, newVnode.props)
+			}
 			break
 		case UPDATE:
 			updateComponent(vnode.component, mergeProps(newVnode.props, newVnode.children))

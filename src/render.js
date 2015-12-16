@@ -6,6 +6,9 @@ import { COMPONENT_ID, DID_MOUNT, REF_CALLBACK } from './constant'
 
 let store = {}
 export let render = (vnode, container, callback) => {
+	if (!vnode) {
+		throw new Error(`cannot render ${vnode} to container`)
+	}
 	let id = getAttr(container, COMPONENT_ID)
 	if (store.hasOwnProperty(id)) {
 		let patches = diff(store[id], vnode)
@@ -20,21 +23,24 @@ export let render = (vnode, container, callback) => {
 	}
 	$triggerOnce(REF_CALLBACK)
 	$triggerOnce(DID_MOUNT)
-	if (isFn(callback)) {
-		callback()
-	}
+
+	let ret
 
 	if (!vnode) {
-		return
+		ret = null
+	} else if (isComponentClass(vnode.tagName)) {
+		ret = vnode.component
+	} else if (isStr(vnode.tagName)) {
+		ret = container.firstChild
+	} else {
+		ret = null
 	}
 
-	if (isComponentClass(vnode.tagName)) {
-		return vnode.component
-	} else if (vnode && isStr(vnode.tagName)) {
-		return container.firstChild
-	} else {
-		return null
+	if (isFn(callback)) {
+		callback.call(ret)
 	}
+	
+	return ret
 }
 
 export let unmount = container => {

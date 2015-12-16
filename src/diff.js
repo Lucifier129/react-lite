@@ -2,6 +2,7 @@ import { CREATE, REMOVE, REPLACE, PROPS, UPDATE } from './constant'
 import {
 	isObj,
 	isUndefined,
+	isComponent,
 	isComponentClass,
 	mapChildren,
 	hasKey
@@ -25,13 +26,19 @@ let diff = (vnode, newVnode) => {
 		case vnode === null || newVnode === null || vnode.tagName !== newVnode.tagName:
 			type = REPLACE
 			break
-		case isComponentClass(vnode.tagName):
-			type = UPDATE
-			break
-		case !!(vnode.props || newVnode.props):
-			if (hasKey(newVnode) && newVnode.props.key !== vnode.props.key) {
+		case isComponent(vnode.tagName) || !!(vnode.props || newVnode.props):
+			if (hasKey(vnode) && hasKey(newVnode)) {
+				if (vnode.props.key === newVnode.props.key) {
+					type = UPDATE
+				} else {
+					type = REPLACE
+				}
+			} else if (hasKey(vnode) || hasKey(newVnode)) {
 				type = REPLACE
 			} else {
+				type = UPDATE
+			}
+			if (type === UPDATE && !isComponentClass(vnode.tagName)) {
 				type = PROPS
 			}
 			break
@@ -39,7 +46,7 @@ let diff = (vnode, newVnode) => {
 			type = REPLACE
 			break
 	}
-	if (!type || type === PROPS) {
+	if (!type || (type === PROPS && !isComponent(vnode.tagName))) {
 		if (vnode.props && vnode.props.dangerouslySetInnerHTML || newVnode.props && newVnode.props.dangerouslySetInnerHTML) {
 			//pass
 		} else {

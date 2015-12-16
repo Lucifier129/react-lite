@@ -303,7 +303,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	exports.isComponent = isComponent;
 	var isComponentClass = function isComponentClass(obj) {
-		return isFn(obj) && 'forceUpdate' in obj.prototype;
+		return isFn(obj) && obj.prototype && 'forceUpdate' in obj.prototype;
 	};
 	exports.isComponentClass = isComponentClass;
 	var isUndefined = function isUndefined(obj) {
@@ -330,7 +330,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var mergeProps = function mergeProps(props, children) {
 		if (children && children.length) {
 			children = children.length === 1 ? children[0] : children;
-			if (props) {
+			if (!isUndefined(children) && props) {
 				props.children = children;
 			} else {
 				props = { children: children };
@@ -347,7 +347,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		children.forEach(function (child) {
 			if (isArr(child)) {
 				mapChildren(child, callback, record);
-			} else if (!isBln(child)) {
+			} else if (!isBln(child) && !isUndefined(child)) {
 				store.push(child);
 				callback(child, record.index);
 				record.index += 1;
@@ -472,7 +472,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.removeChild = removeChild;
 	var replaceChild = function replaceChild(node, newChild, child) {
-		$trigger(_constant.WILL_UNMOUNT, child);
+		for (var _len6 = arguments.length, args = Array(_len6 > 3 ? _len6 - 3 : 0), _key6 = 3; _key6 < _len6; _key6++) {
+			args[_key6 - 3] = arguments[_key6];
+		}
+
+		$trigger.apply(undefined, [_constant.WILL_UNMOUNT, child, newChild].concat(args));
 		node.replaceChild(newChild, child);
 	};
 
@@ -737,6 +741,12 @@ return /******/ (function(modules) { // webpackBootstrap
 		getDOMNode: function getDOMNode() {
 			return this.node;
 		},
+		replaceState: function replaceState(nextState, callback) {
+			this.state = nextState;
+			if (_util.isFn(callback)) {
+				callback.call(this);
+			}
+		},
 		setState: function setState(nextState, callback) {
 			var $cache = this.$cache;
 			var state = this.state;
@@ -744,7 +754,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			var node = this.node;
 
 			if (_util.isFn(nextState)) {
-				nextState = nextState(state, props);
+				nextState = nextState.call(this, state, props);
 			}
 			var keepSilent = $cache.keepSilent;
 
@@ -753,7 +763,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				$cache.nextState = nextState;
 				return;
 			}
-			var shouldUpdate = this.shouldComponentUpdate(nextState, props);
+			var shouldUpdate = this.shouldComponentUpdate(props, nextState);
 			this.state = nextState;
 			if (shouldUpdate === false) {
 				return;
@@ -787,29 +797,46 @@ return /******/ (function(modules) { // webpackBootstrap
 			this.props = nextProps;
 			this.state = nextState;
 			_util.setComponentId(id);
+			var oldAttr = _util.getAttr(node, _constant.COMPONENT_ID);
 			var nextVnode = this.render();
 			var patches = _diff2['default'](vnode, nextVnode);
 			var newNode = _patch2['default'](node, patches);
 			_util.resetComponentId();
+			// update this.node, if component render new element
+			if (newNode !== node) {
+				var attr = _util.getAttr(newNode, _constant.COMPONENT_ID);
+				if (!attr) {
+					_util.setAttr(newNode, _constant.COMPONENT_ID, id);
+					var component = components[oldAttr];
+					if (_util.isArr(component)) {
+						var index = component.indexOf(this);
+						components[id] = component.slice(0, index + 1);
+						component.slice(index + 1).forEach(function (item) {
+							item.componentWillUnmount();
+							delete components[item.$id];
+						});
+					}
+				}
+				this.node = newNode;
+			}
 			var refs = this.refs;
 			this.refs = _util.getRefs(id);
 			_util.patchRefs(refs, this.refs);
 			_util.$triggerOnce(_constant.REF_CALLBACK);
-			// update this.node, if component render new element
-			if (newNode !== node) {
-				_util.setAttr(newNode, _constant.COMPONENT_ID, id);
-				this.node = newNode;
-			}
 			this.vnode = nextVnode;
 			_util.$triggerOnce(_constant.DID_MOUNT);
 			this.componentDidUpdate(props, state);
 			if (_util.isFn(callback)) {
-				callback();
+				callback.call(this);
 			}
 		}
 	};
 	var findDOMNode = function findDOMNode(node) {
-		return node.nodeName ? node : node.getDOMNode();
+		node = node.nodeName ? node : node.getDOMNode();
+		if (node.nodeName.toLowerCase() === 'noscript') {
+			return null;
+		}
+		return node;
 	};
 
 	exports.findDOMNode = findDOMNode;
@@ -882,14 +909,14 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (!component) {
 			return;
 		}
-		if (_util.isArr(component)) {
-			return component.forEach(function (item) {
-				item.componentWillUnmount();
-				delete components[item.$id];
-			});
+		if (!_util.isArr(component)) {
+			component = [component];
 		}
-		component.componentWillUnmount();
-		delete components[id];
+		component.forEach(function (item) {
+			item.componentWillUnmount();
+			delete item.refs;
+			delete components[item.$id];
+		});
 	};
 	var checkUnmount = function checkUnmount(node, newNode) {
 		if (!node || node.nodeType === 3) {
@@ -897,7 +924,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 		var id = _util.getAttr(node, _constant.COMPONENT_ID);
 		// if newNode is existed, it must be calling replaceChild function
-		if (id && !newNode) {
+		if (id) {
 			removeComponent(id);
 		}
 		var componentNodes = _util.querySelectorAll(node, '[' + _constant.COMPONENT_ID + ']');
@@ -993,6 +1020,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.__esModule = true;
 
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 	var _component = __webpack_require__(3);
 
 	var _util = __webpack_require__(2);
@@ -1010,6 +1039,11 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (vnode === null) {
 				return document.createElement('noscript');
 			}
+
+			if (_util.isUndefined(vnode)) {
+				throw new Error('create(vnode): vnode is undefined');
+			}
+
 			if (!_util.isObj(vnode)) {
 				return document.createTextNode(vnode);
 			}
@@ -1017,6 +1051,10 @@ return /******/ (function(modules) { // webpackBootstrap
 			var tagName = vnode.tagName;
 			var props = vnode.props;
 			var children = vnode.children;
+
+			if (_util.isUndefined(tagName)) {
+				throw new Error('create(vnode): vnode.tagName is undefined');
+			}
 
 			if (_util.isComponent(tagName)) {
 				var Component = tagName;
@@ -1030,7 +1068,11 @@ return /******/ (function(modules) { // webpackBootstrap
 					vnode.component = component;
 					return node;
 				}
-				_x = Component(props);
+				vnode.content = Component(_extends({}, props, Component.defaultProps));
+				if (_util.isObj(vnode.content) && _util.isFn(vnode.content.render)) {
+					vnode.content = vnode.content.render();
+				}
+				_x = vnode.content;
 				_again = true;
 				tagName = props = children = Component = _initComponent = node = component = undefined;
 				continue _function;
@@ -1085,13 +1127,19 @@ return /******/ (function(modules) { // webpackBootstrap
 			case vnode === null || newVnode === null || vnode.tagName !== newVnode.tagName:
 				type = _constant.REPLACE;
 				break;
-			case _util.isComponentClass(vnode.tagName):
-				type = _constant.UPDATE;
-				break;
-			case !!(vnode.props || newVnode.props):
-				if (_util.hasKey(newVnode) && newVnode.props.key !== vnode.props.key) {
+			case _util.isComponent(vnode.tagName) || !!(vnode.props || newVnode.props):
+				if (_util.hasKey(vnode) && _util.hasKey(newVnode)) {
+					if (vnode.props.key === newVnode.props.key) {
+						type = _constant.UPDATE;
+					} else {
+						type = _constant.REPLACE;
+					}
+				} else if (_util.hasKey(vnode) || _util.hasKey(newVnode)) {
 					type = _constant.REPLACE;
 				} else {
+					type = _constant.UPDATE;
+				}
+				if (type === _constant.UPDATE && !_util.isComponentClass(vnode.tagName)) {
 					type = _constant.PROPS;
 				}
 				break;
@@ -1099,7 +1147,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				type = _constant.REPLACE;
 				break;
 		}
-		if (!type || type === _constant.PROPS) {
+		if (!type || type === _constant.PROPS && !_util.isComponent(vnode.tagName)) {
 			if (vnode.props && vnode.props.dangerouslySetInnerHTML || newVnode.props && newVnode.props.dangerouslySetInnerHTML) {
 				//pass
 			} else {
@@ -1133,6 +1181,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.__esModule = true;
 
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 	var _constant = __webpack_require__(1);
@@ -1152,61 +1202,85 @@ return /******/ (function(modules) { // webpackBootstrap
 	/**
 	* patch dom
 	*/
-	var patch = function patch(node, patches, parent) {
-		if (!patches) {
-			return node;
-		}
-		var vnode = patches.vnode;
-		var newVnode = patches.newVnode;
-		var type = patches.type;
-		var childrenType = patches.childrenType;
+	var patch = function patch(_x, _x2, _x3) {
+		var _again = true;
 
-		var newNode = undefined;
-		parent = node ? node.parentNode : parent;
-		switch (type) {
-			case _constant.CREATE:
-				newNode = _create2['default'](newVnode);
-				_util.appendChild(parent, newNode);
-				break;
-			case _constant.REMOVE:
-				_util.removeChild(parent, node);
-				break;
-			case _constant.REPLACE:
-				newNode = _create2['default'](newVnode);
-				_util.replaceChild(parent, newNode, node);
-				break;
-			case _constant.PROPS:
-				_util.patchProps(node, vnode.props, newVnode.props);
-				break;
-			case _constant.UPDATE:
-				_component.updateComponent(vnode.component, _util.mergeProps(newVnode.props, newVnode.children));
-				newVnode.component = vnode.component;
-				break;
-		}
+		_function: while (_again) {
+			var node = _x,
+			    patches = _x2,
+			    parent = _x3;
+			_again = false;
 
-		switch (childrenType) {
-			case _constant.REMOVE:
-				while (node.firstChild) {
-					_util.removeChild(node, node.firstChild);
-				}
-				break;
-			case _constant.CREATE:
-				newVnode.children = _util.mapChildren(newVnode.children, function (child) {
-					return _create.addChild(node, child);
-				});
-				break;
-			case _constant.REPLACE:
-				newVnode.children = _util.mapChildren(newVnode.children, function (newChild, i) {
-					var patches = _diff2['default'](vnode.children[i], newChild);
-					patch(node.childNodes[i], patches, node);
-				});
-				while (node.childNodes.length > newVnode.children.length) {
-					_util.removeChild(node, node.lastChild);
-				}
-				break;
-		}
+			if (!patches) {
+				return node;
+			}
+			var vnode = patches.vnode;
+			var newVnode = patches.newVnode;
+			var type = patches.type;
+			var childrenType = patches.childrenType;
 
-		return newNode || node;
+			var newNode = undefined;
+			parent = node ? node.parentNode : parent;
+			switch (type) {
+				case _constant.CREATE:
+					newNode = _create2['default'](newVnode);
+					_util.appendChild(parent, newNode);
+					break;
+				case _constant.REMOVE:
+					_util.removeChild(parent, node);
+					break;
+				case _constant.REPLACE:
+					newNode = _create2['default'](newVnode);
+					_util.replaceChild(parent, newNode, node);
+					break;
+				case _constant.PROPS:
+					if (_util.isComponent(vnode.tagName)) {
+						var newProps = _util.mergeProps(newVnode.props, newVnode.children);
+						newVnode.content = newVnode.tagName(_extends({}, newProps, newVnode.tagName.defaultProps));
+						if (_util.isObj(newVnode.content) && _util.isFn(newVnode.content.render)) {
+							newVnode.content = newVnode.content.render();
+						}
+						var _patches = _diff2['default'](vnode.content, newVnode.content);
+						_x = node;
+						_x2 = _patches;
+						_x3 = parent;
+						_again = true;
+						vnode = newVnode = type = childrenType = newNode = newProps = _patches = undefined;
+						continue _function;
+					} else {
+						_util.patchProps(node, vnode.props, newVnode.props);
+					}
+					break;
+				case _constant.UPDATE:
+					_component.updateComponent(vnode.component, _util.mergeProps(newVnode.props, newVnode.children));
+					newVnode.component = vnode.component;
+					break;
+			}
+
+			switch (childrenType) {
+				case _constant.REMOVE:
+					while (node.firstChild) {
+						_util.removeChild(node, node.firstChild);
+					}
+					break;
+				case _constant.CREATE:
+					newVnode.children = _util.mapChildren(newVnode.children, function (child) {
+						return _create.addChild(node, child);
+					});
+					break;
+				case _constant.REPLACE:
+					newVnode.children = _util.mapChildren(newVnode.children, function (newChild, i) {
+						var patches = _diff2['default'](vnode.children[i], newChild);
+						patch(node.childNodes[i], patches, node);
+					});
+					while (node.childNodes.length > newVnode.children.length) {
+						_util.removeChild(node, node.lastChild);
+					}
+					break;
+			}
+
+			return newNode || node;
+		}
 	};
 
 	exports['default'] = patch;
@@ -1263,6 +1337,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var store = {};
 	var render = function render(vnode, container, callback) {
+		if (!vnode) {
+			throw new Error('cannot render ' + vnode + ' to container');
+		}
 		var id = _util.getAttr(container, _constant.COMPONENT_ID);
 		if (store.hasOwnProperty(id)) {
 			var patches = _diff2['default'](store[id], vnode);
@@ -1277,21 +1354,24 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 		_util.$triggerOnce(_constant.REF_CALLBACK);
 		_util.$triggerOnce(_constant.DID_MOUNT);
-		if (_util.isFn(callback)) {
-			callback();
-		}
+
+		var ret = undefined;
 
 		if (!vnode) {
-			return;
+			ret = null;
+		} else if (_util.isComponentClass(vnode.tagName)) {
+			ret = vnode.component;
+		} else if (_util.isStr(vnode.tagName)) {
+			ret = container.firstChild;
+		} else {
+			ret = null;
 		}
 
-		if (_util.isComponentClass(vnode.tagName)) {
-			return vnode.component;
-		} else if (vnode && _util.isStr(vnode.tagName)) {
-			return container.firstChild;
-		} else {
-			return null;
+		if (_util.isFn(callback)) {
+			callback.call(ret);
 		}
+
+		return ret;
 	};
 
 	exports.render = render;

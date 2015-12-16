@@ -1,5 +1,7 @@
 import { initComponent } from './component'
 import {
+	isFn,
+	isUndefined,
 	isObj,
 	isComponentClass,
 	isComponent,
@@ -13,14 +15,25 @@ import {
 * 根据 tagName props attrs 创建 real-dom
 */
 let create = vnode => {
+
 	if (vnode === null) {
 		return document.createElement('noscript')
 	}
+
+	if (isUndefined(vnode)) {
+		throw new Error('create(vnode): vnode is undefined')
+	}
+
 	if (!isObj(vnode)) {
 		return document.createTextNode(vnode)
 	}
 
 	let { tagName, props, children } = vnode
+
+	if (isUndefined(tagName)) {
+		throw new Error('create(vnode): vnode.tagName is undefined')
+	}
+
 	if (isComponent(tagName)) {
 		let Component = tagName
 		props = mergeProps(props, children)
@@ -29,7 +42,11 @@ let create = vnode => {
 			vnode.component = component
 			return node
 		}
-		return create(Component(props))
+		vnode.content = Component({ ...props, ...Component.defaultProps })
+		if (isObj(vnode.content) && isFn(vnode.content.render)) {
+			vnode.content = vnode.content.render()
+		}
+		return create(vnode.content)
 	}
 
 	let elem = document.createElement(tagName)
