@@ -1,66 +1,34 @@
-import { initComponent } from './component'
-import {
-	isFn,
-	isUndefined,
-	isObj,
-	isComponentClass,
-	isComponent,
-	setProps,
-	appendChild,
-	mergeProps,
-	mapChildren
-} from 'util'
+import * as _ from './util'
+import { initComponent, isComponent, isStateComponent } from './Component'
+import { VNODE_TYPE } from './constant'
 
 /**
-* 根据 tagName props attrs 创建 real-dom
+* 根据 type props 创建 real-dom
 */
-let create = vnode => {
+let create = (vnode) => {
 
-	if (vnode === null) {
+	if (vnode === null || _.isBln(vnode)) {
 		return document.createElement('noscript')
 	}
 
-	if (isUndefined(vnode)) {
+	if (_.isUndefined(vnode)) {
 		throw new Error('create(vnode): vnode is undefined')
 	}
 
-	if (!isObj(vnode)) {
+	if (!_.isObj(vnode)) {
 		return document.createTextNode(vnode)
 	}
 
-	let { tagName, props, children } = vnode
+	let { type, props } = vnode
 
-	if (isUndefined(tagName)) {
-		throw new Error('create(vnode): vnode.tagName is undefined')
-	}
-
-	if (isComponent(tagName)) {
-		let Component = tagName
-		props = mergeProps(props, children)
-		if (isComponentClass(Component)) {
-			let { node, component } = initComponent(Component, props)
-			vnode.component = component
-			return node
-		}
-		vnode.content = Component({ ...props, ...Component.defaultProps })
-		if (isObj(vnode.content) && isFn(vnode.content.render)) {
-			vnode.content = vnode.content.render()
-		}
-		return create(vnode.content)
+	if (_.isUndefined(type)) {
+		throw new Error('create(vnode): vnode.type is undefined')
 	}
 
-	let elem = document.createElement(tagName)
-	if (props) {
-		setProps(elem, props)
-	}
-	if (children && children.length > 0) {
-		vnode.children = mapChildren(children, child => addChild(elem, child))
-	}
+	let elem = document.createElement(type)
+	_.setProps(elem, props)
+	
 	return elem
 }
 
 export default create
-
-export let addChild = (elem, child) => {
-	appendChild(elem, create(child))
-}

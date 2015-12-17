@@ -1,15 +1,17 @@
-/**
-* 常量
-*/
-export default {
+
+
+
+
+export let VNODE_TYPE = {
+	ELEMENT: 1,
+	COMPONENT: 2,
+	STATELESS_COMPONENT: 3,
+	TEXT: 4
+}
+
+export let DIFF_TYPE = {
 	CREATE: 1,
 	REMOVE: 2,
-	REORDER: 3,
-	REPLACE: 4,
-	PROPS: 5,
-	UPDATE: 6,
-	DID_MOUNT: 7,
-	WILL_UNMOUNT: 8,
-	REF_CALLBACK: 9,
-	COMPONENT_ID: 'data-liteid'
+	REPLACE: 3,
+	UPDATE: 4
 }

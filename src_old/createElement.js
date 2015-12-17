@@ -1,5 +1,6 @@
-let createElement = (type, props, ...children) => {
-	let vnode = { type, props }
+
+let createElement = (tagName, props, ...children) => {
+	let vnode = { tagName, props }
 	if (children.length) {
 		vnode.children = children
 	}
