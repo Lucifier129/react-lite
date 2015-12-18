@@ -1,14 +1,9 @@
-
-
-
-
 export let VNODE_TYPE = {
 	ELEMENT: 1,
 	COMPONENT: 2,
 	STATELESS_COMPONENT: 3,
 	TEXT: 4
 }
-
 export let DIFF_TYPE = {
 	CREATE: 1,
 	REMOVE: 2,

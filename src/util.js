@@ -75,8 +75,12 @@ export let hasKey = (obj, key = 'key') => isObj(obj) && isObj(obj.props) && (obj
 
 export let mergeProps = (props, children, defaultProps) => {
 	let result = { ...defaultProps, ...props }
-	if (isArr(children) && children.length > 0) {
-		children = children.length === 1 ? children[0] : children
+	if (isArr(children)) {
+		if (children.length > 0) {
+			children = children.length === 1 ? children[0] : children
+		} else {
+			children = undefined
+		}
 	}
 	if (!isUndefined(children)) {
 		result.children = children

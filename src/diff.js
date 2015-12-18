@@ -1,4 +1,4 @@
-import { DIFF_TYPE: type } from './constant'
+import { DIFF_TYPE, VNODE_TYPE } from './constant'
 import * as _ from './util'
 
 let diff = (vnode, newVnode) => {
@@ -7,25 +7,26 @@ let diff = (vnode, newVnode) => {
 		case vnode === newVnode:
 			return null
 		case _.isUndefined(newVnode):
-			type = type.REMOVE
+			type = DIFF_TYPE.REMOVE
 			break
 		case _.isUndefined(vnode):
-			type = type.CREATE
+			type = DIFF_TYPE.CREATE
 			break
 		case vnode === null || newVnode === null || vnode.type !== newVnode.type:
-			type = type.REPLACE
+			type = DIFF_TYPE.REPLACE
 			break
-		case hasKey(newVnode):
-			if (!hasKey(vnode) || newVnode.props.key !== vnode.props.key) {
-				type = type.REPLACE
+		case _.hasKey(newVnode):
+			if (!_.hasKey(vnode) || newVnode.props.key !== vnode.props.key) {
+				type = DIFF_TYPE.REPLACE
 			} else {
-				type = type.UPDATE
+				type = DIFF_TYPE.UPDATE
 			}
 			break
-		case hasKey(vnode):
-			type = type.REPLACE
+		case _.hasKey(vnode):
+			type = DIFF_TYPE.REPLACE
 			break
 	}
+	return type
 }
 
 export default diff
