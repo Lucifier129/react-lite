@@ -10,3 +10,5 @@ export let DIFF_TYPE = {
 	REPLACE: 3,
 	UPDATE: 4
 }
+
+export let COMPONENT_ID = 'liteid'

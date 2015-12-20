@@ -12,7 +12,7 @@ let diff = (vnode, newVnode) => {
 		case _.isUndefined(vnode):
 			type = DIFF_TYPE.CREATE
 			break
-		case vnode === null || newVnode === null || vnode.type !== newVnode.type:
+		case vnode.type !== newVnode.type:
 			type = DIFF_TYPE.REPLACE
 			break
 		case _.hasKey(newVnode):
@@ -25,6 +25,8 @@ let diff = (vnode, newVnode) => {
 		case _.hasKey(vnode):
 			type = DIFF_TYPE.REPLACE
 			break
+		default:
+			type = DIFF_TYPE.UPDATE
 	}
 	return type
 }

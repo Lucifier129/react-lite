@@ -1,9 +1,25 @@
+import * as _ from './util'
+import { Velem, Vcomponent, VstatelessComponent } from './virtual-dom'
+
 let createElement = (type, props, ...children) => {
-	let vnode = { type, props }
-	if (children.length) {
-		vnode.children = children
+	let Vnode
+	switch (true) {
+		case _.isStr(type):
+			Vnode = Velem
+			break
+		case _.isComponent(type):
+			Vnode = Vcomponent
+			break
+		case _.isStatelessComponent(type):
+			Vnode = VstatelessComponent
+			break
+		default:
+			throw new Error(`React.createElement: unexpect type ${type}`)
 	}
-	return vnode
+	if (children.length === 0) {
+		children = undefined
+	}
+	return new Vnode(type, props, children)
 }
 
 export default createElement

@@ -7,6 +7,8 @@ export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isUndefined = obj => obj === undefined
+export let isComponent = obj => _.isFn(obj) && _.isObj(obj.prototype) && ('forceUpdate' in obj.prototype)
+export let isStatelessComponent = obj => _.isObj(obj) && !isComponent(obj)
 
 export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
 
