@@ -7,67 +7,52 @@ export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isUndefined = obj => obj === undefined
-export let isComponent = obj => _.isFn(obj) && _.isObj(obj.prototype) && ('forceUpdate' in obj.prototype)
-export let isStatelessComponent = obj => _.isObj(obj) && !isComponent(obj)
+export let isComponent = obj => isFn(obj) && isObj(obj.prototype) && ('forceUpdate' in obj.prototype)
+export let isStatelessComponent = obj => isFn(obj) && (!isObj(obj.prototype) || !('forceUpdate' in obj.prototype))
 
 export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
 
-export let pairFn = (fn1, fn2, context) => (...args) => {
-	let result = fn1.apply(context, args)
-	if (!isUndefined(result)) {
-		args = [result]
+export let pipe = (fn1, fn2) => {
+	return function(...args) {
+		fn1.apply(this, args)
+		return fn2.apply(this, args)
 	}
-	return fn2.apply(context, args)
 }
 
-export let forEach = (list, iteratee, context, record = { index: 0 }) => {
+export let forEach = (list, iteratee, record = { index: 0 }) => {
 	for (let i = 0, len = list.length; i < len; i += 1) {
 		let item = list[i]
 		if (isArr(item)) {
-			forEach(item, iteratee, context, record)
+			forEach(item, iteratee, record)
 		} else if (!isUndefined(item)) {
-			let result = iteratee.call(context, item, record.index)
-			if (result === false) {
-				return
-			}
+			iteratee(item, record.index)
 			record.index += 1
 		}
 	}
 }
 
-export let mapValue = (obj, iteratee, context) => {
+export let eachItem = (list, iteratee) => {
+	for (let i = 0, len = list.length; i < len; i += 1) {
+		iteratee(list[i], i)
+	}
+}
+
+export let mapValue = (obj, iteratee) => {
 	for (let key in obj) {
-		if (obj.hasOwnProperty(key)) {
-			let result = iteratee.call(context || obj, obj[key], value)
-			if (result === false) {
-				return
-			}
+		if (!obj.hasOwnProperty(key)) {
+			continue
 		}
+		iteratee(obj[key], key)
 	}
 }
 
-export let mapTree = (tree, iteratee, supTree) => {
-	let { children } = tree
-	if (children) {
-		if (isArr(children)) {
-			forEach(tree.children, subTree => {
-				mapTree(subTree, iteratee, tree)
-			}, record)
-		} else {
-			mapTree(children, iteratee, tree)
-		}
-	}
-	iteratee(tree, supTree)
-}
-
-let $extend = (obj1, obj2) => {
-	return { ...obj1, ...obj2 }
-}
-
-export let extend = (...args) => {
-	let result = {}
-	forEach(args, source => $extend(result, source))
-	return result
+export let extend = (target, ...args) => {
+	eachItem(args, source => {
+		mapValue(source, (value, key) => {
+			target[key] = value
+		})
+	})
+	return target
 }
 
 let uid = 0
@@ -76,16 +61,9 @@ export let getUid = () => ++uid
 export let hasKey = (obj, key = 'key') => isObj(obj) && isObj(obj.props) && (obj.props.hasOwnProperty(key))
 
 export let mergeProps = (props, children, defaultProps) => {
-	let result = { ...defaultProps, ...props }
-	if (isArr(children)) {
-		if (children.length > 0) {
-			children = children.length === 1 ? children[0] : children
-		} else {
-			children = undefined
-		}
-	}
-	if (!isUndefined(children)) {
-		result.children = children
+	let result = extend({}, defaultProps, props)
+	if (isArr(children) && children.length > 0) {
+		result.children = children.length === 1 ? children[0] : children
 	}
 	return result
 }
@@ -245,8 +223,9 @@ export let removeStyle = (elem, style) => {
 	if (!isObj(style)) {
 		return
 	}
+	let elemStyle = elem.style
 	mapValue(style, (_, key) => {
-		elem.style[key] = ''
+		elemStyle[key] = ''
 	})
 }
 export let setStyle = (elem, style) => {
@@ -269,14 +248,15 @@ export let patchStyle = (elem, style, newStyle) => {
 	} else {
 		let elemStyle = elem.style
 		mapValue(newStyle, (value, key) => {
-			if (style.hasOwnProperty(key)) {
+			if (isUndefined(value)) {
+				elemStyle[key] = ''
+			} else if (style.hasOwnProperty(key)) {
 				let oldValue = style[key]
 				delete style[key]
-				if (oldValue === value) {
-					return
+				if (oldValue !== value) {
+					setStyleValue(elemStyle, key, value)
 				}
 			}
-			setStyleValue(elemStyle, key, value)
 		})
 		removeStyle(elemStyle, style)
 	}
@@ -329,9 +309,11 @@ let prefixes = ['Webkit', 'ms', 'Moz', 'O'];
 
 // Using Object.keys here, or else the vanilla for-in loop makes IE8 go into an
 // infinite loop, because it iterates over the newly added props too.
-Object.keys(isUnitlessNumber).forEach(prop => prefixes.forEach(prefix => 
-	isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop]
-))
+mapValue(isUnitlessNumber, (_, prop) => {
+	eachItem(prefixes, prefix => 
+		isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop]
+	)
+})
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
 export let setStyleValue = (style, key, value) => {

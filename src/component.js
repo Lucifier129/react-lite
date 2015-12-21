@@ -1,7 +1,43 @@
 import * as _ from './util'
-import { getVnode } from './virtual-dom'
+import { getVnode, bindRefs } from './virtual-dom'
 
-export function Component(props) {
+
+function Updater(instant) {
+	this.instant = instant
+	this.pendingState = null
+	this.pendingCallback = null
+	this.isPendingForceUpdate = false
+}
+
+Updater.prototype = {
+	constructor: Updater,
+	emitUpdate(nextProps) {
+		let { instant, pendingState, pendingCallback } = this
+		if (nextProps || pendingState) {
+			let props = nextProps || instant.props
+			let state = pendingState || instant.state
+			shouldUpdate(instant, props, state, pendingCallback)
+		}
+		this.pendingState = null
+		this.pendingCallback = null
+	},
+	addState(nextState) {
+		if (nextState) {
+			this.pendingState = nextState
+			if (this.isPendingForceUpdate === false) {
+				this.emitUpdate()
+			}
+		}
+	},
+	addCallback(callback) {
+		if (_.isFn(callback)) {
+			this.pendingCallback = callback
+		}
+	}
+}
+
+export default function Component(props) {
+	this.$updater = new Updater(this)
 	this.$cache = {}
 	this.props = props
 	this.state = {}
@@ -20,7 +56,7 @@ Component.prototype = {
 		return true
 	},
 	forceUpdate(callback) {
-		let { $cache, props, state } = this
+		let { $cache, props, state, vtree, node, refs } = this
 		let nextProps = $cache.props || props
 		let nextState = $cache.state || state
 		$cache.props = $cache.state = null
@@ -28,7 +64,7 @@ Component.prototype = {
 		this.props = nextProps
 		this.state = nextState
 		let nextVtree = getVnode(this.render())
-		this.vtree.updateTree(nextVtree, null, this)
+		vtree.updateTree(nextVtree, node && node.parentNode)
 		this.vtree = nextVtree
 		this.componentDidUpdate(props, state)
 		if (_.isFn(callback)) {
@@ -36,12 +72,15 @@ Component.prototype = {
 		}
 	},
 	setState(nextState, callback) {
-		let { props, state } = this
+		let { props, state, $updater } = this
 		if (_.isFn(nextState)) {
 			nextState = nextState.call(this, state, props)
 		}
-		nextState = _.extend(state, nextState)
-		shouldUpdate(this, props, nextState, callback)
+		if (_.isObj(nextState)) {
+			nextState = _.extend({}, state, nextState)
+		}
+		$updater.addCallback(callback)
+		$updater.addState(nextState)
 	},
 	getDOMNode() {
 		let node = this.vtree.node
@@ -51,19 +90,24 @@ Component.prototype = {
 		if (!_.isObj(nextState)) {
 			return
 		}
-		shouldUpdate(this, this.props, nextState, callback)
+		let { $updater } = this
+		$updater.addCallback(callback)
+		$updater.addState(nextState)
 	}
 }
 
+export let updatePropsAndState = (component, props, state) => {
+	component.state = state
+	component.props = props
+}
+
 export let shouldUpdate = (component, nextProps, nextState, callback) => {
+	let { $cache } = component
 	let shouldUpdate = component.shouldComponentUpdate(nextProps, nextState)
 	if (shouldUpdate === false) {
-		component.props = nextProps
-		component.state = nextState
+		updatePropsAndState(component, nextProps, nextState)
 		return
 	}
-	let { $cache } = component
-	$cache.props = nextProps
-	$cache.state = nextState
+	updatePropsAndState(component.$cache, nextProps, nextState)
 	component.forceUpdate(callback)
 }

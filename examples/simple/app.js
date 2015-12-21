@@ -189,13 +189,13 @@
 		componentDidMount: function componentDidMount() {
 			var _this2 = this;
 
-			console.log('didMount', this.setState({ val: this.state.val + 1 }));
+			this.setState({ val: this.state.val + 1 });
 			console.log('didMount', this.state.val); // log 1
 			this.setState({ val: this.state.val + 1 });
 			console.log('didMount', this.state.val); // log 2
 
 			setTimeout(function () {
-				console.log('setTimeout', _this2.setState({ val: _this2.state.val + 1 }));
+				_this2.setState({ val: _this2.state.val + 1 });
 				console.log('setTimeout:', _this2.state.val); // log 3
 				_this2.setState({ val: _this2.state.val + 1 });
 				console.log('setTimeout:', _this2.state.val); // log 4
@@ -294,8 +294,7 @@
 		);
 	};
 
-	var testStateless = React.render(React.createElement(Stateless, null), document.getElementById('container'));
-	console.log(testStateless);
+	React.render(React.createElement(Stateless, null), document.getElementById('container'));
 
 	var update = function update(count) {
 		return React.render(React.createElement(Wrap, { count: count }), document.getElementById('container'));

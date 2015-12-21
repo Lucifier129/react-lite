@@ -94,13 +94,13 @@ var Example = React.createClass({
   },
 
   componentDidMount() {
-     console.log('didMount', this.setState({val: this.state.val + 1}));
+    this.setState({val: this.state.val + 1})
     console.log('didMount', this.state.val);    // log 1
     this.setState({val: this.state.val + 1});
     console.log('didMount', this.state.val);    // log 2
 
     setTimeout(() => {
-      console.log('setTimeout', this.setState({val: this.state.val + 1}));
+      this.setState({val: this.state.val + 1});
       console.log('setTimeout:', this.state.val);  // log 3
       this.setState({val: this.state.val + 1});
       console.log('setTimeout:', this.state.val);  // log 4
@@ -187,8 +187,7 @@ let Stateless = function() {
 	return <div>stateless</div>
 }
 
-let testStateless = React.render(<Stateless />, document.getElementById('container'))
-console.log(testStateless)
+React.render(<Stateless />, document.getElementById('container'))
 
 let update = count => {
 	return React.render(

@@ -10,7 +10,7 @@ export let render = (vtree, container, callback) => {
 	if (store.hasOwnProperty(id)) {
 		store[id].updateTree(vtree, container)
 	} else {
-		_.setAttr(container, COMPONENT_ID, id = getUid())
+		_.setAttr(container, COMPONENT_ID, id = _.getUid())
 		container.innerHTML = ''
 		vtree.initTree(container)
 	}
@@ -29,14 +29,14 @@ export let render = (vtree, container, callback) => {
 			result = null
 	}
 
-	if (isFn(callback)) {
+	if (_.isFn(callback)) {
 		callback.call(result)
 	}
 	
 	return result
 }
 
-export let unmount = container => {
+export let unmountComponentAtNode = container => {
 	let id = _.getAttr(container, COMPONENT_ID)
 	if (store.hasOwnProperty(id)) {
 		store[id].destroyTree(container)
@@ -45,3 +45,5 @@ export let unmount = container => {
 	}
 	return false
 }
+
+export let findDOMNode = node => node.nodeName ? node : node.getDOMNode()
