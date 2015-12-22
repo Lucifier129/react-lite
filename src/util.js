@@ -7,8 +7,8 @@ export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isUndefined = obj => obj === undefined
-export let isComponent = obj => isFn(obj) && isObj(obj.prototype) && ('forceUpdate' in obj.prototype)
-export let isStatelessComponent = obj => isFn(obj) && (!isObj(obj.prototype) || !('forceUpdate' in obj.prototype))
+export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
+export let isStatelessComponent = obj => obj && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
 export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
 
@@ -48,6 +48,9 @@ export let mapValue = (obj, iteratee) => {
 
 export let extend = (target, ...args) => {
 	eachItem(args, source => {
+		if (source == null) {
+			return
+		}
 		mapValue(source, (value, key) => {
 			target[key] = value
 		})
@@ -58,11 +61,11 @@ export let extend = (target, ...args) => {
 let uid = 0
 export let getUid = () => ++uid
 
-export let hasKey = (obj, key = 'key') => isObj(obj) && isObj(obj.props) && (obj.props.hasOwnProperty(key))
+export let hasKey = (obj, key = 'key') => obj && obj.props && (obj.props.hasOwnProperty(key))
 
 export let mergeProps = (props, children, defaultProps) => {
 	let result = extend({}, defaultProps, props)
-	if (isArr(children) && children.length > 0) {
+	if (children && children.length > 0) {
 		result.children = children.length === 1 ? children[0] : children
 	}
 	return result
@@ -112,7 +115,7 @@ export let setProp = (elem, key, value) => {
 			setStyle(elem, value)
 			break
 		case isInnerHTMLKey(key):
-			isObj(value) && isStr(value.__html) && (elem.innerHTML = value.__html)
+			value && isStr(value.__html) && (elem.innerHTML = value.__html)
 			break
 		case key in elem:
 			elem[key] = value
@@ -122,17 +125,11 @@ export let setProp = (elem, key, value) => {
 	}
 }
 export let setProps = (elem, props) => {
-	if (!isObj(props)) {
-		return
-	}
 	mapValue(props, (value, key) => {
 		setProp(elem, key, value)
 	})
 }
 export let removeProps = (elem, oldProps) => {
-	if (!isObj(oldProps)) {
-		return
-	}
 	mapValue(oldProps, (oldValue, key) => {
 		removeProp(elem, key, oldValue)
 	})
@@ -195,18 +192,18 @@ export let patchProps = (elem, props, newProps) => {
 		}
 		let oldValue = props[key]
 		delete props[key]
-		if (valueIsUndefined) {
-			removeProp(elem, key, oldValue)
+		if (value === oldValue) {
 			return
 		}
-		if (value === oldValue) {
+		if (valueIsUndefined) {
+			removeProp(elem, key, oldValue)
 			return
 		}
 		if (isStyleKey(key)) {
 			patchStyle(elem, oldValue, value)
 		} else if (isInnerHTMLKey(key)) {
-			let oldHtml = isObj(oldValue) && oldValue.__html
-			let html = isObj(value) && value.__html
+			let oldHtml = oldValue && oldValue.__html
+			let html = value && value.__html
 			if (!isStr(html)) {
 				elem.innerHTML = ''
 			} else if (html !== oldHtml) {
@@ -220,18 +217,12 @@ export let patchProps = (elem, props, newProps) => {
 }
 
 export let removeStyle = (elem, style) => {
-	if (!isObj(style)) {
-		return
-	}
 	let elemStyle = elem.style
 	mapValue(style, (_, key) => {
 		elemStyle[key] = ''
 	})
 }
 export let setStyle = (elem, style) => {
-	if (!isObj(style)) {
-		return
-	}
 	let elemStyle = elem.style
 	mapValue(style, (value, key) => {
 		setStyleValue(elemStyle, key, value)
@@ -248,12 +239,15 @@ export let patchStyle = (elem, style, newStyle) => {
 	} else {
 		let elemStyle = elem.style
 		mapValue(newStyle, (value, key) => {
-			if (isUndefined(value)) {
+			if (value == null) {
 				elemStyle[key] = ''
-			} else if (style.hasOwnProperty(key)) {
-				let oldValue = style[key]
-				delete style[key]
-				if (oldValue !== value) {
+			} else {
+				let oldValue
+				if (style.hasOwnProperty(key)) {
+					oldValue = style[key]
+					delete style[key]
+				}
+				if (value !== oldValue) {
 					setStyleValue(elemStyle, key, value)
 				}
 			}
@@ -311,7 +305,7 @@ let prefixes = ['Webkit', 'ms', 'Moz', 'O'];
 // infinite loop, because it iterates over the newly added props too.
 mapValue(isUnitlessNumber, (_, prop) => {
 	eachItem(prefixes, prefix => 
-		isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop]
+		isUnitlessNumber[prefixKey(prefix, prop)] = true
 	)
 })
 

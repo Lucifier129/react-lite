@@ -145,11 +145,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	exports.isUndefined = isUndefined;
 	var isComponent = function isComponent(obj) {
-		return isFn(obj) && isObj(obj.prototype) && 'forceUpdate' in obj.prototype;
+		return obj && obj.prototype && 'forceUpdate' in obj.prototype;
 	};
 	exports.isComponent = isComponent;
 	var isStatelessComponent = function isStatelessComponent(obj) {
-		return isFn(obj) && (!isObj(obj.prototype) || !('forceUpdate' in obj.prototype));
+		return obj && (!obj.prototype || !('forceUpdate' in obj.prototype));
 	};
 
 	exports.isStatelessComponent = isStatelessComponent;
@@ -208,6 +208,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 		eachItem(args, function (source) {
+			if (source == null) {
+				return;
+			}
 			mapValue(source, function (value, key) {
 				target[key] = value;
 			});
@@ -224,13 +227,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.getUid = getUid;
 	var hasKey = function hasKey(obj) {
 		var key = arguments.length <= 1 || arguments[1] === undefined ? 'key' : arguments[1];
-		return isObj(obj) && isObj(obj.props) && obj.props.hasOwnProperty(key);
+		return obj && obj.props && obj.props.hasOwnProperty(key);
 	};
 
 	exports.hasKey = hasKey;
 	var mergeProps = function mergeProps(props, children, defaultProps) {
 		var result = extend({}, defaultProps, props);
-		if (isArr(children) && children.length > 0) {
+		if (children && children.length > 0) {
 			result.children = children.length === 1 ? children[0] : children;
 		}
 		return result;
@@ -298,7 +301,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				setStyle(elem, value);
 				break;
 			case isInnerHTMLKey(key):
-				isObj(value) && isStr(value.__html) && (elem.innerHTML = value.__html);
+				value && isStr(value.__html) && (elem.innerHTML = value.__html);
 				break;
 			case key in elem:
 				elem[key] = value;
@@ -309,18 +312,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	exports.setProp = setProp;
 	var setProps = function setProps(elem, props) {
-		if (!isObj(props)) {
-			return;
-		}
 		mapValue(props, function (value, key) {
 			setProp(elem, key, value);
 		});
 	};
 	exports.setProps = setProps;
 	var removeProps = function removeProps(elem, oldProps) {
-		if (!isObj(oldProps)) {
-			return;
-		}
 		mapValue(oldProps, function (oldValue, key) {
 			removeProp(elem, key, oldValue);
 		});
@@ -385,18 +382,18 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 			var oldValue = props[key];
 			delete props[key];
-			if (valueIsUndefined) {
-				removeProp(elem, key, oldValue);
+			if (value === oldValue) {
 				return;
 			}
-			if (value === oldValue) {
+			if (valueIsUndefined) {
+				removeProp(elem, key, oldValue);
 				return;
 			}
 			if (isStyleKey(key)) {
 				patchStyle(elem, oldValue, value);
 			} else if (isInnerHTMLKey(key)) {
-				var oldHtml = isObj(oldValue) && oldValue.__html;
-				var html = isObj(value) && value.__html;
+				var oldHtml = oldValue && oldValue.__html;
+				var html = value && value.__html;
 				if (!isStr(html)) {
 					elem.innerHTML = '';
 				} else if (html !== oldHtml) {
@@ -411,9 +408,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.patchProps = patchProps;
 	var removeStyle = function removeStyle(elem, style) {
-		if (!isObj(style)) {
-			return;
-		}
 		var elemStyle = elem.style;
 		mapValue(style, function (_, key) {
 			elemStyle[key] = '';
@@ -421,9 +415,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	exports.removeStyle = removeStyle;
 	var setStyle = function setStyle(elem, style) {
-		if (!isObj(style)) {
-			return;
-		}
 		var elemStyle = elem.style;
 		mapValue(style, function (value, key) {
 			setStyleValue(elemStyle, key, value);
@@ -442,12 +433,15 @@ return /******/ (function(modules) { // webpackBootstrap
 			(function () {
 				var elemStyle = elem.style;
 				mapValue(newStyle, function (value, key) {
-					if (isUndefined(value)) {
+					if (value == null) {
 						elemStyle[key] = '';
-					} else if (style.hasOwnProperty(key)) {
-						var oldValue = style[key];
-						delete style[key];
-						if (oldValue !== value) {
+					} else {
+						var oldValue = undefined;
+						if (style.hasOwnProperty(key)) {
+							oldValue = style[key];
+							delete style[key];
+						}
+						if (value !== oldValue) {
 							setStyleValue(elemStyle, key, value);
 						}
 					}
@@ -509,7 +503,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	// infinite loop, because it iterates over the newly added props too.
 	mapValue(isUnitlessNumber, function (_, prop) {
 		eachItem(prefixes, function (prefix) {
-			return isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop];
+			return isUnitlessNumber[prefixKey(prefix, prop)] = true;
 		});
 	});
 
@@ -610,7 +604,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			this.componentWillUpdate(nextProps, nextState);
 			this.props = nextProps;
 			this.state = nextState;
-			var nextVtree = _virtualDom.getVnode(this.render());
+			var nextVtree = checkVtree(this.render());
 			vtree.updateTree(nextVtree, node && node.parentNode);
 			this.vtree = nextVtree;
 			this.componentDidUpdate(props, state);
@@ -647,6 +641,14 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	};
 
+	var checkVtree = function checkVtree(vtree) {
+		if (_.isUndefined(vtree)) {
+			throw new Error('component can not render undefined');
+		}
+		return _virtualDom.getVnode(vtree);
+	};
+
+	exports.checkVtree = checkVtree;
 	var updatePropsAndState = function updatePropsAndState(component, props, state) {
 		component.state = state;
 		component.props = props;
@@ -719,17 +721,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _diff2 = _interopRequireDefault(_diff);
 
-	function Vdom(properties) {
-		var _this = this;
-
-		_.mapValue(properties, function (value, key) {
-			_this[key] = value;
-		});
+	function Vtree(properties) {
+		_.extend(this, properties);
 	}
 
 	var noop = function noop() {};
-	Vdom.prototype = {
-		constructor: Vdom,
+	Vtree.prototype = {
+		constructor: Vtree,
 		eachChildren: noop,
 		mapTree: noop,
 		initTree: noop,
@@ -737,10 +735,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		attachRef: noop,
 		detachRef: noop,
 		updateRef: noop,
-		create: noop,
-		update: noop,
-		remove: noop,
-		replace: noop,
 		updateTree: function updateTree(nextVtree, parentNode) {
 			_updateTree(this, nextVtree, parentNode);
 		}
@@ -750,7 +744,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		this.text = text;
 	}
 
-	Vtext.prototype = new Vdom({
+	Vtext.prototype = new Vtree({
 		constructor: Vtext,
 		vtype: _constant.VNODE_TYPE.TEXT,
 		update: function update(nextVtext) {
@@ -778,15 +772,17 @@ return /******/ (function(modules) { // webpackBootstrap
 		this.children = children;
 	}
 
-	var _destroyTree = function _destroyTree(tree) {
-		return tree.destroyTree();
-	};
+	var detachTree = function detachTree(vtree) {
+		var props = vtree.props;
 
-	Velem.prototype = new Vdom({
+		vtree.detachRef(props && props.ref);
+		unbindRefs(vtree);
+	};
+	Velem.prototype = new Vtree({
 		constructor: Velem,
 		vtype: _constant.VNODE_TYPE.ELEMENT,
 		eachChildren: function eachChildren(iteratee) {
-			var _this2 = this;
+			var _this = this;
 
 			var children = this.children;
 			var sorted = this.sorted;
@@ -803,8 +799,8 @@ return /******/ (function(modules) { // webpackBootstrap
 						iteratee(vchild, index);
 						newChildren.push(vchild);
 					});
-					_this2.children = newChildren;
-					_this2.sorted = true;
+					_this.children = newChildren;
+					_this.sorted = true;
 				})();
 			}
 		},
@@ -829,9 +825,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			var node = this.node;
 			var props = this.props;
 
-			this.eachChildren(_destroyTree);
-			this.detachRef(props && props.ref);
-			unbindRefs(this);
+			this.mapTree(detachTree);
 			removeNode(node);
 		},
 		update: function update(newVelem) {
@@ -854,7 +848,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			var newVchildLen = newVelem.children && newVelem.children.length ? newVelem.children.length : 0;
 			if (children.length > newVchildLen) {
-				_.eachItem(children.slice(newVchildLen), _destroyTree);
+				_.eachItem(children.slice(newVchildLen), destroyTree);
 			}
 			var newRefKey = newVelem.props && newVelem.props.ref;
 			var oldRefKey = props && props.ref;
@@ -875,7 +869,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		this.children = children;
 	}
 
-	VstatelessComponent.prototype = new Vdom({
+	VstatelessComponent.prototype = new Vtree({
 		constructor: VstatelessComponent,
 		vtype: _constant.VNODE_TYPE.STATELESS_COMPONENT,
 		renderTree: function renderTree() {
@@ -911,7 +905,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		this.children = children;
 	}
 
-	Vcomponent.prototype = new Vdom({
+	Vcomponent.prototype = new Vtree({
 		constructor: Vcomponent,
 		vtype: _constant.VNODE_TYPE.COMPONENT,
 		mapTree: function mapTree(iteratee) {
@@ -930,7 +924,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				_component.updatePropsAndState(component, component.props, updater.pendingState);
 				updater.pendingState = null;
 			}
-			var vtree = getVnode(component.render());
+			var vtree = _component.checkVtree(component.render());
 			vtree.mapTree(bindRefs(component.refs));
 			component.vtree = vtree;
 			vtree.initTree(parentNode);
@@ -946,8 +940,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			component.componentWillUnmount();
 			component.vtree.destroyTree();
-			this.detachRef(props && props.ref);
-			unbindRefs(this);
+			this.mapTree(detachTree);
 			this.component = this.node = component.node = component.refs = null;
 		},
 		update: function update(newVtree, parentNode) {
@@ -1032,9 +1025,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	var getVnode = function getVnode(vnode) {
-		if (_.isUndefined(vnode)) {
-			throw new Error('can not render undefined');
-		}
 		if (vnode === null || vnode === false) {
 			vnode = new Velem('noscript');
 		} else if (!_.isObj(vnode)) {

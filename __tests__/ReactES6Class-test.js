@@ -9,7 +9,7 @@
  * @emails react-core
  */
 
- jest.dontMock('../dist/react-lite');
+ jest.dontMock('../src');
 
 'use strict';
 
@@ -28,8 +28,8 @@ describe('ReactES6Class', function() {
   var renderedName = null;
 
   beforeEach(function() {
-    React = require('../dist/react-lite');
-    ReactDOM = require('../dist/react-lite');
+    React = require('../src');
+    ReactDOM = require('../src');
 
     container = document.createElement('div');
     attachedListener = null;

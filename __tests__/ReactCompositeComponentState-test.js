@@ -10,7 +10,7 @@
 //  */
 
 // 'use strict';
-//  jest.dontMock('../dist/react-lite');
+//  jest.dontMock('../src');
 // var mocks = {
 //   getMockFunction: function() {
 //     return jest.genMockFunction()
@@ -25,9 +25,9 @@
 // describe('ReactCompositeComponent-state', function() {
 
 //   beforeEach(function() {
-//     React = require('../dist/react-lite');
+//     React = require('../src');
 
-//     ReactDOM = require('../dist/react-lite');
+//     ReactDOM = require('../src');
 
 //     TestComponent = React.createClass({
 //       peekAtState: function(from, state) {

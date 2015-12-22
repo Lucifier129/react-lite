@@ -10,7 +10,7 @@
  */
 
 'use strict';
- jest.dontMock('../dist/react-lite');
+ jest.dontMock('../src');
 var mocks = {
       getMockFunction: function() {
         return jest.genMockFunction()
@@ -23,8 +23,8 @@ describe('ReactMultiChild', function() {
   var ReactDOM;
 
   beforeEach(function() {
-    React = require('../dist/react-lite');
-    ReactDOM = require('../dist/react-lite');
+    React = require('../src');
+    ReactDOM = require('../src');
   });
 
   describe('reconciliation', function() {

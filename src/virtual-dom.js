@@ -1,17 +1,15 @@
 import * as _ from './util'
-import { VNODE_TYPE, DIFF_TYPE } from './constant'
-import { shouldUpdate, updatePropsAndState } from './component'
+import { VNODE_TYPE, DIFF_TYPE, COMPONENT_ID } from './constant'
+import { checkVtree, shouldUpdate, updatePropsAndState } from './component'
 import diff from './diff'
 
-function Vdom(properties) {
-	_.mapValue(properties, (value, key) => {
-		this[key] = value
-	})
+function Vtree(properties) {
+	_.extend(this, properties)
 }
 
 let noop = () => {}
-Vdom.prototype = {
-	constructor: Vdom,
+Vtree.prototype = {
+	constructor: Vtree,
 	eachChildren: noop,
 	mapTree: noop,
 	initTree: noop,
@@ -19,10 +17,6 @@ Vdom.prototype = {
 	attachRef: noop,
 	detachRef: noop,
 	updateRef: noop,
-	create: noop,
-	update: noop,
-	remove: noop,
-	replace: noop,
 	updateTree(nextVtree, parentNode) {
 		updateTree(this, nextVtree, parentNode)
 	}
@@ -32,7 +26,7 @@ export function Vtext(text) {
 	this.text = text
 }
 
-Vtext.prototype = new Vdom({
+Vtext.prototype = new Vtree({
 	constructor: Vtext,
 	vtype: VNODE_TYPE.TEXT,
 	update(nextVtext) {
@@ -58,9 +52,18 @@ export function Velem(type, props, children) {
 	this.children = children
 }
 
-let destroyTree = tree => tree.destroyTree()
-
-Velem.prototype = new Vdom({
+let detachTree = vtree => {
+	let { props, vtype } = vtree
+	vtree.detachRef(props && props.ref)
+	unbindRefs(vtree)
+	if (vtype === VNODE_TYPE.COMPONENT) {
+		vtree.component.vtree.destroyTree()
+	} else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
+		vtree.destroyTree()
+	}
+}
+let destroyTree = vtree => vtree.destroyTree()
+Velem.prototype = new Vtree({
 	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
 	eachChildren(iteratee) {
@@ -95,9 +98,7 @@ Velem.prototype = new Vdom({
 	},
 	destroyTree() {
 		let { node, props } = this
-		this.eachChildren(destroyTree)
-		this.detachRef(props && props.ref)
-		unbindRefs(this)
+		this.mapTree(detachTree)
 		removeNode(node)
 	},
 	update(newVelem) {
@@ -139,9 +140,12 @@ export function VstatelessComponent(type, props, children) {
 	this.children = children
 }
 
-VstatelessComponent.prototype = new Vdom({
+VstatelessComponent.prototype = new Vtree({
 	constructor: VstatelessComponent,
 	vtype: VNODE_TYPE.STATELESS_COMPONENT,
+	mapTree(iteratee) {
+		iteratee(this)
+	},
 	renderTree() {
 		let { type: factory } = this
 		let props = _.mergeProps(this.props, this.children, factory.defaultProps)
@@ -173,7 +177,7 @@ export function Vcomponent(type, props, children) {
 	this.children = children
 }
 
-Vcomponent.prototype = new Vdom({
+Vcomponent.prototype = new Vtree({
 	constructor: Vcomponent,
 	vtype: VNODE_TYPE.COMPONENT,
 	mapTree(iteratee) {
@@ -191,11 +195,18 @@ Vcomponent.prototype = new Vdom({
 			updatePropsAndState(component, component.props, updater.pendingState)
 			updater.pendingState = null
 		}
-		let vtree = getVnode(component.render())
+		let vtree = checkVtree(component.render())
 		vtree.mapTree(bindRefs(component.refs))
 		component.vtree = vtree
 		vtree.initTree(parentNode)
-		component.node = this.node = vtree.node
+		let node = component.node = this.node = vtree.node
+		let componentId = _.getAttr(node, COMPONENT_ID)
+		if (componentId) {
+			componentId = `${ component.$id },${ componentId }`
+		} else {
+			componentId = component.$id
+		}
+		_.setAttr(node, COMPONENT_ID, componentId)
 		component.componentDidMount()
 		updater.isPendingForceUpdate = false
 		updater.emitUpdate()
@@ -204,9 +215,7 @@ Vcomponent.prototype = new Vdom({
 	destroyTree() {
 		let { component, props } = this
 		component.componentWillUnmount()
-		component.vtree.destroyTree()
-		this.detachRef(props && props.ref)
-		unbindRefs(this)
+		detachTree(this)
 		this.component = this.node = component.node = component.refs = null
 	},
 	update(newVtree, parentNode) {
@@ -285,9 +294,6 @@ let createElement = (tagName, props) =>  {
 }
 
 export let getVnode = vnode => {
-	if (_.isUndefined(vnode)) {
-		throw new Error('can not render undefined')
-	}
 	if (vnode === null || vnode === false) {
 		vnode = new Velem('noscript')
 	} else if (!_.isObj(vnode)) {
@@ -327,6 +333,9 @@ let bindRefs = refs => {
 	let	$detachRef = (refKey) => detachRef(refKey, refs)
 	let	$updateRef = (newRefKey, oldRefKey, refValue) => updateRef(newRefKey, oldRefKey, refValue, refs)
 	return vnode => {
+		if (vnode.vtype === VNODE_TYPE.TEXT || vnode.vtype === VNODE_TYPE.STATELESS_COMPONENT) {
+			return
+		}
 		let { props } = vnode
 		if (!props || _.isUndefined(props.ref)) {
 			return

@@ -10,7 +10,7 @@
  */
 
 'use strict';
- jest.dontMock('../dist/react-lite');
+ jest.dontMock('../src');
 var React;
 var ReactDOM;
 var ReactTestUtils;
@@ -21,8 +21,8 @@ var reactComponentExpect;
 describe('ReactEmptyComponent', function() {
   beforeEach(function() {
 
-    React = require('../dist/react-lite');
-    ReactDOM = require('../dist/react-lite');
+    React = require('../src');
+    ReactDOM = require('../src');
     ReactTestUtils = {
       renderIntoDocument: function(instance) {
         var div = document.createElement('div');

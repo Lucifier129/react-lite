@@ -42,6 +42,7 @@ export default function Component(props) {
 	this.props = props
 	this.state = {}
 	this.refs = {}
+	this.$id = _.getUid()
 }
 
 Component.prototype = {
@@ -63,7 +64,7 @@ Component.prototype = {
 		this.componentWillUpdate(nextProps, nextState)
 		this.props = nextProps
 		this.state = nextState
-		let nextVtree = getVnode(this.render())
+		let nextVtree = checkVtree(this.render())
 		vtree.updateTree(nextVtree, node && node.parentNode)
 		this.vtree = nextVtree
 		this.componentDidUpdate(props, state)
@@ -94,6 +95,13 @@ Component.prototype = {
 		$updater.addCallback(callback)
 		$updater.addState(nextState)
 	}
+}
+
+export let checkVtree = vtree => {
+	if (_.isUndefined(vtree)) {
+		throw new Error('component can not render undefined')
+	}
+	return getVnode(vtree)
 }
 
 export let updatePropsAndState = (component, props, state) => {

@@ -10,7 +10,7 @@
  */
 
 'use strict';
- jest.dontMock('../dist/react-lite');
+ jest.dontMock('../src');
 var mocks = {
   getMockFunction: function() {
     return jest.genMockFunction()
@@ -24,8 +24,8 @@ var ReactTestUtils;
 describe('ReactCompositeComponentNestedState-state', function() {
   return
   beforeEach(function() {
-    React = require('../dist/react-lite');
-    ReactDOM = require('../dist/react-lite');
+    React = require('../src');
+    ReactDOM = require('../src');
     ReactTestUtils = {
       renderIntoDocument: function(instance) {
         var div = document.createElement('div');
