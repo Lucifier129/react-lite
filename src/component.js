@@ -4,34 +4,48 @@ import { getVnode, bindRefs } from './virtual-dom'
 
 function Updater(instant) {
 	this.instant = instant
-	this.pendingState = null
-	this.pendingCallback = null
+	this.pendingStates = []
+	this.pendingCallbacks = []
 	this.isPendingForceUpdate = false
 }
 
 Updater.prototype = {
 	constructor: Updater,
 	emitUpdate(nextProps) {
-		let { instant, pendingState, pendingCallback } = this
-		if (nextProps || pendingState) {
+		let { instant, pendingStates, pendingCallbacks } = this
+		if (nextProps || pendingStates.length > 0) {
 			let props = nextProps || instant.props
-			let state = pendingState || instant.state
-			shouldUpdate(instant, props, state, pendingCallback)
+			shouldUpdate(instant, props, this.getState())
 		}
-		this.pendingState = null
-		this.pendingCallback = null
+		this.clearCallbacks()
 	},
 	addState(nextState) {
 		if (nextState) {
-			this.pendingState = nextState
-			if (this.isPendingForceUpdate === false) {
+			this.pendingStates.push(nextState)
+			if (!this.isPendingForceUpdate) {
 				this.emitUpdate()
 			}
 		}
 	},
+	getState() {
+		let { instant, pendingStates } = this
+		let state = instant.state
+		if (pendingStates.length > 0) {
+			state = _.extend(state, ...pendingStates)
+			pendingStates.length = 0
+		}
+		return state
+	},
+	clearCallbacks() {
+		let { pendingCallbacks } = this
+		if (pendingCallbacks.length > 0) {
+			_.eachItem(pendingCallbacks, callback => callback.call(instant))
+			pendingCallbacks.length = 0
+		}
+	},
 	addCallback(callback) {
 		if (_.isFn(callback)) {
-			this.pendingCallback = callback
+			this.pendingCallbacks.push(callback)
 		}
 	}
 }

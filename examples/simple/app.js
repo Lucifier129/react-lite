@@ -182,23 +182,24 @@
 
 		getInitialState: function getInitialState() {
 			return {
-				val: 0
+				val: 0,
+				test: 0
 			};
 		},
 
 		componentDidMount: function componentDidMount() {
 			var _this2 = this;
 
-			this.setState({ val: this.state.val + 1 });
-			console.log('didMount', this.state.val); // log 1
-			this.setState({ val: this.state.val + 1 });
-			console.log('didMount', this.state.val); // log 2
+			this.setState({ val: this.state.val + 1, test1: 1 });
+			console.log('didMount', this.state); // log 1
+			this.setState({ val: this.state.val + 1, test2: 2 });
+			console.log('didMount', this.state); // log 2
 
 			setTimeout(function () {
 				_this2.setState({ val: _this2.state.val + 1 });
-				console.log('setTimeout:', _this2.state.val); // log 3
+				console.log('setTimeout:', _this2.state); // log 3
 				_this2.setState({ val: _this2.state.val + 1 });
-				console.log('setTimeout:', _this2.state.val); // log 4
+				console.log('setTimeout:', _this2.state); // log 4
 			}, 4);
 		},
 

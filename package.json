@@ -10,7 +10,7 @@
     "build:lib": "babel src --out-dir lib",
     "build:es3": "set BROWSER_ENV=es3&& webpack src/index.js dist/react-lite-jquery.js --config webpack.config.development.js",
     "build:es3:min": "set BROWSER_ENV=es3&& webpack src/index.js dist/react-lite-jquery.min.js --config webpack.config.production.js",
-    "build:umd": "webpack --watch src/index.js dist/react-lite.js --config webpack.config.development.js",
+    "build:umd": "webpack src/index.js dist/react-lite.js --config webpack.config.development.js",
     "build:umd:min": "webpack src/index.js dist/react-lite.min.js --config webpack.config.production.js",
     "build": "npm run build:lib && npm run build:umd && npm run build:umd:min && npm run build:es3 && npm run build:es3:min",
     "prepublish": "npm run build"

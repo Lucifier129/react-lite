@@ -237,7 +237,7 @@ export let patchStyle = (elem, style, newStyle) => {
 	} else if (newStyle && !style) {
 		setStyle(elem, newStyle)
 	} else {
-		let elemStyle = elem.style
+		var elemStyle = elem.style
 		mapValue(newStyle, (value, key) => {
 			if (value == null) {
 				elemStyle[key] = ''

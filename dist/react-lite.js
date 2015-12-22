@@ -430,24 +430,22 @@ return /******/ (function(modules) { // webpackBootstrap
 		} else if (newStyle && !style) {
 			setStyle(elem, newStyle);
 		} else {
-			(function () {
-				var elemStyle = elem.style;
-				mapValue(newStyle, function (value, key) {
-					if (value == null) {
-						elemStyle[key] = '';
-					} else {
-						var oldValue = undefined;
-						if (style.hasOwnProperty(key)) {
-							oldValue = style[key];
-							delete style[key];
-						}
-						if (value !== oldValue) {
-							setStyleValue(elemStyle, key, value);
-						}
+			var elemStyle = elem.style;
+			mapValue(newStyle, function (value, key) {
+				if (value == null) {
+					elemStyle[key] = '';
+				} else {
+					var oldValue = undefined;
+					if (style.hasOwnProperty(key)) {
+						oldValue = style[key];
+						delete style[key];
 					}
-				});
-				removeStyle(elemStyle, style);
-			})();
+					if (value !== oldValue) {
+						setStyleValue(elemStyle, key, value);
+					}
+				}
+			});
+			removeStyle(elemStyle, style);
 		}
 	};
 
@@ -536,8 +534,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function Updater(instant) {
 		this.instant = instant;
-		this.pendingState = null;
-		this.pendingCallback = null;
+		this.pendingStates = [];
+		this.pendingCallbacks = [];
 		this.isPendingForceUpdate = false;
 	}
 
@@ -545,28 +543,47 @@ return /******/ (function(modules) { // webpackBootstrap
 		constructor: Updater,
 		emitUpdate: function emitUpdate(nextProps) {
 			var instant = this.instant;
-			var pendingState = this.pendingState;
-			var pendingCallback = this.pendingCallback;
+			var pendingStates = this.pendingStates;
+			var pendingCallbacks = this.pendingCallbacks;
 
-			if (nextProps || pendingState) {
+			if (nextProps || pendingStates.length > 0) {
 				var props = nextProps || instant.props;
-				var state = pendingState || instant.state;
-				shouldUpdate(instant, props, state, pendingCallback);
+				shouldUpdate(instant, props, this.getState());
 			}
-			this.pendingState = null;
-			this.pendingCallback = null;
+			this.clearCallbacks();
 		},
 		addState: function addState(nextState) {
 			if (nextState) {
-				this.pendingState = nextState;
-				if (this.isPendingForceUpdate === false) {
+				this.pendingStates.push(nextState);
+				if (!this.isPendingForceUpdate) {
 					this.emitUpdate();
 				}
 			}
 		},
+		getState: function getState() {
+			var instant = this.instant;
+			var pendingStates = this.pendingStates;
+
+			var state = instant.state;
+			if (pendingStates.length > 0) {
+				state = _.extend.apply(_, [state].concat(pendingStates));
+				pendingStates.length = 0;
+			}
+			return state;
+		},
+		clearCallbacks: function clearCallbacks() {
+			var pendingCallbacks = this.pendingCallbacks;
+
+			if (pendingCallbacks.length > 0) {
+				_.eachItem(pendingCallbacks, function (callback) {
+					return callback.call(instant);
+				});
+				pendingCallbacks.length = 0;
+			}
+		},
 		addCallback: function addCallback(callback) {
 			if (_.isFn(callback)) {
-				this.pendingCallback = callback;
+				this.pendingCallbacks.push(callback);
 			}
 		}
 	};
@@ -777,8 +794,10 @@ return /******/ (function(modules) { // webpackBootstrap
 		var props = vtree.props;
 		var vtype = vtree.vtype;
 
-		vtree.detachRef(props && props.ref);
-		unbindRefs(vtree);
+		if (vtree !== noop) {
+			vtree.detachRef(props && props.ref);
+			unbindRefs(vtree);
+		}
 		if (vtype === _constant.VNODE_TYPE.COMPONENT) {
 			vtree.component.vtree.destroyTree();
 		} else if (vtype === _constant.VNODE_TYPE.STATELESS_COMPONENT) {
@@ -792,8 +811,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		constructor: Velem,
 		vtype: _constant.VNODE_TYPE.ELEMENT,
 		eachChildren: function eachChildren(iteratee) {
-			var _this = this;
-
 			var children = this.children;
 			var sorted = this.sorted;
 
@@ -802,16 +819,14 @@ return /******/ (function(modules) { // webpackBootstrap
 				return;
 			}
 			if (children && children.length > 0) {
-				(function () {
-					var newChildren = [];
-					_.forEach(children, function (vchild, index) {
-						vchild = getVnode(vchild);
-						iteratee(vchild, index);
-						newChildren.push(vchild);
-					});
-					_this.children = newChildren;
-					_this.sorted = true;
-				})();
+				var newChildren = [];
+				_.forEach(children, function (vchild, index) {
+					vchild = getVnode(vchild);
+					iteratee(vchild, index);
+					newChildren.push(vchild);
+				});
+				this.children = newChildren;
+				this.sorted = true;
 			}
 		},
 		mapTree: function mapTree(iteratee) {
@@ -842,9 +857,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			var node = this.node;
 			var props = this.props;
 
+			var children = this.children || [];
 			_.patchProps(node, props, newVelem.props);
 
-			var children = this.children || [];
 			newVelem.node = node;
 			newVelem.eachChildren(function (newVchild, index) {
 				newVelem;
@@ -860,15 +875,15 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (children.length > newVchildLen) {
 				_.eachItem(children.slice(newVchildLen), destroyTree);
 			}
-			var newRefKey = newVelem.props && newVelem.props.ref;
-			var oldRefKey = props && props.ref;
-			if (oldRefKey !== newRefKey) {
-				this.updateRef(newRefKey, oldRefKey, node);
-			}
 			if (this.detachRef !== noop) {
 				newVelem.detachRef = this.detachRef;
 				newVelem.attachRef = this.attachRef;
 				newVelem.updateRef = this.updateRef;
+				var newRefKey = newVelem.props && newVelem.props.ref;
+				var oldRefKey = props && props.ref;
+				if (oldRefKey !== newRefKey) {
+					this.updateRef(newRefKey, oldRefKey, node);
+				}
 			}
 		}
 	});
@@ -890,7 +905,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			var props = _.mergeProps(this.props, this.children, factory.defaultProps);
 			var vtree = factory(props);
-			if (_.isObj(vtree) && _.isFn(vtree.render)) {
+			if (vtree && _.isFn(vtree.render)) {
 				vtree = vtree.render();
 			}
 			this.vtree = getVnode(vtree);
@@ -933,26 +948,19 @@ return /******/ (function(modules) { // webpackBootstrap
 			updater.isPendingForceUpdate = true;
 			component.props = component.props || props;
 			component.componentWillMount();
-			if (updater.pendingState) {
-				_component.updatePropsAndState(component, component.props, updater.pendingState);
-				updater.pendingState = null;
+			var nextState = updater.getState();
+			if (nextState !== component.state) {
+				_component.updatePropsAndState(component, component.props, nextState);
 			}
 			var vtree = _component.checkVtree(component.render());
 			vtree.mapTree(bindRefs(component.refs));
 			component.vtree = vtree;
 			vtree.initTree(parentNode);
-			var node = component.node = this.node = vtree.node;
-			var componentId = _.getAttr(node, _constant.COMPONENT_ID);
-			if (componentId) {
-				componentId = component.$id + ',' + componentId;
-			} else {
-				componentId = component.$id;
-			}
-			_.setAttr(node, _constant.COMPONENT_ID, componentId);
+			component.node = this.node = vtree.node;
 			component.componentDidMount();
 			updater.isPendingForceUpdate = false;
-			updater.emitUpdate();
 			this.attachRef(props.ref, component);
+			updater.emitUpdate();
 		},
 		destroyTree: function destroyTree() {
 			var component = this.component;
@@ -979,15 +987,15 @@ return /******/ (function(modules) { // webpackBootstrap
 			component.componentWillReceiveProps(nextProps);
 			updater.isPendingForceUpdate = false;
 			updater.emitUpdate(nextProps);
-			var newRefKey = nextProps.ref;
-			var oldRefKey = this.props && this.props.ref;
-			if (newRefKey !== oldRefKey) {
-				this.updateRef(newRefKey, oldRefKey, component);
-			}
 			if (this.detachRef !== noop) {
 				newVtree.detachRef = this.detachRef;
 				newVtree.attachRef = this.attachRef;
 				newVtree.updateRef = this.updateRef;
+				var newRefKey = nextProps.ref;
+				var oldRefKey = this.props && this.props.ref;
+				if (newRefKey !== oldRefKey) {
+					this.updateRef(newRefKey, oldRefKey, component);
+				}
 			}
 		}
 	});
