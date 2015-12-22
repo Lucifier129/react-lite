@@ -746,13 +746,63 @@ return /******/ (function(modules) { // webpackBootstrap
 	var noop = function noop() {};
 	Vtree.prototype = {
 		constructor: Vtree,
-		eachChildren: noop,
 		mapTree: noop,
-		initTree: noop,
-		destroyTree: noop,
-		attachRef: noop,
-		detachRef: noop,
-		updateRef: noop,
+		attachRef: function attachRef() {
+			var props = this.props;
+			var refs = this.refs;
+			var vtype = this.vtype;
+
+			var refValue = undefined;
+			if (vtype === _constant.VNODE_TYPE.ELEMENT) {
+				refValue = this.node;
+			} else if (vtype === _constant.VNODE_TYPE.COMPONENT) {
+				refValue = this.component;
+			}
+			if (refValue && refs && props && props.ref) {
+				_attachRef(props.ref, refValue, refs);
+			}
+		},
+		detachRef: function detachRef() {
+			var props = this.props;
+			var refs = this.refs;
+
+			if (refs && props && props.ref) {
+				_detachRef(props.ref, refs);
+			}
+		},
+		updateRef: function updateRef(newVtree) {
+			var props = this.props;
+			var refs = this.refs;
+			var newProps = newVtree.props;
+
+			var oldTreeRef = props && props.ref;
+			var newTreeRef = newProps && newProps.ref;
+			if (_.isUndefined(newTreeRef)) {
+				this.detachRef();
+			} else if (oldTreeRef !== newTreeRef) {
+				this.detachRef();
+				newVtree.attachRef();
+			}
+		},
+		eachChildren: function eachChildren(iteratee) {
+			var children = this.children;
+			var sorted = this.sorted;
+
+			if (sorted) {
+				_.eachItem(children, iteratee);
+				return;
+			}
+			if (children && children.length > 0) {
+				var newChildren = [];
+				_.forEach(children, function (vchild, index) {
+					vchild = getVnode(vchild);
+					iteratee(vchild, index);
+					newChildren.push(vchild);
+				});
+				this.children = newChildren;
+				this.sorted = true;
+			}
+		},
 		updateTree: function updateTree(nextVtree, parentNode) {
 			_updateTree(this, nextVtree, parentNode);
 		}
@@ -794,15 +844,10 @@ return /******/ (function(modules) { // webpackBootstrap
 		var props = vtree.props;
 		var vtype = vtree.vtype;
 
-		if (vtree !== noop) {
-			vtree.detachRef(props && props.ref);
-			unbindRefs(vtree);
-		}
-		if (vtype === _constant.VNODE_TYPE.COMPONENT) {
-			vtree.component.vtree.destroyTree();
-		} else if (vtype === _constant.VNODE_TYPE.STATELESS_COMPONENT) {
+		if (vtype === _constant.VNODE_TYPE.COMPONENT || vtype === _constant.VNODE_TYPE.STATELESS_COMPONENT) {
 			vtree.destroyTree();
 		}
+		vtree.detachRef();
 	};
 	var destroyTree = function destroyTree(vtree) {
 		return vtree.destroyTree();
@@ -810,25 +855,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	Velem.prototype = new Vtree({
 		constructor: Velem,
 		vtype: _constant.VNODE_TYPE.ELEMENT,
-		eachChildren: function eachChildren(iteratee) {
-			var children = this.children;
-			var sorted = this.sorted;
-
-			if (sorted) {
-				_.eachItem(children, iteratee);
-				return;
-			}
-			if (children && children.length > 0) {
-				var newChildren = [];
-				_.forEach(children, function (vchild, index) {
-					vchild = getVnode(vchild);
-					iteratee(vchild, index);
-					newChildren.push(vchild);
-				});
-				this.children = newChildren;
-				this.sorted = true;
-			}
-		},
 		mapTree: function mapTree(iteratee) {
 			iteratee(this);
 			this.eachChildren(function (vchild) {
@@ -844,7 +870,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				vchild.initTree(node);
 			});
 			appendNode(parentNode, node);
-			this.attachRef(props && props.ref, node);
+			this.attachRef();
 		},
 		destroyTree: function destroyTree() {
 			var node = this.node;
@@ -856,11 +882,13 @@ return /******/ (function(modules) { // webpackBootstrap
 		update: function update(newVelem) {
 			var node = this.node;
 			var props = this.props;
+			var refs = this.refs;
 
 			var children = this.children || [];
 			_.patchProps(node, props, newVelem.props);
 
 			newVelem.node = node;
+			newVelem.refs = refs;
 			newVelem.eachChildren(function (newVchild, index) {
 				newVelem;
 				var vchild = children[index];
@@ -875,16 +903,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (children.length > newVchildLen) {
 				_.eachItem(children.slice(newVchildLen), destroyTree);
 			}
-			if (this.detachRef !== noop) {
-				newVelem.detachRef = this.detachRef;
-				newVelem.attachRef = this.attachRef;
-				newVelem.updateRef = this.updateRef;
-				var newRefKey = newVelem.props && newVelem.props.ref;
-				var oldRefKey = props && props.ref;
-				if (oldRefKey !== newRefKey) {
-					this.updateRef(newRefKey, oldRefKey, node);
-				}
-			}
+			this.updateRef(newVelem);
 		}
 	});
 
@@ -959,7 +978,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			component.node = this.node = vtree.node;
 			component.componentDidMount();
 			updater.isPendingForceUpdate = false;
-			this.attachRef(props.ref, component);
+			this.attachRef();
 			updater.emitUpdate();
 		},
 		destroyTree: function destroyTree() {
@@ -967,7 +986,6 @@ return /******/ (function(modules) { // webpackBootstrap
 			var props = this.props;
 
 			component.componentWillUnmount();
-			detachTree(this);
 			this.component = this.node = component.node = component.refs = null;
 		},
 		update: function update(newVtree, parentNode) {
@@ -986,17 +1004,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			updater.isPendingForceUpdate = true;
 			component.componentWillReceiveProps(nextProps);
 			updater.isPendingForceUpdate = false;
+			this.updateRef(newVtree);
 			updater.emitUpdate(nextProps);
-			if (this.detachRef !== noop) {
-				newVtree.detachRef = this.detachRef;
-				newVtree.attachRef = this.attachRef;
-				newVtree.updateRef = this.updateRef;
-				var newRefKey = nextProps.ref;
-				var oldRefKey = this.props && this.props.ref;
-				if (newRefKey !== oldRefKey) {
-					this.updateRef(newRefKey, oldRefKey, component);
-				}
-			}
 		}
 	});
 
@@ -1065,7 +1074,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		return this;
 	};
 
-	var attachRef = function attachRef(refKey, refValue, refs) {
+	var _attachRef = function _attachRef(refKey, refValue, refs) {
 		if (refValue && refValue.nodeName) {
 			refValue.getDOMNode = getDOMNode;
 		}
@@ -1076,7 +1085,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	};
 
-	var detachRef = function detachRef(refKey, refs) {
+	var _detachRef = function _detachRef(refKey, refs) {
 		if (_.isFn(refKey)) {
 			refKey(null);
 		} else if (_.isStr(refKey)) {
@@ -1084,40 +1093,12 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	};
 
-	var updateRef = function updateRef(newRefKey, oldRefKey, refValue, refs) {
-		detachRef(oldRefKey, refs);
-		attachRef(newRefKey, refValue, refs);
-	};
-
 	var bindRefs = function bindRefs(refs) {
-		var $attachRef = function $attachRef(refKey, refValue) {
-			return attachRef(refKey, refValue, refs);
-		};
-		var $detachRef = function $detachRef(refKey) {
-			return detachRef(refKey, refs);
-		};
-		var $updateRef = function $updateRef(newRefKey, oldRefKey, refValue) {
-			return updateRef(newRefKey, oldRefKey, refValue, refs);
-		};
 		return function (vnode) {
-			if (vnode.vtype === _constant.VNODE_TYPE.TEXT || vnode.vtype === _constant.VNODE_TYPE.STATELESS_COMPONENT) {
-				return;
+			if (vnode.vtype === _constant.VNODE_TYPE.ELEMENT || vnode.vtype === _constant.VNODE_TYPE.COMPONENT) {
+				vnode.refs = refs;
 			}
-			var props = vnode.props;
-
-			if (!props || _.isUndefined(props.ref)) {
-				return;
-			}
-			vnode.attachRef = $attachRef;
-			vnode.detachRef = $detachRef;
-			vnode.updateRef = $updateRef;
 		};
-	};
-
-	var unbindRefs = function unbindRefs(vnode) {
-		delete vnode.attachRef;
-		delete vnode.detachRef;
-		delete vnode.updateRef;
 	};
 
 /***/ },
