@@ -622,7 +622,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			this.componentWillUpdate(nextProps, nextState);
 			this.props = nextProps;
 			this.state = nextState;
+			_virtualDom.setComponent(this);
 			var nextVtree = checkVtree(this.render());
+			_virtualDom.resetComponent();
 			vtree.updateTree(nextVtree, node && node.parentNode);
 			this.vtree = nextVtree;
 			this.componentDidUpdate(props, state);
@@ -746,35 +748,65 @@ return /******/ (function(modules) { // webpackBootstrap
 	var noop = function noop() {};
 	Vtree.prototype = {
 		constructor: Vtree,
-		mapTree: noop,
+		mapTree: function mapTree(iteratee) {
+			iteratee(this);
+			this.eachChildren(function (vchild) {
+				return vchild.mapTree(iteratee);
+			});
+		},
 		attachRef: function attachRef() {
 			var props = this.props;
-			var refs = this.refs;
+			var context = this.context;
 			var vtype = this.vtype;
 
+			if (!context) {
+				return;
+			}
+			var refs = context.refs;
+
+			var refKey = undefined;
 			var refValue = undefined;
 			if (vtype === _constant.VNODE_TYPE.ELEMENT) {
 				refValue = this.node;
+				refValue.getDOMNode = getDOMNode;
 			} else if (vtype === _constant.VNODE_TYPE.COMPONENT) {
 				refValue = this.component;
 			}
 			if (refValue && refs && props && props.ref) {
-				_attachRef(props.ref, refValue, refs);
+				refKey = props.ref;
+				if (_.isFn(refKey)) {
+					refKey(refValue);
+				} else if (_.isStr(refKey)) {
+					refs[refKey] = refValue;
+				}
 			}
 		},
 		detachRef: function detachRef() {
 			var props = this.props;
-			var refs = this.refs;
+			var context = this.context;
 
+			if (!context) {
+				return;
+			}
+			var refs = context.refs;
+
+			var refKey = undefined;
 			if (refs && props && props.ref) {
-				_detachRef(props.ref, refs);
+				if (_.isFn(props.ref)) {
+					props.ref(null);
+				} else {
+					delete refs[props.ref];
+				}
 			}
 		},
 		updateRef: function updateRef(newVtree) {
+			if (this.context !== newVtree.context) {
+				this.detachRef();
+				newVtree.attachRef();
+				return;
+			}
 			var props = this.props;
-			var refs = this.refs;
 			var newProps = newVtree.props;
-
 			var oldTreeRef = props && props.ref;
 			var newTreeRef = newProps && newProps.ref;
 			if (_.isUndefined(newTreeRef)) {
@@ -834,20 +866,21 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	});
 
-	function Velem(type, props, children) {
+	function Velem(type, props, children, context) {
 		this.type = type;
 		this.props = props;
 		this.children = children;
+		this.context = context;
 	}
 
 	var detachTree = function detachTree(vtree) {
-		var props = vtree.props;
 		var vtype = vtree.vtype;
 
 		if (vtype === _constant.VNODE_TYPE.COMPONENT || vtype === _constant.VNODE_TYPE.STATELESS_COMPONENT) {
 			vtree.destroyTree();
+		} else if (vtype === _constant.VNODE_TYPE.ELEMENT) {
+			vtree.detachRef();
 		}
-		vtree.detachRef();
 	};
 	var destroyTree = function destroyTree(vtree) {
 		return vtree.destroyTree();
@@ -855,12 +888,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	Velem.prototype = new Vtree({
 		constructor: Velem,
 		vtype: _constant.VNODE_TYPE.ELEMENT,
-		mapTree: function mapTree(iteratee) {
-			iteratee(this);
-			this.eachChildren(function (vchild) {
-				return vchild.mapTree(iteratee);
-			});
-		},
 		initTree: function initTree(parentNode) {
 			var type = this.type;
 			var props = this.props;
@@ -882,13 +909,10 @@ return /******/ (function(modules) { // webpackBootstrap
 		update: function update(newVelem) {
 			var node = this.node;
 			var props = this.props;
-			var refs = this.refs;
 
 			var children = this.children || [];
 			_.patchProps(node, props, newVelem.props);
-
 			newVelem.node = node;
-			newVelem.refs = refs;
 			newVelem.eachChildren(function (newVchild, index) {
 				newVelem;
 				var vchild = children[index];
@@ -907,18 +931,16 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	});
 
-	function VstatelessComponent(type, props, children) {
+	function VstatelessComponent(type, props, children, context) {
 		this.type = type;
 		this.props = props;
 		this.children = children;
+		this.context = context;
 	}
 
 	VstatelessComponent.prototype = new Vtree({
 		constructor: VstatelessComponent,
 		vtype: _constant.VNODE_TYPE.STATELESS_COMPONENT,
-		mapTree: function mapTree(iteratee) {
-			iteratee(this);
-		},
 		renderTree: function renderTree() {
 			var factory = this.type;
 
@@ -946,18 +968,33 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	});
 
-	function Vcomponent(type, props, children) {
+	var curComponent = null;
+	var cacheComponent = null;
+	var getComponent = function getComponent() {
+		return curComponent;
+	};
+	exports.getComponent = getComponent;
+	var setComponent = function setComponent(component) {
+		cacheComponent = curComponent;
+		curComponent = component;
+	};
+	exports.setComponent = setComponent;
+	var resetComponent = function resetComponent() {
+		curComponent = cacheComponent;
+	};
+
+	exports.resetComponent = resetComponent;
+
+	function Vcomponent(type, props, children, context) {
 		this.type = type;
 		this.props = props;
 		this.children = children;
+		this.context = context;
 	}
 
 	Vcomponent.prototype = new Vtree({
 		constructor: Vcomponent,
 		vtype: _constant.VNODE_TYPE.COMPONENT,
-		mapTree: function mapTree(iteratee) {
-			iteratee(this);
-		},
 		initTree: function initTree(parentNode) {
 			var Component = this.type;
 
@@ -971,8 +1008,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (nextState !== component.state) {
 				_component.updatePropsAndState(component, component.props, nextState);
 			}
+			setComponent(component);
 			var vtree = _component.checkVtree(component.render());
-			vtree.mapTree(bindRefs(component.refs));
+			resetComponent();
 			component.vtree = vtree;
 			vtree.initTree(parentNode);
 			component.node = this.node = vtree.node;
@@ -986,6 +1024,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			var props = this.props;
 
 			component.componentWillUnmount();
+			this.detachRef();
+			component.vtree.destroyTree();
 			this.component = this.node = component.node = component.refs = null;
 		},
 		update: function update(newVtree, parentNode) {
@@ -1072,33 +1112,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.getVnode = getVnode;
 	var getDOMNode = function getDOMNode() {
 		return this;
-	};
-
-	var _attachRef = function _attachRef(refKey, refValue, refs) {
-		if (refValue && refValue.nodeName) {
-			refValue.getDOMNode = getDOMNode;
-		}
-		if (_.isFn(refKey)) {
-			refKey(refValue);
-		} else if (_.isStr(refKey)) {
-			refs[refKey] = refValue;
-		}
-	};
-
-	var _detachRef = function _detachRef(refKey, refs) {
-		if (_.isFn(refKey)) {
-			refKey(null);
-		} else if (_.isStr(refKey)) {
-			delete refs[refKey];
-		}
-	};
-
-	var bindRefs = function bindRefs(refs) {
-		return function (vnode) {
-			if (vnode.vtype === _constant.VNODE_TYPE.ELEMENT || vnode.vtype === _constant.VNODE_TYPE.COMPONENT) {
-				vnode.refs = refs;
-			}
-		};
 	};
 
 /***/ },
@@ -1279,7 +1292,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (children.length === 0) {
 			children = undefined;
 		}
-		return new Vnode(type, props, children);
+		return new Vnode(type, props, children, _virtualDom.getComponent());
 	};
 
 	exports['default'] = createElement;

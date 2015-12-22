@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { getVnode, bindRefs } from './virtual-dom'
+import { getVnode, setComponent, resetComponent  } from './virtual-dom'
 
 
 function Updater(instant) {
@@ -78,7 +78,9 @@ Component.prototype = {
 		this.componentWillUpdate(nextProps, nextState)
 		this.props = nextProps
 		this.state = nextState
+		setComponent(this)
 		let nextVtree = checkVtree(this.render())
+		resetComponent()
 		vtree.updateTree(nextVtree, node && node.parentNode)
 		this.vtree = nextVtree
 		this.componentDidUpdate(props, state)

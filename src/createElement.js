@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { Velem, Vcomponent, VstatelessComponent } from './virtual-dom'
+import { Velem, Vcomponent, VstatelessComponent, getComponent } from './virtual-dom'
 
 let createElement = (type, props, ...children) => {
 	let Vnode
@@ -19,7 +19,7 @@ let createElement = (type, props, ...children) => {
 	if (children.length === 0) {
 		children = undefined
 	}
-	return new Vnode(type, props, children)
+	return new Vnode(type, props, children, getComponent())
 }
 
 export default createElement

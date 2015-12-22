@@ -74,7 +74,6 @@ describe('ReactEmptyComponent', function() {
   });
 
   it('should be able to switch between rendering null and a normal tag', () => {
-    var log = console.log.bind(console)
     spyOn(console, 'log');
     var instance1 =
       <TogglingComponent
@@ -129,7 +128,6 @@ describe('ReactEmptyComponent', function() {
 
   it('should have getDOMNode return null when multiple layers of composite ' +
     'components render to the same null placeholder', () => {
-
       spyOn(console, 'log');
 
       var GrandChild = React.createClass({
@@ -161,7 +159,6 @@ describe('ReactEmptyComponent', function() {
       expect(function() {
         ReactTestUtils.renderIntoDocument(instance2);
       }).not.toThrow();
-
       expect(console.log.argsForCall.length).toBe(4);
       expect(console.log.argsForCall[0][0].tagName).toBe('DIV');
       expect(console.log.argsForCall[1][0]).toBe(null);

@@ -1,6 +1,6 @@
 {
   "name": "react-lite",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "simple react",
   "main": "src/index.js",
   "jsnext:main": "src/index.js",

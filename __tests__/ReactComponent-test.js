@@ -59,37 +59,37 @@ describe('ReactComponent', function() {
   //   }).toThrow();
   // });
 
-  // it('should support refs on owned components', function() {
-  //   var innerObj = {};
-  //   var outerObj = {};
+  it('should support refs on owned components', function() {
+    var innerObj = {};
+    var outerObj = {};
 
-  //   var Wrapper = React.createClass({
+    var Wrapper = React.createClass({
 
-  //     getObject: function() {
-  //       return this.props.object;
-  //     },
+      getObject: function() {
+        return this.props.object;
+      },
 
-  //     render: function() {
-  //       return <div>{this.props.children}</div>;
-  //     },
+      render: function() {
+        return <div>{this.props.children}</div>;
+      },
 
-  //   });
+    });
 
-  //   var Component = React.createClass({
-  //     render: function() {
-  //       var inner = <Wrapper object={innerObj} ref="inner" />;
-  //       var outer = <Wrapper object={outerObj} ref="outer">{inner}</Wrapper>;
-  //       return outer;
-  //     },
-  //     componentDidMount: function() {
-  //       expect(this.refs.inner.getObject()).toEqual(innerObj);
-  //       expect(this.refs.outer.getObject()).toEqual(outerObj);
-  //     },
-  //   });
+    var Component = React.createClass({
+      render: function() {
+        var inner = <Wrapper object={innerObj} ref="inner" />;
+        var outer = <Wrapper object={outerObj} ref="outer">{inner}</Wrapper>;
+        return outer;
+      },
+      componentDidMount: function() {
+        expect(this.refs.inner.getObject()).toEqual(innerObj);
+        expect(this.refs.outer.getObject()).toEqual(outerObj);
+      },
+    });
 
-  //   var instance = <Component />;
-  //   instance = ReactTestUtils.renderIntoDocument(instance);
-  // });
+    var instance = <Component />;
+    instance = ReactTestUtils.renderIntoDocument(instance);
+  });
 
   it('should not have refs on unmounted components', function() {
     var Parent = React.createClass({
