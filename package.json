@@ -2,7 +2,7 @@
   "name": "react-lite",
   "version": "0.0.2",
   "description": "simple react",
-  "main": "src/index.js",
+  "main": "dist/react-lite.common.js",
   "jsnext:main": "src/index.js",
   "scripts": {
     "test": "jest",
@@ -10,7 +10,8 @@
     "build:lib": "babel src --out-dir lib",
     "build:umd": "webpack src/index.js dist/react-lite.js --config webpack.config.development.js",
     "build:umd:min": "webpack src/index.js dist/react-lite.min.js --config webpack.config.production.js",
-    "build": "npm run build:lib && npm run build:umd && npm run build:umd:min",
+    "build:rollup": "node build.js",
+    "build": "npm run build:lib && npm run build:rollup",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -44,7 +45,12 @@
     "babel-runtime": "^5.8.25",
     "jest-cli": "^0.8.1",
     "jest-webpack-alias": "^2.0.0",
-    "webpack": "^1.12.2"
+    "rollup": "^0.21.0",
+    "rollup-plugin-babel": "^1.0.0",
+    "rollup-plugin-replace": "^1.1.0",
+    "uglify-js": "^2.6.1",
+    "webpack": "^1.12.2",
+    "zlib": "^1.0.5"
   },
   "npmName": "react-lite",
   "npmFileMap": [

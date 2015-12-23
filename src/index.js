@@ -1,3 +1,6 @@
+/**
+  React-lite.version
+*/
 import { render, findDOMNode, unmountComponentAtNode } from './ReactDOM'
 import Component from './component'
 import createClass from './createClass'
