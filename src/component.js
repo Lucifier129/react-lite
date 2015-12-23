@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { getVnode, setComponent, resetComponent  } from './virtual-dom'
+import { renderComponent  } from './virtual-dom'
 
 
 function Updater(instant) {
@@ -15,9 +15,8 @@ Updater.prototype = {
 		let { instant, pendingStates, pendingCallbacks } = this
 		if (nextProps || pendingStates.length > 0) {
 			let props = nextProps || instant.props
-			shouldUpdate(instant, props, this.getState())
+			shouldUpdate(instant, props, this.getState(), this.clearCallbacks.bind(this))
 		}
-		this.clearCallbacks()
 	},
 	addState(nextState) {
 		if (nextState) {
@@ -27,17 +26,25 @@ Updater.prototype = {
 			}
 		}
 	},
+	replaceState(nextState) {
+		let { pendingStates } = this
+		pendingStates.pop()
+		pendingStates.push(nextState)
+	},
 	getState() {
 		let { instant, pendingStates } = this
-		let state = instant.state
-		if (pendingStates.length > 0) {
-			state = _.extend(state, ...pendingStates)
-			pendingStates.length = 0
-		}
+		let { state, props } = instant
+		_.eachItem(pendingStates, nextState => {
+			if (_.isFn(nextState)) {
+				nextState = nextState.call(instant, state, props)
+			}
+			state = _.extend({}, state, nextState)
+		})
+		pendingStates.length = 0
 		return state
 	},
 	clearCallbacks() {
-		let { pendingCallbacks } = this
+		let { pendingCallbacks, instant } = this
 		if (pendingCallbacks.length > 0) {
 			_.eachItem(pendingCallbacks, callback => callback.call(instant))
 			pendingCallbacks.length = 0
@@ -78,9 +85,7 @@ Component.prototype = {
 		this.componentWillUpdate(nextProps, nextState)
 		this.props = nextProps
 		this.state = nextState
-		setComponent(this)
-		let nextVtree = checkVtree(this.render())
-		resetComponent()
+		let nextVtree = renderComponent(this)
 		vtree.updateTree(nextVtree, node && node.parentNode)
 		this.vtree = nextVtree
 		this.componentDidUpdate(props, state)
@@ -89,35 +94,19 @@ Component.prototype = {
 		}
 	},
 	setState(nextState, callback) {
-		let { props, state, $updater } = this
-		if (_.isFn(nextState)) {
-			nextState = nextState.call(this, state, props)
-		}
-		if (_.isObj(nextState)) {
-			nextState = _.extend({}, state, nextState)
-		}
+		let { $updater } = this
 		$updater.addCallback(callback)
 		$updater.addState(nextState)
+	},
+	replaceState(nextState, callback) {
+		let { $updater } = this
+		$updater.addCallback(callback)
+		$updater.replaceState(nextState)
 	},
 	getDOMNode() {
 		let node = this.vtree.node
 		return node.tagName === 'NOSCRIPT' ? null : node
-	},
-	replaceState(nextState, callback) {
-		if (!_.isObj(nextState)) {
-			return
-		}
-		let { $updater } = this
-		$updater.addCallback(callback)
-		$updater.addState(nextState)
 	}
-}
-
-export let checkVtree = vtree => {
-	if (_.isUndefined(vtree)) {
-		throw new Error('component can not render undefined')
-	}
-	return getVnode(vtree)
 }
 
 export let updatePropsAndState = (component, props, state) => {

@@ -148,10 +148,7 @@ describe('ReactStatelessComponent', function() {
 
   //   expect(console.error.argsForCall.length).toBe(1);
   //   expect(console.error.argsForCall[0][0]).toContain(
-  //     'Stateless function components cannot be given refs ' +
-  //     '(See ref "stateless" in StatelessComponent created by Parent). ' +
-  //     'Attempts to access this ref will fail.'
-  //   );
+  //     'Stateless function components cannot be given refs');
   // });
 
   it('should provide a null ref', function() {
