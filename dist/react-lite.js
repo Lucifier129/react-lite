@@ -131,7 +131,7 @@
   	}
   };
 
-  var IGNORE_KEYS = /(key)|(ref)/i;
+  var IGNORE_KEYS = /(key)|(ref)|(children)/i;
   var EVENT_KEYS = /^on/i;
   var isIgnoreKey = function isIgnoreKey(key) {
   	return IGNORE_KEYS.test(key);
@@ -183,7 +183,7 @@
   			removeEvent(elem, key);
   			break;
   		case isStyleKey(key):
-  			removeStyle(elem.style, oldValue);
+  			removeStyle(elem, oldValue);
   			break;
   		case isInnerHTMLKey(key):
   			elem.innerHTML = '';
@@ -258,12 +258,18 @@
   };
 
   var removeStyle = function removeStyle(elem, style) {
+  	if (!isObj(style)) {
+  		return;
+  	}
   	var elemStyle = elem.style;
   	mapValue(style, function (_, key) {
   		elemStyle[key] = '';
   	});
   };
   var setStyle = function setStyle(elem, style) {
+  	if (!isObj(style)) {
+  		return;
+  	}
   	var elemStyle = elem.style;
   	mapValue(style, function (value, key) {
   		setStyleValue(elemStyle, key, value);
@@ -293,7 +299,7 @@
   				}
   			}
   		});
-  		removeStyle(elemStyle, style);
+  		removeStyle(elem, style);
   	}
   };
 
@@ -354,6 +360,9 @@
 
   var RE_NUMBER = /^-?\d+(\.\d+)?$/;
   var setStyleValue = function setStyleValue(style, key, value) {
+  	if (isBln(value) || value == null) {
+  		value = '';
+  	}
   	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
   		style[key] = value + 'px';
   	} else {
@@ -422,7 +431,18 @@
   };
 
   var findDOMNode = function findDOMNode(node) {
-  	return node.nodeName ? node : node.getDOMNode();
+  	if (node == null) {
+  		return null;
+  	}
+  	if (node.nodeName) {
+  		return node;
+  	}
+  	var component = node;
+  	if (isFn(component.getDOMNode) && component.node) {
+  		node = component.getDOMNode();
+  		return node;
+  	}
+  	throw new Error('findDOMNode can not find Node');
   };
 
   function Updater(instant) {
@@ -496,7 +516,6 @@
   	this.props = props;
   	this.state = {};
   	this.refs = {};
-  	this.$id = getUid();
   }
 
   Component.prototype = {
@@ -1101,10 +1120,21 @@
     }
   };
 
+  var createFactory = function createFactory(type) {
+    return function () {
+      for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      return createElement.apply(undefined, [type].concat(args));
+    };
+  };
+
   var index = {
     Component: Component,
     createClass: createClass,
     createElement: createElement,
+    createFactory: createFactory,
     Children: Children,
     PropTypes: PropTypes,
     render: render,

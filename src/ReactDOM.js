@@ -46,4 +46,17 @@ export let unmountComponentAtNode = container => {
 	return false
 }
 
-export let findDOMNode = node => node.nodeName ? node : node.getDOMNode()
+export let findDOMNode = node => {
+	if (node == null) {
+		return null
+	}
+	if (node.nodeName) {
+		return node
+	}
+	let component = node
+	if (_.isFn(component.getDOMNode) && component.node) {
+		node = component.getDOMNode()
+		return  node
+	}
+	throw new Error('findDOMNode can not find Node')
+}

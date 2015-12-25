@@ -271,7 +271,6 @@ describe('ReactEmptyComponent', function() {
     ReactDOM.render(<Empty />, container);
     var noscript2 = container.firstChild;
     expect(noscript2.tagName).toBe('NOSCRIPT');
-
     expect(noscript1).toBe(noscript2);
   });
 });

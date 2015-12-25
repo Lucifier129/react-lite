@@ -63,7 +63,6 @@ export default function Component(props) {
 	this.props = props
 	this.state = {}
 	this.refs = {}
-	this.$id = _.getUid()
 }
 
 Component.prototype = {

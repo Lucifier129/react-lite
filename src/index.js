@@ -1,6 +1,3 @@
-/**
-  React-lite.version
-*/
 import { render, findDOMNode, unmountComponentAtNode } from './ReactDOM'
 import Component from './component'
 import createClass from './createClass'
@@ -32,10 +29,13 @@ let Children = {
 	}
 }
 
+let createFactory = type => (...args) => createElement(type, ...args)
+
 export default {
 	Component,
 	createClass,
 	createElement,
+    createFactory,
 	Children,
     PropTypes,
 	render,

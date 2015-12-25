@@ -98,7 +98,7 @@ export let removeEvent = (elem, key) => {
 	}
 }
 
-let IGNORE_KEYS = /(key)|(ref)/i
+let IGNORE_KEYS = /(key)|(ref)|(children)/i
 let EVENT_KEYS = /^on/i
 export let isIgnoreKey = key => IGNORE_KEYS.test(key)
 export let isEventKey = key => EVENT_KEYS.test(key)
@@ -142,7 +142,7 @@ export let removeProp = (elem, key, oldValue) => {
 			removeEvent(elem, key)
 			break
 		case isStyleKey(key):
-			removeStyle(elem.style, oldValue)
+			removeStyle(elem, oldValue)
 			break
 		case isInnerHTMLKey(key):
 			elem.innerHTML = ''
@@ -217,12 +217,18 @@ export let patchProps = (elem, props, newProps) => {
 }
 
 export let removeStyle = (elem, style) => {
+	if (!isObj(style)) {
+		return
+	}
 	let elemStyle = elem.style
 	mapValue(style, (_, key) => {
 		elemStyle[key] = ''
 	})
 }
 export let setStyle = (elem, style) => {
+	if (!isObj(style)) {
+		return
+	}
 	let elemStyle = elem.style
 	mapValue(style, (value, key) => {
 		setStyleValue(elemStyle, key, value)
@@ -252,7 +258,7 @@ export let patchStyle = (elem, style, newStyle) => {
 				}
 			}
 		})
-		removeStyle(elemStyle, style)
+		removeStyle(elem, style)
 	}
 }
 
@@ -311,6 +317,9 @@ mapValue(isUnitlessNumber, (_, prop) => {
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
 export let setStyleValue = (style, key, value) => {
+	if (isBln(value) || value == null) {
+		value = ''
+	}
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
 		style[key] = value + 'px'
 	} else {
