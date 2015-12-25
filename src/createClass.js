@@ -2,7 +2,13 @@ import * as _ from './util'
 import Component from './component'
 
 let combineMixin = (proto, mixin) => {
+	if (_.isArr(mixin.mixins)) {
+		combineMixins(proto, mixin.mixins)
+	}
 	_.mapValue(mixin, (value, key) => {
+		if (key === 'statics' || key === 'propTypes' || key === 'mixins') {
+			return
+		}
 		let curValue = proto[key]
 		if (_.isFn(curValue) && _.isFn(value)) {
 			proto[key] = _.pipe(curValue, value)
@@ -23,28 +29,51 @@ let bindContext = (obj, source) => {
 	})
 }
 
+let combineStaticsAndPropTypes = (Component, mixins) => {
+	_.eachItem(mixins, mixin => {
+		if (_.isArr(mixin.mixins)) {
+			combineStaticsAndPropTypes(Component, mixin.mixins)
+		}
+		if (_.isObj(mixin.propTypes)) {
+			_.extend(Component.propTypes, mixin.propTypes)
+		}
+		if (_.isObj(mixin.statics)) {
+			_.extend(Component, mixin.statics)
+		}
+	})
+}
+
 let Facade = function() {}
 Facade.prototype = Component.prototype
 
 export let createClass = spec => {
+	if (!_.isFn(spec.render)) {
+		throw new Error('createClass: spec.render is not function')
+	}
 	let mixins = spec.mixins || []
+	delete spec.mixins
+	mixins = mixins.concat(spec)
 	function Klass(props) {
 		Component.call(this, props)
-		bindContext(this, Klass.prototype)
+		spec.autobind !== false && bindContext(this, Klass.prototype)
+		this.constructor = Klass
 		if (_.isFn(this.getInitialState)) {
+			let setState = this.setState
+			this.setState = Facade
 			this.state = this.getInitialState()
+			this.setState = setState
 		}
 	}
 	Klass.prototype = new Facade()
-	combineMixins(Klass.prototype, mixins.concat(spec))
-	if (_.isObj(spec.statics)) {
-		_.mapValue(spec.statics, (value, key) => {
-			Klass[key] = value
-		})
-	}
+	combineMixins(Klass.prototype, mixins)
+	Klass.propTypes = {}
+	combineStaticsAndPropTypes(Klass, mixins)
 	if (_.isFn(spec.getDefaultProps)) {
 		Klass.defaultProps =  spec.getDefaultProps()
 	}
+	Klass.displayName = spec.displayName
+	mixins.pop()
+	spec.mixins = mixins
 	return Klass
 }
 

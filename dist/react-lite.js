@@ -1044,7 +1044,13 @@
   };
 
   var combineMixin = function combineMixin(proto, mixin) {
+  	if (isArr(mixin.mixins)) {
+  		combineMixins(proto, mixin.mixins);
+  	}
   	mapValue(mixin, function (value, key) {
+  		if (key === 'statics' || key === 'propTypes' || key === 'mixins') {
+  			return;
+  		}
   		var curValue = proto[key];
   		if (isFn(curValue) && isFn(value)) {
   			proto[key] = pipe(curValue, value);
@@ -1067,28 +1073,51 @@
   	});
   };
 
+  var combineStaticsAndPropTypes = function combineStaticsAndPropTypes(Component, mixins) {
+  	eachItem(mixins, function (mixin) {
+  		if (isArr(mixin.mixins)) {
+  			combineStaticsAndPropTypes(Component, mixin.mixins);
+  		}
+  		if (isObj(mixin.propTypes)) {
+  			extend(Component.propTypes, mixin.propTypes);
+  		}
+  		if (isObj(mixin.statics)) {
+  			extend(Component, mixin.statics);
+  		}
+  	});
+  };
+
   var Facade = function Facade() {};
   Facade.prototype = Component.prototype;
 
   var createClass = function createClass(spec) {
+  	if (!isFn(spec.render)) {
+  		throw new Error('createClass: spec.render is not function');
+  	}
   	var mixins = spec.mixins || [];
+  	delete spec.mixins;
+  	mixins = mixins.concat(spec);
   	function Klass(props) {
   		Component.call(this, props);
-  		bindContext(this, Klass.prototype);
+  		spec.autobind !== false && bindContext(this, Klass.prototype);
+  		this.constructor = Klass;
   		if (isFn(this.getInitialState)) {
+  			var setState = this.setState;
+  			this.setState = Facade;
   			this.state = this.getInitialState();
+  			this.setState = setState;
   		}
   	}
   	Klass.prototype = new Facade();
-  	combineMixins(Klass.prototype, mixins.concat(spec));
-  	if (isObj(spec.statics)) {
-  		mapValue(spec.statics, function (value, key) {
-  			Klass[key] = value;
-  		});
-  	}
+  	combineMixins(Klass.prototype, mixins);
+  	Klass.propTypes = {};
+  	combineStaticsAndPropTypes(Klass, mixins);
   	if (isFn(spec.getDefaultProps)) {
   		Klass.defaultProps = spec.getDefaultProps();
   	}
+  	Klass.displayName = spec.displayName;
+  	mixins.pop();
+  	spec.mixins = mixins;
   	return Klass;
   };
 
