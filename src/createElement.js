@@ -14,10 +14,7 @@ export let isValidElement = obj => {
 
 export let cloneElement = (originElem, props, ...children) => {
 	let type = originElem.type
-	props = _.extend(originElem.props, props)
-	if (children.length === 0) {
-		children = originElem.children || originElem.props.children
-	}
+	props = _.extend({}, originElem.props, props)
 	let vnode = createElement(type, props, ...children)
 	if (vnode.ref === originElem.ref) {
 		vnode.refs = originElem.refs
@@ -40,10 +37,7 @@ let createElement = (type, props, ...children) => {
 		default:
 			throw new Error(`React.createElement: unexpect type ${type}`)
 	}
-	if (children.length === 0) {
-		children = undefined
-	}
-	let vnode = new Vnode(type, _.extend({}, props), children)
+	let vnode = new Vnode(type, _.mergeProps(props, children, type.defaultProps))
 	let hasKey = _.hasKey(vnode, 'key')
 	let hasRef = _.hasKey(vnode, 'ref')
 	vnode.key = hasKey ? vnode.props.key : null

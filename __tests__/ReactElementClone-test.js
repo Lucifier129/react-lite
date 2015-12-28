@@ -149,7 +149,7 @@ describe('ReactElementClone', function() {
       <span />
     );
 
-    expect(clone.children).toEqual([
+    expect(clone.props.children).toEqual([
       <div />,
       <span />,
     ]);

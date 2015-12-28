@@ -81,10 +81,14 @@ export let hasKey = (obj, key = 'key') => obj && obj.props && (obj.props.hasOwnP
 
 let getChildren = children => {
 	if (children && children.length > 0) {
-		children = children.length === 1 ? children[0] : children
-		if (isArr(children)) {
-			return getChildren(children)
+		if (children.length === 1) {
+			children = children[0]
+			if (isArr(children)) {
+				return getChildren(children)
+			}
 		}
+	} else {
+		children = undefined
 	}
 	return children
 }

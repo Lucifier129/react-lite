@@ -1,5 +1,5 @@
 import * as _ from './util'
-import Component from './component'
+import Component from './Component'
 
 let eachMixin = (mixins, iteratee) => {
 	_.eachItem(mixins, mixin => {

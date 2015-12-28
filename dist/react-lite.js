@@ -41,7 +41,7 @@
     	};
     };
 
-    var forEach = function forEach(list, iteratee) {
+    var forEach$1 = function forEach(list, iteratee) {
     	var record = arguments.length <= 2 || arguments[2] === undefined ? { index: 0 } : arguments[2];
 
     	for (var i = 0, len = list.length; i < len; i += 1) {
@@ -120,19 +120,26 @@
     		_again = false;
 
     		if (children && children.length > 0) {
-    			children = children.length === 1 ? children[0] : children;
-    			if (isArr(children)) {
-    				_x3 = children;
-    				_again = true;
-    				continue _function;
+    			if (children.length === 1) {
+    				children = children[0];
+    				if (isArr(children)) {
+    					_x3 = children;
+    					_again = true;
+    					continue _function;
+    				}
     			}
+    		} else {
+    			children = undefined;
     		}
     		return children;
     	}
     };
     var mergeProps = function mergeProps(props, children, defaultProps) {
     	var result = extend({}, defaultProps, props);
-    	result.children = getChildren(children);
+    	children = getChildren(children);
+    	if (!isUndefined(children)) {
+    		result.children = children;
+    	}
     	return result;
     };
 
@@ -461,6 +468,63 @@
     	throw new Error('findDOMNode can not find Node');
     };
 
+    var only = function only(children) {
+    	if (children != null && !isArr(children)) {
+    		return children;
+    	}
+    	throw new Error('expect only one child');
+    };
+
+    var forEach = function forEach(children, iteratee, context) {
+    	if (children == null) {
+    		return;
+    	}
+    	if (isArr(children)) {
+    		forEach$1(children, function (child, index) {
+    			iteratee.call(context, child, index);
+    		});
+    	} else {
+    		iteratee.call(context, children, 0);
+    	}
+    };
+
+    var map = function map(children, iteratee, context) {
+    	if (children == null) {
+    		return null;
+    	}
+    	var result = [];
+    	forEach(children, function (child, index) {
+    		child = iteratee.call(context, child, index) || child;
+    		result.push(child);
+    	});
+    	return result;
+    };
+
+    var count = function count(children) {
+    	var count = 0;
+    	forEach(children, function () {
+    		return count++;
+    	});
+    	return count;
+    };
+
+    var toArray = function toArray(children) {
+    	var result = [];
+    	forEach(children, function (child, index) {
+    		result.push(child);
+    	});
+    	return result;
+    };
+
+
+    var Children = Object.freeze({
+    	only: only,
+    	forEach: forEach,
+    	map: map,
+    	count: count,
+    	toArray: toArray
+    });
+
     function Updater(instance) {
     	this.instance = instance;
     	this.pendingStates = [];
@@ -752,10 +816,9 @@
     	}
     });
 
-    function Velem(type, props, children) {
+    function Velem(type, props) {
     	this.type = type;
     	this.props = props;
-    	this.children = children;
     }
 
     var unmountTree = function unmountTree(vtree) {
@@ -774,22 +837,25 @@
     	constructor: Velem,
     	vtype: VNODE_TYPE.ELEMENT,
     	eachChildren: function eachChildren(iteratee) {
-    		var children = this.children;
+    		var children = this.props.children;
     		var sorted = this.sorted;
 
     		if (sorted) {
     			eachItem(children, iteratee);
     			return;
     		}
-    		if (children && children.length > 0) {
+    		if (isArr(children)) {
     			var newChildren = [];
-    			forEach(children, function (vchild, index) {
+    			forEach$1(children, function (vchild, index) {
     				vchild = getVnode(vchild);
     				iteratee(vchild, index);
     				newChildren.push(vchild);
     			});
-    			this.children = newChildren;
+    			this.props.children = newChildren;
     			this.sorted = true;
+    		} else if (!isUndefined(children)) {
+    			children = this.props.children = getVnode(children);
+    			iteratee(children, 0);
     		}
     	},
     	mapTree: function mapTree(iteratee) {
@@ -820,8 +886,12 @@
     		var node = this.node;
     		var props = this.props;
 
-    		var children = this.children || [];
-    		patchProps(node, props, newVelem.props);
+    		var children = !isUndefined(props.children) ? props.children : [];
+    		var newProps = newVelem.props;
+    		if (!isArr(children)) {
+    			children = [children];
+    		}
+    		patchProps(node, props, newProps);
     		newVelem.node = node;
     		newVelem.eachChildren(function (newVchild, index) {
     			var vchild = children[index];
@@ -832,7 +902,14 @@
     			}
     		});
 
-    		var newVchildLen = newVelem.children ? newVelem.children.length : 0;
+    		var newVchildLen = undefined;
+    		if (isUndefined(newProps.children)) {
+    			newVchildLen = 0;
+    		} else if (isArr(newProps.children)) {
+    			newVchildLen = newProps.children.length;
+    		} else {
+    			newVchildLen = 1;
+    		}
     		if (children.length > newVchildLen) {
     			eachItem(children.slice(newVchildLen), destroyTree);
     		}
@@ -840,10 +917,9 @@
     	}
     });
 
-    function VstatelessComponent(type, props, children) {
+    function VstatelessComponent(type, props) {
     	this.type = type;
     	this.props = props;
-    	this.children = children;
     }
 
     VstatelessComponent.prototype = new Vtree({
@@ -857,8 +933,8 @@
     	},
     	renderTree: function renderTree() {
     		var factory = this.type;
+    		var props = this.props;
 
-    		var props = mergeProps(this.props, this.children, factory.defaultProps);
     		var vtree = factory(props);
     		if (vtree && isFn(vtree.render)) {
     			vtree = vtree.render();
@@ -903,10 +979,9 @@
     	return false;
     };
 
-    function Vcomponent(type, props, children) {
+    function Vcomponent(type, props) {
     	this.type = type;
     	this.props = props;
-    	this.children = children;
     }
 
     Vcomponent.prototype = new Vtree({
@@ -917,8 +992,8 @@
     	},
     	initTree: function initTree(parentNode) {
     		var Component = this.type;
+    		var props = this.props;
 
-    		var props = mergeProps(this.props, this.children, Component.defaultProps);
     		var component = this.component = new Component(props);
     		var updater = component.$updater;
     		var cache = component.$cache;
@@ -955,10 +1030,8 @@
     			return;
     		}
     		var Component = newVtree.type;
-    		var props = newVtree.props;
-    		var children = newVtree.children;
+    		var nextProps = newVtree.props;
 
-    		var nextProps = mergeProps(props, children, Component.defaultProps);
     		var updater = component.$updater;
     		newVtree.component = component;
     		updater.isPending = true;
@@ -1022,13 +1095,13 @@
     };
     var createElement$1 = function createElement(tagName, props) {
     	var node = document.createElement(tagName);
-    	props && setProps(node, props);
+    	setProps(node, props);
     	return node;
     };
 
     var getVnode = function getVnode(vnode) {
     	if (vnode === null || vnode === false) {
-    		vnode = new Velem('noscript');
+    		vnode = new Velem('noscript', {});
     	} else if (!isObj(vnode)) {
     		vnode = new Vtext(vnode);
     	}
@@ -1058,12 +1131,11 @@
     	}
 
     	var type = originElem.type;
-    	props = extend(originElem.props, props);
-    	if (children.length === 0) {
-    		children = originElem.children || originElem.props.children;
+    	props = extend({}, originElem.props, props);
+    	var vnode = createElement.apply(undefined, [type, props].concat(children));
+    	if (vnode.ref === originElem.ref) {
+    		vnode.refs = originElem.refs;
     	}
-    	var vnode = createElement(type, props, children);
-    	vnode.refs = originElem.refs;
     	return vnode;
     };
 
@@ -1086,10 +1158,7 @@
     		default:
     			throw new Error('React.createElement: unexpect type ' + type);
     	}
-    	if (children.length === 0) {
-    		children = undefined;
-    	}
-    	var vnode = new Vnode(type, extend({}, props), children);
+    	var vnode = new Vnode(type, mergeProps(props, children, type.defaultProps));
     	var hasKey$$ = hasKey(vnode, 'key');
     	var hasRef = hasKey(vnode, 'ref');
     	vnode.key = hasKey$$ ? vnode.props.key : null;
@@ -1209,12 +1278,6 @@
         "oneOf": check,
         "oneOfType": check,
         "shape": check
-    };
-
-    var Children = {
-        only: function only(children) {
-            return children;
-        }
     };
 
     var createFactory = function createFactory(type) {

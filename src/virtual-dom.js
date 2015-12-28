@@ -1,6 +1,6 @@
 import * as _ from './util'
 import { VNODE_TYPE, DIFF_TYPE, COMPONENT_ID } from './constant'
-import { shouldUpdate, updatePropsAndState } from './component'
+import { shouldUpdate, updatePropsAndState } from './Component'
 import diff from './diff'
 
 function Vtree(properties) {
@@ -98,10 +98,9 @@ Vtext.prototype = new Vtree({
 	}
 })
 
-export function Velem(type, props, children) {
+export function Velem(type, props) {
 	this.type = type
 	this.props = props
-	this.children = children
 }
 
 let unmountTree = vtree => {
@@ -117,20 +116,24 @@ Velem.prototype = new Vtree({
 	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
 	eachChildren(iteratee) {
-		let { children, sorted } = this
+		let { children } = this.props
+		let { sorted } = this
 		if (sorted) {
 			_.eachItem(children, iteratee)
 			return
 		}
-		if (children && children.length > 0) {
+		if (_.isArr(children)) {
 			var newChildren = []
 			_.forEach(children, (vchild, index) => {
 				vchild = getVnode(vchild)
 				iteratee(vchild, index)
 				newChildren.push(vchild)
 			})
-			this.children = newChildren
+			this.props.children = newChildren
 			this.sorted = true
+		} else if (!_.isUndefined(children)) {
+			children = this.props.children = getVnode(children)
+			iteratee(children, 0)
 		}
 	},
 	mapTree(iteratee) {
@@ -153,8 +156,12 @@ Velem.prototype = new Vtree({
 	},
 	update(newVelem) {
 		let { node, props } = this
-		let children = this.children || []
-		_.patchProps(node, props, newVelem.props)
+		let children = !_.isUndefined(props.children) ? props.children : []
+		let newProps = newVelem.props
+		if (!_.isArr(children)) {
+			children = [children]
+		}
+		_.patchProps(node, props, newProps)
 		newVelem.node = node
 		newVelem.eachChildren((newVchild, index) => {
 			let vchild = children[index]
@@ -165,7 +172,14 @@ Velem.prototype = new Vtree({
 			}
 		})
 
-		let newVchildLen = newVelem.children ? newVelem.children.length : 0
+		let newVchildLen
+		if (_.isUndefined(newProps.children)) {
+			newVchildLen = 0
+		} else if (_.isArr(newProps.children)) {
+			newVchildLen = newProps.children.length
+		} else {
+			newVchildLen = 1
+		}
 		if (children.length > newVchildLen) {
 			_.eachItem(children.slice(newVchildLen), destroyTree)
 		}
@@ -173,10 +187,9 @@ Velem.prototype = new Vtree({
 	}
 })
 
-export function VstatelessComponent(type, props, children) {
+export function VstatelessComponent(type, props) {
 	this.type = type
 	this.props = props
-	this.children = children
 }
 
 VstatelessComponent.prototype = new Vtree({
@@ -189,8 +202,7 @@ VstatelessComponent.prototype = new Vtree({
 		iteratee(this)
 	},
 	renderTree() {
-		let { type: factory } = this
-		let props = _.mergeProps(this.props, this.children, factory.defaultProps)
+		let { type: factory, props } = this
 		let vtree = factory(props)
 		if (vtree && _.isFn(vtree.render)) {
 			vtree = vtree.render()
@@ -229,10 +241,9 @@ export let renderComponent = component => {
 	return vtree
 }
 let neverUpdate = () => false
-export function Vcomponent(type, props, children) {
+export function Vcomponent(type, props) {
 	this.type = type
 	this.props = props
-	this.children = children
 }
 Vcomponent.prototype = new Vtree({
 	constructor: Vcomponent,
@@ -241,8 +252,7 @@ Vcomponent.prototype = new Vtree({
 		iteratee(this)
 	},
 	initTree(parentNode) {
-		let { type: Component } = this
-		let props = _.mergeProps(this.props, this.children, Component.defaultProps)
+		let { type: Component, props } = this
 		let component = this.component = new Component(props)
 		let { $updater: updater, $cache: cache } = component
 		updater.isPending = true
@@ -273,8 +283,7 @@ Vcomponent.prototype = new Vtree({
 		if (!component) {
 			return
 		}
-		let { type: Component, props, children } = newVtree
-		let nextProps = _.mergeProps(props, children, Component.defaultProps)
+		let { type: Component, props: nextProps } = newVtree
 		let updater = component.$updater
 		newVtree.component = component
 		updater.isPending = true
@@ -336,13 +345,13 @@ let replaceNode = (parentNode, newNode, existNode) => {
 let createTextNode = text => document.createTextNode(text)
 let createElement = (tagName, props) =>  {
 	let node = document.createElement(tagName)
-	props && _.setProps(node, props)
+	_.setProps(node, props)
 	return node
 }
 
 let getVnode = vnode => {
 	if (vnode === null || vnode === false) {
-		vnode = new Velem('noscript')
+		vnode = new Velem('noscript', {})
 	} else if (!_.isObj(vnode)) {
 		vnode = new Vtext(vnode)
 	}
