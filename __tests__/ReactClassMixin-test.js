@@ -183,26 +183,26 @@ describe('ReactClass-mixin', function() {
   });
 
 
-  // it('should support mixins with getInitialState()', function() {
-  //   var Mixin = {
-  //     getInitialState: function() {
-  //       return {mixin: true};
-  //     },
-  //   };
-  //   var Component = React.createClass({
-  //     mixins: [Mixin],
-  //     getInitialState: function() {
-  //       return {component: true};
-  //     },
-  //     render: function() {
-  //       return <span />;
-  //     },
-  //   });
-  //   var instance = <Component />;
-  //   instance = ReactTestUtils.renderIntoDocument(instance);
-  //   expect(instance.state.component).toBe(true);
-  //   expect(instance.state.mixin).toBe(true);
-  // });
+  it('should support mixins with getInitialState()', function() {
+    var Mixin = {
+      getInitialState: function() {
+        return {mixin: true};
+      },
+    };
+    var Component = React.createClass({
+      mixins: [Mixin],
+      getInitialState: function() {
+        return {component: true};
+      },
+      render: function() {
+        return <span />;
+      },
+    });
+    var instance = <Component />;
+    instance = ReactTestUtils.renderIntoDocument(instance);
+    expect(instance.state.component).toBe(true);
+    expect(instance.state.mixin).toBe(true);
+  });
 
   // it('should throw with conflicting getInitialState() methods', function() {
   //   var Mixin = {
@@ -231,25 +231,25 @@ describe('ReactClass-mixin', function() {
   //   );
   // });
 
-  // it('should not mutate objects returned by getInitialState()', function() {
-  //   var Mixin = {
-  //     getInitialState: function() {
-  //       return Object.freeze({mixin: true});
-  //     },
-  //   };
-  //   var Component = React.createClass({
-  //     mixins: [Mixin],
-  //     getInitialState: function() {
-  //       return Object.freeze({component: true});
-  //     },
-  //     render: function() {
-  //       return <span />;
-  //     },
-  //   });
-  //   expect(() => {
-  //     ReactTestUtils.renderIntoDocument(<Component />);
-  //   }).not.toThrow();
-  // });
+  it('should not mutate objects returned by getInitialState()', function() {
+    var Mixin = {
+      getInitialState: function() {
+        return Object.freeze({mixin: true});
+      },
+    };
+    var Component = React.createClass({
+      mixins: [Mixin],
+      getInitialState: function() {
+        return Object.freeze({component: true});
+      },
+      render: function() {
+        return <span />;
+      },
+    });
+    expect(() => {
+      ReactTestUtils.renderIntoDocument(<Component />);
+    }).not.toThrow();
+  });
 
   it('should support statics in mixins', function() {
     var Mixin = {
@@ -406,72 +406,72 @@ describe('ReactClass-mixin', function() {
     instance = ReactTestUtils.renderIntoDocument(instance);
   });
 
-  // it('should work with a null getInitialState return value and a mixin', () => {
-  //   var Component;
-  //   var instance;
+  it('should work with a null getInitialState return value and a mixin', () => {
+    var Component;
+    var instance;
 
-  //   var Mixin = {
-  //     getInitialState: function() {
-  //       return {foo: 'bar'};
-  //     },
-  //   };
-  //   Component = React.createClass({
-  //     mixins: [Mixin],
-  //     getInitialState: function() {
-  //       return null;
-  //     },
-  //     render: function() {
-  //       return <span />;
-  //     },
-  //   });
-  //   expect(
-  //     () => ReactTestUtils.renderIntoDocument(<Component />)
-  //   ).not.toThrow();
+    var Mixin = {
+      getInitialState: function() {
+        return {foo: 'bar'};
+      },
+    };
+    Component = React.createClass({
+      mixins: [Mixin],
+      getInitialState: function() {
+        return null;
+      },
+      render: function() {
+        return <span />;
+      },
+    });
+    expect(
+      () => ReactTestUtils.renderIntoDocument(<Component />)
+    ).not.toThrow();
 
-  //   instance = <Component />;
-  //   instance = ReactTestUtils.renderIntoDocument(instance);
-  //   expect(instance.state).toEqual({foo: 'bar'});
+    instance = <Component />;
+    instance = ReactTestUtils.renderIntoDocument(instance);
+    expect(instance.state).toEqual({foo: 'bar'});
 
-  //   // Also the other way round should work
-  //   var Mixin2 = {
-  //     getInitialState: function() {
-  //       return null;
-  //     },
-  //   };
-  //   Component = React.createClass({
-  //     mixins: [Mixin2],
-  //     getInitialState: function() {
-  //       return {foo: 'bar'};
-  //     },
-  //     render: function() {
-  //       return <span />;
-  //     },
-  //   });
-  //   expect(
-  //     () => ReactTestUtils.renderIntoDocument(<Component />)
-  //   ).not.toThrow();
+    // Also the other way round should work
+    var Mixin2 = {
+      getInitialState: function() {
+        return null;
+      },
+    };
+    Component = React.createClass({
+      mixins: [Mixin2],
+      getInitialState: function() {
+        return {foo: 'bar'};
+      },
+      render: function() {
+        return <span />;
+      },
+    });
+    expect(
+      () => ReactTestUtils.renderIntoDocument(<Component />)
+    ).not.toThrow();
 
-  //   instance = <Component />;
-  //   instance = ReactTestUtils.renderIntoDocument(instance);
-  //   expect(instance.state).toEqual({foo: 'bar'});
+    instance = <Component />;
+    instance = ReactTestUtils.renderIntoDocument(instance);
+    expect(instance.state).toEqual({foo: 'bar'});
 
-  //   // Multiple mixins should be fine too
-  //   Component = React.createClass({
-  //     mixins: [Mixin, Mixin2],
-  //     getInitialState: function() {
-  //       return {x: true};
-  //     },
-  //     render: function() {
-  //       return <span />;
-  //     },
-  //   });
-  //   expect(
-  //     () => ReactTestUtils.renderIntoDocument(<Component />)
-  //   ).not.toThrow();
+    // Multiple mixins should be fine too
+    Component = React.createClass({
+      mixins: [Mixin, Mixin2],
+      getInitialState: function() {
+        return {x: true};
+      },
+      render: function() {
+        return <span />;
+      },
+    });
+    expect(
+      () => ReactTestUtils.renderIntoDocument(<Component />)
+    ).not.toThrow();
 
-  //   instance = <Component />;
-  //   instance = ReactTestUtils.renderIntoDocument(instance);
-  //   expect(instance.state).toEqual({foo: 'bar', x: true});
-  // });
+    instance = <Component />;
+    instance = ReactTestUtils.renderIntoDocument(instance);
+    expect(instance.state).toEqual({foo: 'bar', x: true});
+  });
 
 });

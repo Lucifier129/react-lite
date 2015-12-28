@@ -12,7 +12,6 @@ let getDOMNode = function() { return this }
 Vtree.prototype = {
 	constructor: Vtree,
 	mapTree: noop,
-	eachChildren: noop,
 	attachRef() {
 		let { props, refs, vtype } = this
 		if (!refs) {
@@ -166,7 +165,6 @@ Velem.prototype = new Vtree({
 		_.patchProps(node, props, newVelem.props)
 		newVelem.node = node
 		newVelem.eachChildren((newVchild, index) => {
-			newVelem
 			let vchild = children[index]
 			if (vchild) {
 				vchild.updateTree(newVchild, node)
@@ -175,7 +173,7 @@ Velem.prototype = new Vtree({
 			}
 		})
 
-		let newVchildLen = newVelem.children && newVelem.children.length ? newVelem.children.length : 0
+		let newVchildLen = newVelem.children ? newVelem.children.length : 0
 		if (children.length > newVchildLen) {
 			_.eachItem(children.slice(newVchildLen), destroyTree)
 		}
@@ -254,8 +252,8 @@ Vcomponent.prototype = new Vtree({
 		let { type: Component } = this
 		let props = _.mergeProps(this.props, this.children, Component.defaultProps)
 		let component = this.component = new Component(props)
-		let updater = component.$updater
-		updater.isPendingForceUpdate = true
+		let { $updater: updater, $cache: cache } = component
+		updater.isPending = true
 		component.props = component.props || props
 		component.componentWillMount()
 		let nextState = updater.getState()
@@ -265,9 +263,10 @@ Vcomponent.prototype = new Vtree({
 		let vtree = renderComponent(component)
 		component.vtree = vtree
 		vtree.initTree(parentNode)
+		cache.isMounted = true
 		component.node = this.node = vtree.node
 		component.componentDidMount()
-		updater.isPendingForceUpdate = false
+		updater.isPending = false
 		this.attachRef()
 		updater.emitUpdate()
 	},
@@ -278,6 +277,7 @@ Vcomponent.prototype = new Vtree({
 		component.componentWillUnmount()
 		this.detachRef()
 		component.vtree.destroyTree()
+		component.$cache.isMounted = false
 		this.component = this.node = component.node = component.refs = null
 	},
 	update(newVtree, parentNode) {
@@ -289,9 +289,9 @@ Vcomponent.prototype = new Vtree({
 		let nextProps = _.mergeProps(props, children, Component.defaultProps)
 		let updater = component.$updater
 		newVtree.component = component
-		updater.isPendingForceUpdate = true
+		updater.isPending = true
 		component.componentWillReceiveProps(nextProps)
-		updater.isPendingForceUpdate = false
+		updater.isPending = false
 		updater.emitUpdate(nextProps)
 		this.updateRef(newVtree)
 	}
@@ -299,6 +299,8 @@ Vcomponent.prototype = new Vtree({
 
 let updateTree = (vtree, newVtree, parentNode) => {
 	let diffType = diff(vtree, newVtree)
+	let $removeNode
+	let node
 	switch (diffType) {
 		case DIFF_TYPE.CREATE:
 			newVtree.initTree(parentNode)
@@ -307,10 +309,14 @@ let updateTree = (vtree, newVtree, parentNode) => {
 			vtree.destroyTree()
 			break
 		case DIFF_TYPE.REPLACE:
-			newVtree.initTree(newNode => {
-				replaceNode(parentNode, newNode, vtree.node)
-			})
+			node = vtree.node
+			$removeNode = removeNode
+			removeNode = noop
 			vtree.destroyTree()
+			removeNode = $removeNode
+			newVtree.initTree(newNode => {
+				replaceNode(parentNode, newNode, node)
+			})
 			break
 		case DIFF_TYPE.UPDATE:
 			vtree.update(newVtree, parentNode)

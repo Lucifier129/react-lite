@@ -6,7 +6,7 @@ function Updater(instant) {
 	this.instant = instant
 	this.pendingStates = []
 	this.pendingCallbacks = []
-	this.isPendingForceUpdate = false
+	this.isPending = false
 }
 
 Updater.prototype = {
@@ -21,7 +21,7 @@ Updater.prototype = {
 	addState(nextState) {
 		if (nextState) {
 			this.pendingStates.push(nextState)
-			if (!this.isPendingForceUpdate) {
+			if (!this.isPending) {
 				this.emitUpdate()
 			}
 		}
@@ -29,17 +29,23 @@ Updater.prototype = {
 	replaceState(nextState) {
 		let { pendingStates } = this
 		pendingStates.pop()
-		pendingStates.push(nextState)
+		pendingStates.push([nextState])
 	},
 	getState() {
 		let { instant, pendingStates } = this
 		let { state, props } = instant
-		_.eachItem(pendingStates, nextState => {
+		let merge = nextState => {
+			// replace state
+			if (_.isArr(nextState)) {
+				state = null
+				return merge(nextState[0])
+			}
 			if (_.isFn(nextState)) {
 				nextState = nextState.call(instant, state, props)
 			}
 			state = _.extend({}, state, nextState)
-		})
+		}
+		_.eachItem(pendingStates, merge)
 		pendingStates.length = 0
 		return state
 	},
@@ -59,7 +65,7 @@ Updater.prototype = {
 
 export default function Component(props) {
 	this.$updater = new Updater(this)
-	this.$cache = {}
+	this.$cache = { isMounted: false }
 	this.props = props
 	this.state = {}
 	this.refs = {}
@@ -105,6 +111,9 @@ Component.prototype = {
 	getDOMNode() {
 		let node = this.vtree.node
 		return node.tagName === 'NOSCRIPT' ? null : node
+	},
+	isMounted() {
+		return this.$cache.isMounted
 	}
 }
 
@@ -114,7 +123,6 @@ export let updatePropsAndState = (component, props, state) => {
 }
 
 export let shouldUpdate = (component, nextProps, nextState, callback) => {
-	let { $cache } = component
 	let shouldUpdate = component.shouldComponentUpdate(nextProps, nextState)
 	if (shouldUpdate === false) {
 		updatePropsAndState(component, nextProps, nextState)

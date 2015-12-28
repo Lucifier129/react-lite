@@ -39,7 +39,7 @@ export let render = (vtree, container, callback) => {
 export let unmountComponentAtNode = container => {
 	let id = _.getAttr(container, COMPONENT_ID)
 	if (store.hasOwnProperty(id)) {
-		store[id].destroyTree(container)
+		store[id].destroyTree()
 		delete store[id]
 		return true
 	}

@@ -233,74 +233,74 @@ describe('ReactComponentLifeCycle', function() {
     // );
   });
 
-  // it('should correctly determine if a component is mounted', function() {
-  //   spyOn(console, 'error');
-  //   var Component = React.createClass({
-  //     componentWillMount: function() {
-  //       expect(this.isMounted()).toBeFalsy();
-  //     },
-  //     componentDidMount: function() {
-  //       expect(this.isMounted()).toBeTruthy();
-  //     },
-  //     render: function() {
-  //       expect(this.isMounted()).toBeFalsy();
-  //       return <div/>;
-  //     },
-  //   });
+  it('should correctly determine if a component is mounted', function() {
+    spyOn(console, 'error');
+    var Component = React.createClass({
+      componentWillMount: function() {
+        expect(this.isMounted()).toBeFalsy();
+      },
+      componentDidMount: function() {
+        expect(this.isMounted()).toBeTruthy();
+      },
+      render: function() {
+        expect(this.isMounted()).toBeFalsy();
+        return <div/>;
+      },
+    });
 
-  //   var element = <Component />;
+    var element = <Component />;
 
-  //   var instance = ReactTestUtils.renderIntoDocument(element);
-  //   expect(instance.isMounted()).toBeTruthy();
+    var instance = ReactTestUtils.renderIntoDocument(element);
+    expect(instance.isMounted()).toBeTruthy();
 
-  //   expect(console.error.argsForCall.length).toBe(1);
-  //   expect(console.error.argsForCall[0][0]).toContain(
-  //     'Component is accessing isMounted inside its render()'
-  //   );
-  // });
+    // expect(console.error.argsForCall.length).toBe(1);
+    // expect(console.error.argsForCall[0][0]).toContain(
+    //   'Component is accessing isMounted inside its render()'
+    // );
+  });
 
-  // it('should correctly determine if a null component is mounted', function() {
-  //   spyOn(console, 'error');
-  //   var Component = React.createClass({
-  //     componentWillMount: function() {
-  //       expect(this.isMounted()).toBeFalsy();
-  //     },
-  //     componentDidMount: function() {
-  //       expect(this.isMounted()).toBeTruthy();
-  //     },
-  //     render: function() {
-  //       expect(this.isMounted()).toBeFalsy();
-  //       return null;
-  //     },
-  //   });
+  it('should correctly determine if a null component is mounted', function() {
+    spyOn(console, 'error');
+    var Component = React.createClass({
+      componentWillMount: function() {
+        expect(this.isMounted()).toBeFalsy();
+      },
+      componentDidMount: function() {
+        expect(this.isMounted()).toBeTruthy();
+      },
+      render: function() {
+        expect(this.isMounted()).toBeFalsy();
+        return null;
+      },
+    });
 
-  //   var element = <Component />;
+    var element = <Component />;
 
-  //   var instance = ReactTestUtils.renderIntoDocument(element);
-  //   expect(instance.isMounted()).toBeTruthy();
+    var instance = ReactTestUtils.renderIntoDocument(element);
+    expect(instance.isMounted()).toBeTruthy();
 
-  //   expect(console.error.argsForCall.length).toBe(1);
-  //   expect(console.error.argsForCall[0][0]).toContain(
-  //     'Component is accessing isMounted inside its render()'
-  //   );
-  // });
+    // expect(console.error.argsForCall.length).toBe(1);
+    // expect(console.error.argsForCall[0][0]).toContain(
+    //   'Component is accessing isMounted inside its render()'
+    // );
+  });
 
-  // it('isMounted should return false when unmounted', function() {
-  //   var Component = React.createClass({
-  //     render: function() {
-  //       return <div/>;
-  //     },
-  //   });
+  it('isMounted should return false when unmounted', function() {
+    var Component = React.createClass({
+      render: function() {
+        return <div/>;
+      },
+    });
 
-  //   var container = document.createElement('div');
-  //   var instance = ReactDOM.render(<Component />, container);
+    var container = document.createElement('div');
+    var instance = ReactDOM.render(<Component />, container);
 
-  //   expect(instance.isMounted()).toBe(true);
+    expect(instance.isMounted()).toBe(true);
 
-  //   ReactDOM.unmountComponentAtNode(container);
+    ReactDOM.unmountComponentAtNode(container);
 
-  //   expect(instance.isMounted()).toBe(false);
-  // });
+    expect(instance.isMounted()).toBe(false);
+  });
 
   // it('warns if findDOMNode is used inside render', function() {
   //   spyOn(console, 'error');

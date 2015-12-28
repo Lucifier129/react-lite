@@ -66,6 +66,22 @@ var mapValue = function mapValue(obj, iteratee) {
 	}
 };
 
+var mapKey = function mapKey(sources, iteratee) {
+	var keyMap = {};
+	var item = undefined;
+	var key = undefined;
+	for (var i = 0, len = sources.length; i < len; i += 1) {
+		item = sources[i];
+		for (key in item) {
+			if (!item.hasOwnProperty(key) || keyMap[key]) {
+				continue;
+			}
+			keyMap[key] = true;
+			iteratee(key);
+		}
+	}
+};
+
 var extend = function extend(target) {
 	for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
 		args[_key2 - 1] = arguments[_key2];
@@ -216,23 +232,16 @@ var patchProps = function patchProps(elem, props, newProps) {
 		return;
 	}
 
-	mapValue(newProps, function (value, key) {
+	mapKey([props, newProps], function (key) {
 		if (isIgnoreKey(key)) {
 			return;
 		}
-		var valueIsUndefined = isUndefined(value);
-		if (!props.hasOwnProperty(key)) {
-			if (!valueIsUndefined) {
-				setProp(elem, key, value);
-				return;
-			}
-		}
+		var value = newProps[key];
 		var oldValue = props[key];
-		delete props[key];
 		if (value === oldValue) {
 			return;
 		}
-		if (valueIsUndefined) {
+		if (isUndefined(value)) {
 			removeProp(elem, key, oldValue);
 			return;
 		}
@@ -250,7 +259,6 @@ var patchProps = function patchProps(elem, props, newProps) {
 			setProp(elem, key, value);
 		}
 	});
-	removeProps(elem, props);
 };
 
 var removeStyle = function removeStyle(elem, style) {
@@ -281,21 +289,13 @@ var patchStyle = function patchStyle(elem, style, newStyle) {
 		setStyle(elem, newStyle);
 	} else {
 		var elemStyle = elem.style;
-		mapValue(newStyle, function (value, key) {
-			if (value == null) {
-				elemStyle[key] = '';
-			} else {
-				var oldValue = undefined;
-				if (style.hasOwnProperty(key)) {
-					oldValue = style[key];
-					delete style[key];
-				}
-				if (value !== oldValue) {
-					setStyleValue(elemStyle, key, value);
-				}
+		mapKey([style, newStyle], function (key) {
+			var value = newStyle[key];
+			var oldValue = style[key];
+			if (value !== oldValue) {
+				setStyleValue(elemStyle, key, value);
 			}
 		});
-		removeStyle(elem, style);
 	}
 };
 
@@ -419,7 +419,7 @@ var render = function render(vtree, container, callback) {
 var unmountComponentAtNode = function unmountComponentAtNode(container) {
 	var id = getAttr(container, COMPONENT_ID);
 	if (store.hasOwnProperty(id)) {
-		store[id].destroyTree(container);
+		store[id].destroyTree();
 		delete store[id];
 		return true;
 	}
@@ -445,7 +445,7 @@ function Updater(instant) {
 	this.instant = instant;
 	this.pendingStates = [];
 	this.pendingCallbacks = [];
-	this.isPendingForceUpdate = false;
+	this.isPending = false;
 }
 
 Updater.prototype = {
@@ -463,7 +463,7 @@ Updater.prototype = {
 	addState: function addState(nextState) {
 		if (nextState) {
 			this.pendingStates.push(nextState);
-			if (!this.isPendingForceUpdate) {
+			if (!this.isPending) {
 				this.emitUpdate();
 			}
 		}
@@ -472,7 +472,7 @@ Updater.prototype = {
 		var pendingStates = this.pendingStates;
 
 		pendingStates.pop();
-		pendingStates.push(nextState);
+		pendingStates.push([nextState]);
 	},
 	getState: function getState() {
 		var instant = this.instant;
@@ -480,12 +480,27 @@ Updater.prototype = {
 		var state = instant.state;
 		var props = instant.props;
 
-		eachItem(pendingStates, function (nextState) {
-			if (isFn(nextState)) {
-				nextState = nextState.call(instant, state, props);
+		var merge = function merge(_x) {
+			var _again = true;
+
+			_function: while (_again) {
+				var nextState = _x;
+				_again = false;
+
+				// replace state
+				if (isArr(nextState)) {
+					state = null;
+					_x = nextState[0];
+					_again = true;
+					continue _function;
+				}
+				if (isFn(nextState)) {
+					nextState = nextState.call(instant, state, props);
+				}
+				state = extend({}, state, nextState);
 			}
-			state = extend({}, state, nextState);
-		});
+		};
+		eachItem(pendingStates, merge);
 		pendingStates.length = 0;
 		return state;
 	},
@@ -508,7 +523,7 @@ Updater.prototype = {
 };
 function Component(props) {
 	this.$updater = new Updater(this);
-	this.$cache = {};
+	this.$cache = { isMounted: false };
 	this.props = props;
 	this.state = {};
 	this.refs = {};
@@ -562,6 +577,9 @@ Component.prototype = {
 	getDOMNode: function getDOMNode() {
 		var node = this.vtree.node;
 		return node.tagName === 'NOSCRIPT' ? null : node;
+	},
+	isMounted: function isMounted() {
+		return this.$cache.isMounted;
 	}
 };
 
@@ -571,8 +589,6 @@ var updatePropsAndState = function updatePropsAndState(component, props, state) 
 };
 
 var shouldUpdate = function shouldUpdate(component, nextProps, nextState, callback) {
-	var $cache = component.$cache;
-
 	var shouldUpdate = component.shouldComponentUpdate(nextProps, nextState);
 	if (shouldUpdate === false) {
 		updatePropsAndState(component, nextProps, nextState);
@@ -797,7 +813,6 @@ Velem.prototype = new Vtree({
 		patchProps(node, props, newVelem.props);
 		newVelem.node = node;
 		newVelem.eachChildren(function (newVchild, index) {
-			newVelem;
 			var vchild = children[index];
 			if (vchild) {
 				vchild.updateTree(newVchild, node);
@@ -806,7 +821,7 @@ Velem.prototype = new Vtree({
 			}
 		});
 
-		var newVchildLen = newVelem.children && newVelem.children.length ? newVelem.children.length : 0;
+		var newVchildLen = newVelem.children ? newVelem.children.length : 0;
 		if (children.length > newVchildLen) {
 			eachItem(children.slice(newVchildLen), destroyTree);
 		}
@@ -895,7 +910,9 @@ Vcomponent.prototype = new Vtree({
 		var props = mergeProps(this.props, this.children, Component.defaultProps);
 		var component = this.component = new Component(props);
 		var updater = component.$updater;
-		updater.isPendingForceUpdate = true;
+		var cache = component.$cache;
+
+		updater.isPending = true;
 		component.props = component.props || props;
 		component.componentWillMount();
 		var nextState = updater.getState();
@@ -905,9 +922,10 @@ Vcomponent.prototype = new Vtree({
 		var vtree = renderComponent(component);
 		component.vtree = vtree;
 		vtree.initTree(parentNode);
+		cache.isMounted = true;
 		component.node = this.node = vtree.node;
 		component.componentDidMount();
-		updater.isPendingForceUpdate = false;
+		updater.isPending = false;
 		this.attachRef();
 		updater.emitUpdate();
 	},
@@ -920,6 +938,7 @@ Vcomponent.prototype = new Vtree({
 		component.componentWillUnmount();
 		this.detachRef();
 		component.vtree.destroyTree();
+		component.$cache.isMounted = false;
 		this.component = this.node = component.node = component.refs = null;
 	},
 	update: function update(newVtree, parentNode) {
@@ -935,9 +954,9 @@ Vcomponent.prototype = new Vtree({
 		var nextProps = mergeProps(props, children, Component.defaultProps);
 		var updater = component.$updater;
 		newVtree.component = component;
-		updater.isPendingForceUpdate = true;
+		updater.isPending = true;
 		component.componentWillReceiveProps(nextProps);
-		updater.isPendingForceUpdate = false;
+		updater.isPending = false;
 		updater.emitUpdate(nextProps);
 		this.updateRef(newVtree);
 	}
@@ -945,6 +964,8 @@ Vcomponent.prototype = new Vtree({
 
 var _updateTree = function _updateTree(vtree, newVtree, parentNode) {
 	var diffType = diff(vtree, newVtree);
+	var $removeNode = undefined;
+	var node = undefined;
 	switch (diffType) {
 		case DIFF_TYPE.CREATE:
 			newVtree.initTree(parentNode);
@@ -953,10 +974,14 @@ var _updateTree = function _updateTree(vtree, newVtree, parentNode) {
 			vtree.destroyTree();
 			break;
 		case DIFF_TYPE.REPLACE:
-			newVtree.initTree(function (newNode) {
-				replaceNode(parentNode, newNode, vtree.node);
-			});
+			node = vtree.node;
+			$removeNode = removeNode;
+			removeNode = noop;
 			vtree.destroyTree();
+			removeNode = $removeNode;
+			newVtree.initTree(function (newNode) {
+				replaceNode(parentNode, newNode, node);
+			});
 			break;
 		case DIFF_TYPE.UPDATE:
 			vtree.update(newVtree, parentNode);
@@ -1039,12 +1064,19 @@ var createElement = function createElement(type, props) {
 	return vnode;
 };
 
-var combineMixin = function combineMixin(proto, mixin) {
-	if (isArr(mixin.mixins)) {
-		combineMixins(proto, mixin.mixins);
-	}
+var eachMixin = function eachMixin(mixins, iteratee) {
+	eachItem(mixins, function (mixin) {
+		if (isArr(mixin.mixins)) {
+			eachMixin(mixin.mixins, iteratee);
+		}
+		iteratee(mixin);
+	});
+};
+
+var combineMixinToProto = function combineMixinToProto(proto, mixin) {
 	mapValue(mixin, function (value, key) {
-		if (key === 'statics' || key === 'propTypes' || key === 'mixins') {
+		if (key === 'getInitialState') {
+			proto.$getInitialStates.push(value);
 			return;
 		}
 		var curValue = proto[key];
@@ -1055,10 +1087,17 @@ var combineMixin = function combineMixin(proto, mixin) {
 		}
 	});
 };
-var combineMixins = function combineMixins(proto, mixins) {
-	eachItem(mixins, function (mixin) {
-		return combineMixin(proto, mixin);
-	});
+
+var combineMixinToClass = function combineMixinToClass(Component, mixin) {
+	if (isObj(mixin.propTypes)) {
+		extend(Component.propTypes, mixin.propTypes);
+	}
+	if (isFn(mixin.getDefaultProps)) {
+		extend(Component.defaultProps, mixin.getDefaultProps());
+	}
+	if (isObj(mixin.statics)) {
+		extend(Component, mixin.statics);
+	}
 };
 
 var bindContext = function bindContext(obj, source) {
@@ -1069,51 +1108,48 @@ var bindContext = function bindContext(obj, source) {
 	});
 };
 
-var combineStaticsAndPropTypes = function combineStaticsAndPropTypes(Component, mixins) {
-	eachItem(mixins, function (mixin) {
-		if (isArr(mixin.mixins)) {
-			combineStaticsAndPropTypes(Component, mixin.mixins);
-		}
-		if (isObj(mixin.propTypes)) {
-			extend(Component.propTypes, mixin.propTypes);
-		}
-		if (isObj(mixin.statics)) {
-			extend(Component, mixin.statics);
-		}
-	});
-};
-
 var Facade = function Facade() {};
 Facade.prototype = Component.prototype;
+
+var getInitialState = function getInitialState() {
+	var _this = this;
+
+	var state = {};
+	var setState = this.setState;
+	this.setState = Facade;
+	eachItem(this.$getInitialStates, function (getInitialState) {
+		if (isFn(getInitialState)) {
+			extend(state, getInitialState.call(_this));
+		}
+	});
+	this.setState = setState;
+	return state;
+};
 
 var createClass = function createClass(spec) {
 	if (!isFn(spec.render)) {
 		throw new Error('createClass: spec.render is not function');
 	}
-	var mixins = spec.mixins || [];
-	delete spec.mixins;
-	mixins = mixins.concat(spec);
+	var specMixins = spec.mixins || [];
+	var mixins = specMixins.concat(spec);
+	spec.mixins = null;
 	function Klass(props) {
 		Component.call(this, props);
-		spec.autobind !== false && bindContext(this, Klass.prototype);
 		this.constructor = Klass;
-		if (isFn(this.getInitialState)) {
-			var setState = this.setState;
-			this.setState = Facade;
-			this.state = this.getInitialState();
-			this.setState = setState;
-		}
-	}
-	Klass.prototype = new Facade();
-	combineMixins(Klass.prototype, mixins);
-	Klass.propTypes = {};
-	combineStaticsAndPropTypes(Klass, mixins);
-	if (isFn(spec.getDefaultProps)) {
-		Klass.defaultProps = spec.getDefaultProps();
+		spec.autobind !== false && bindContext(this, Klass.prototype);
+		this.state = this.getInitialState() || this.state;
 	}
 	Klass.displayName = spec.displayName;
-	mixins.pop();
-	spec.mixins = mixins;
+	Klass.propTypes = {};
+	Klass.defaultProps = {};
+	var proto = Klass.prototype = new Facade();
+	var getInitialStates = proto.$getInitialStates = [];
+	eachMixin(mixins, function (mixin) {
+		combineMixinToProto(proto, mixin);
+		combineMixinToClass(Klass, mixin);
+	});
+	proto.getInitialState = getInitialState;
+	spec.mixins = specMixins;
 	return Klass;
 };
 

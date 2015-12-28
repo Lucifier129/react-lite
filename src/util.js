@@ -46,6 +46,22 @@ export let mapValue = (obj, iteratee) => {
 	}
 }
 
+export let mapKey = (sources, iteratee) => {
+	let keyMap = {}
+	let item
+	let key
+	for (let i = 0, len = sources.length; i < len; i += 1) {
+		item = sources[i]
+		for (key in item) {
+			if (!item.hasOwnProperty(key) || keyMap[key]) {
+				continue
+			}
+			keyMap[key] = true
+			iteratee(key)
+		}
+	}
+}
+
 export let extend = (target, ...args) => {
 	eachItem(args, source => {
 		if (source == null) {
@@ -179,23 +195,16 @@ export let patchProps = (elem, props, newProps) => {
 		return
 	}
 
-	mapValue(newProps, (value, key) => {
+	mapKey([props, newProps], key => {
 		if (isIgnoreKey(key)) {
 			return
 		}
-		let valueIsUndefined = isUndefined(value)
-		if (!props.hasOwnProperty(key)) {
-			if (!valueIsUndefined) {
-				setProp(elem, key, value)
-				return
-			}
-		}
+		let value = newProps[key]
 		let oldValue = props[key]
-		delete props[key]
 		if (value === oldValue) {
 			return
 		}
-		if (valueIsUndefined) {
+		if (isUndefined(value)) {
 			removeProp(elem, key, oldValue)
 			return
 		}
@@ -213,7 +222,6 @@ export let patchProps = (elem, props, newProps) => {
 			setProp(elem, key, value)
 		}
 	})
-	removeProps(elem, props)
 }
 
 export let removeStyle = (elem, style) => {
@@ -244,21 +252,13 @@ export let patchStyle = (elem, style, newStyle) => {
 		setStyle(elem, newStyle)
 	} else {
 		var elemStyle = elem.style
-		mapValue(newStyle, (value, key) => {
-			if (value == null) {
-				elemStyle[key] = ''
-			} else {
-				let oldValue
-				if (style.hasOwnProperty(key)) {
-					oldValue = style[key]
-					delete style[key]
-				}
-				if (value !== oldValue) {
-					setStyleValue(elemStyle, key, value)
-				}
+		mapKey([style, newStyle], key => {
+			let value = newStyle[key]
+			let oldValue = style[key]
+			if (value !== oldValue) {
+				setStyleValue(elemStyle, key, value)
 			}
 		})
-		removeStyle(elem, style)
 	}
 }
 
