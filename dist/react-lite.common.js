@@ -639,16 +639,14 @@ var getDOMNode = function getDOMNode() {
 Vtree.prototype = {
 	constructor: Vtree,
 	mapTree: noop,
-	eachChildren: noop,
 	attachRef: function attachRef() {
-		var props = this.props;
+		var refKey = this.ref;
 		var refs = this.refs;
 		var vtype = this.vtype;
 
-		if (!refs) {
+		if (!refs || refKey == null) {
 			return;
 		}
-		var refKey = undefined;
 		var refValue = undefined;
 		if (vtype === VNODE_TYPE.ELEMENT) {
 			refValue = this.node;
@@ -656,8 +654,7 @@ Vtree.prototype = {
 		} else if (vtype === VNODE_TYPE.COMPONENT) {
 			refValue = this.component;
 		}
-		if (refValue && refs && props && props.ref) {
-			refKey = props.ref;
+		if (refValue) {
 			if (isFn(refKey)) {
 				refKey(refValue);
 			} else if (isStr(refKey)) {
@@ -666,20 +663,16 @@ Vtree.prototype = {
 		}
 	},
 	detachRef: function detachRef() {
-		var props = this.props;
+		var refKey = this.ref;
 		var refs = this.refs;
-		var vtype = this.vtype;
 
-		if (!refs) {
+		if (!refs || refKey == null) {
 			return;
 		}
-		var refKey = undefined;
-		if (refs && props && props.ref) {
-			if (isFn(props.ref)) {
-				props.ref(null);
-			} else {
-				delete refs[props.ref];
-			}
+		if (isFn(refKey)) {
+			refKey(null);
+		} else {
+			delete refs[refKey];
 		}
 	},
 	updateRef: function updateRef(newVtree) {
@@ -696,13 +689,11 @@ Vtree.prototype = {
 			newVtree.attachRef();
 			return;
 		}
-		var props = this.props;
-		var newProps = newVtree.props;
-		var oldTreeRef = props && props.ref;
-		var newTreeRef = newProps && newProps.ref;
-		if (isUndefined(newTreeRef)) {
+		var oldRef = this.ref;
+		var newRef = newVtree.ref;
+		if (newRef == null) {
 			this.detachRef();
-		} else if (oldTreeRef !== newTreeRef) {
+		} else if (oldRef !== newRef) {
 			this.detachRef();
 			newVtree.attachRef();
 		}
@@ -915,12 +906,8 @@ Vcomponent.prototype = new Vtree({
 		updater.isPending = true;
 		component.props = component.props || props;
 		component.componentWillMount();
-		var nextState = updater.getState();
-		if (nextState !== component.state) {
-			updatePropsAndState(component, component.props, nextState);
-		}
-		var vtree = renderComponent(component);
-		component.vtree = vtree;
+		updatePropsAndState(component, component.props, updater.getState());
+		var vtree = component.vtree = renderComponent(component);
 		vtree.initTree(parentNode);
 		cache.isMounted = true;
 		component.node = this.node = vtree.node;
@@ -1058,7 +1045,11 @@ var createElement = function createElement(type, props) {
 		children = undefined;
 	}
 	var vnode = new Vnode(type, props, children);
-	if (hasKey(vnode, 'ref') && Vnode !== VstatelessComponent) {
+	var hasKey$$ = hasKey(vnode, 'key');
+	var hasRef = hasKey(vnode, 'ref');
+	vnode.key = hasKey$$ ? vnode.props.key : null;
+	vnode.ref = hasRef ? vnode.props.ref : null;
+	if (hasRef && Vnode !== VstatelessComponent) {
 		collectRef(vnode);
 	}
 	return vnode;

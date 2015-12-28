@@ -13,11 +13,10 @@ Vtree.prototype = {
 	constructor: Vtree,
 	mapTree: noop,
 	attachRef() {
-		let { props, refs, vtype } = this
-		if (!refs) {
+		let { ref: refKey, refs, vtype } = this
+		if (!refs || refKey == null) {
 			return
 		}
-		let refKey
 		let refValue
 		if (vtype === VNODE_TYPE.ELEMENT) {
 			refValue = this.node
@@ -25,8 +24,7 @@ Vtree.prototype = {
 		} else if (vtype === VNODE_TYPE.COMPONENT) {
 			refValue = this.component
 		}
-		if (refValue && refs && props && props.ref) {
-			refKey = props.ref
+		if (refValue) {
 			if (_.isFn(refKey)) {
 				refKey(refValue)
 			} else if (_.isStr(refKey)) {
@@ -35,17 +33,14 @@ Vtree.prototype = {
 		}
 	},
 	detachRef() {
-		let { props, refs, vtype } = this
-		if (!refs) {
+		let { ref: refKey, refs } = this
+		if (!refs || refKey == null) {
 			return
 		}
-		let refKey
-		if (refs && props && props.ref) {
-			if (_.isFn(props.ref)) {
-				props.ref(null)
+		if (_.isFn(refKey)) {
+			refKey(null)
 			} else {
-				delete refs[props.ref]
-			}
+			delete refs[refKey]
 		}
 	},
 	updateRef(newVtree) {
@@ -62,13 +57,11 @@ Vtree.prototype = {
 			newVtree.attachRef()
 			return
 		}
-		let props = this.props
-		let newProps = newVtree.props
-		let oldTreeRef = props && props.ref
-		let newTreeRef = newProps && newProps.ref
-		if (_.isUndefined(newTreeRef)) {
+		let oldRef = this.ref
+		let newRef = newVtree.ref
+		if (newRef == null) {
 			this.detachRef()
-		} else if (oldTreeRef !== newTreeRef) {
+		} else if (oldRef !== newRef) {
 			this.detachRef()
 			newVtree.attachRef()
 		}
@@ -111,7 +104,6 @@ export function Velem(type, props, children) {
 	this.children = children
 }
 
-let detachTreeRef = vtree => vtree.detach()
 let unmountTree = vtree => {
 	let { vtype } = vtree
 	if (vtype === VNODE_TYPE.COMPONENT || vtype === VNODE_TYPE.STATELESS_COMPONENT) {
@@ -256,12 +248,8 @@ Vcomponent.prototype = new Vtree({
 		updater.isPending = true
 		component.props = component.props || props
 		component.componentWillMount()
-		let nextState = updater.getState()
-		if (nextState !== component.state) {
-			updatePropsAndState(component, component.props, nextState)
-		}
-		let vtree = renderComponent(component)
-		component.vtree = vtree
+		updatePropsAndState(component, component.props, updater.getState())
+		let vtree = component.vtree = renderComponent(component)
 		vtree.initTree(parentNode)
 		cache.isMounted = true
 		component.node = this.node = vtree.node
@@ -274,8 +262,8 @@ Vcomponent.prototype = new Vtree({
 		let { component, props } = this
 		component.shouldComponentUpdate = neverUpdate
 		component.forceUpdate = noop
-		component.componentWillUnmount()
 		this.detachRef()
+		component.componentWillUnmount()
 		component.vtree.destroyTree()
 		component.$cache.isMounted = false
 		this.component = this.node = component.node = component.refs = null

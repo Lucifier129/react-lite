@@ -20,7 +20,11 @@ let createElement = (type, props, ...children) => {
 		children = undefined
 	}
 	let vnode = new Vnode(type, props, children)
-	if (_.hasKey(vnode, 'ref') && Vnode !== VstatelessComponent) {
+	let hasKey = _.hasKey(vnode, 'key')
+	let hasRef = _.hasKey(vnode, 'ref')
+	vnode.key = hasKey ? vnode.props.key : null
+	vnode.ref = hasRef ? vnode.props.ref : null
+	if (hasRef && Vnode !== VstatelessComponent) {
 		collectRef(vnode)
 	}
 	return vnode
