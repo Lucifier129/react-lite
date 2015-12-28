@@ -1,5 +1,29 @@
 import * as _ from './util'
+import { VNODE_TYPE } from './constant'
 import { Velem, Vcomponent, VstatelessComponent, collectRef } from './virtual-dom'
+
+export let isValidElement = obj => {
+	if (obj == null) {
+		return false
+	}
+	if (obj.vtype === VNODE_TYPE.ELEMENT || obj.vtype === VNODE_TYPE.COMPONENT) {
+		return true
+	}
+	return false
+}
+
+export let cloneElement = (originElem, props, ...children) => {
+	let type = originElem.type
+	props = _.extend(originElem.props, props)
+	if (children.length === 0) {
+		children = originElem.children || originElem.props.children
+	}
+	let vnode = createElement(type, props, ...children)
+	if (vnode.ref === originElem.ref) {
+		vnode.refs = originElem.refs
+	}
+	return vnode
+}
 
 let createElement = (type, props, ...children) => {
 	let Vnode
@@ -19,7 +43,7 @@ let createElement = (type, props, ...children) => {
 	if (children.length === 0) {
 		children = undefined
 	}
-	let vnode = new Vnode(type, props, children)
+	let vnode = new Vnode(type, _.extend({}, props), children)
 	let hasKey = _.hasKey(vnode, 'key')
 	let hasRef = _.hasKey(vnode, 'ref')
 	vnode.key = hasKey ? vnode.props.key : null

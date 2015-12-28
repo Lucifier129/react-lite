@@ -79,10 +79,20 @@ export let getUid = () => ++uid
 
 export let hasKey = (obj, key = 'key') => obj && obj.props && (obj.props.hasOwnProperty(key))
 
+let getChildren = children => {
+	if (children && children.length > 0) {
+		children = children.length === 1 ? children[0] : children
+		if (isArr(children)) {
+			return getChildren(children)
+		}
+	}
+	return children
+}
 export let mergeProps = (props, children, defaultProps) => {
 	let result = extend({}, defaultProps, props)
-	if (children && children.length > 0) {
-		result.children = children.length === 1 ? children[0] : children
+	children = getChildren(children)
+	if (!isUndefined(children)) {
+		result.children = children
 	}
 	return result
 }

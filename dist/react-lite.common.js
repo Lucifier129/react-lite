@@ -108,11 +108,27 @@ var hasKey = function hasKey(obj) {
 	return obj && obj.props && obj.props.hasOwnProperty(key);
 };
 
+var getChildren = function getChildren(_x3) {
+	var _again = true;
+
+	_function: while (_again) {
+		var children = _x3;
+		_again = false;
+
+		if (children && children.length > 0) {
+			children = children.length === 1 ? children[0] : children;
+			if (isArr(children)) {
+				_x3 = children;
+				_again = true;
+				continue _function;
+			}
+		}
+		return children;
+	}
+};
 var mergeProps = function mergeProps(props, children, defaultProps) {
 	var result = extend({}, defaultProps, props);
-	if (children && children.length > 0) {
-		result.children = children.length === 1 ? children[0] : children;
-	}
+	result.children = getChildren(children);
 	return result;
 };
 
@@ -441,8 +457,8 @@ var findDOMNode = function findDOMNode(node) {
 	throw new Error('findDOMNode can not find Node');
 };
 
-function Updater(instant) {
-	this.instant = instant;
+function Updater(instance) {
+	this.instance = instance;
 	this.pendingStates = [];
 	this.pendingCallbacks = [];
 	this.isPending = false;
@@ -451,13 +467,13 @@ function Updater(instant) {
 Updater.prototype = {
 	constructor: Updater,
 	emitUpdate: function emitUpdate(nextProps) {
-		var instant = this.instant;
+		var instance = this.instance;
 		var pendingStates = this.pendingStates;
 		var pendingCallbacks = this.pendingCallbacks;
 
 		if (nextProps || pendingStates.length > 0) {
-			var props = nextProps || instant.props;
-			shouldUpdate(instant, props, this.getState(), this.clearCallbacks.bind(this));
+			var props = nextProps || instance.props;
+			shouldUpdate(instance, props, this.getState(), this.clearCallbacks.bind(this));
 		}
 	},
 	addState: function addState(nextState) {
@@ -475,10 +491,10 @@ Updater.prototype = {
 		pendingStates.push([nextState]);
 	},
 	getState: function getState() {
-		var instant = this.instant;
+		var instance = this.instance;
 		var pendingStates = this.pendingStates;
-		var state = instant.state;
-		var props = instant.props;
+		var state = instance.state;
+		var props = instance.props;
 
 		var merge = function merge(_x) {
 			var _again = true;
@@ -495,7 +511,7 @@ Updater.prototype = {
 					continue _function;
 				}
 				if (isFn(nextState)) {
-					nextState = nextState.call(instant, state, props);
+					nextState = nextState.call(instance, state, props);
 				}
 				state = extend({}, state, nextState);
 			}
@@ -506,11 +522,11 @@ Updater.prototype = {
 	},
 	clearCallbacks: function clearCallbacks() {
 		var pendingCallbacks = this.pendingCallbacks;
-		var instant = this.instant;
+		var instance = this.instance;
 
 		if (pendingCallbacks.length > 0) {
 			eachItem(pendingCallbacks, function (callback) {
-				return callback.call(instant);
+				return callback.call(instance);
 			});
 			pendingCallbacks.length = 0;
 		}
@@ -922,8 +938,8 @@ Vcomponent.prototype = new Vtree({
 
 		component.shouldComponentUpdate = neverUpdate;
 		component.forceUpdate = noop;
-		component.componentWillUnmount();
 		this.detachRef();
+		component.componentWillUnmount();
 		component.vtree.destroyTree();
 		component.$cache.isMounted = false;
 		this.component = this.node = component.node = component.refs = null;
@@ -1022,9 +1038,34 @@ var checkVtree = function checkVtree(vtree) {
 	return getVnode(vtree);
 };
 
-var createElement = function createElement(type, props) {
+var isValidElement = function isValidElement(obj) {
+	if (obj == null) {
+		return false;
+	}
+	if (obj.vtype === VNODE_TYPE.ELEMENT || obj.vtype === VNODE_TYPE.COMPONENT) {
+		return true;
+	}
+	return false;
+};
+
+var cloneElement = function cloneElement(originElem, props) {
 	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
 		children[_key - 2] = arguments[_key];
+	}
+
+	var type = originElem.type;
+	props = extend(originElem.props, props);
+	if (children.length === 0) {
+		children = originElem.children || originElem.props.children;
+	}
+	var vnode = createElement(type, props, children);
+	vnode.refs = originElem.refs;
+	return vnode;
+};
+
+var createElement = function createElement(type, props) {
+	for (var _len2 = arguments.length, children = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
+		children[_key2 - 2] = arguments[_key2];
 	}
 
 	var Vnode = undefined;
@@ -1044,7 +1085,7 @@ var createElement = function createElement(type, props) {
 	if (children.length === 0) {
 		children = undefined;
 	}
-	var vnode = new Vnode(type, props, children);
+	var vnode = new Vnode(type, extend({}, props), children);
 	var hasKey$$ = hasKey(vnode, 'key');
 	var hasRef = hasKey(vnode, 'ref');
 	vnode.key = hasKey$$ ? vnode.props.key : null;
@@ -1145,53 +1186,61 @@ var createClass = function createClass(spec) {
 };
 
 var check = function check() {
-  return check;
+    return check;
 };
 check.isRequired = check;
 var PropTypes = {
-  "array": check,
-  "bool": check,
-  "func": check,
-  "number": check,
-  "object": check,
-  "string": check,
-  "any": check,
-  "arrayOf": check,
-  "element": check,
-  "instanceOf": check,
-  "node": check,
-  "objectOf": check,
-  "oneOf": check,
-  "oneOfType": check,
-  "shape": check
+    "array": check,
+    "bool": check,
+    "func": check,
+    "number": check,
+    "object": check,
+    "string": check,
+    "any": check,
+    "arrayOf": check,
+    "element": check,
+    "instanceOf": check,
+    "node": check,
+    "objectOf": check,
+    "oneOf": check,
+    "oneOfType": check,
+    "shape": check
 };
 
 var Children = {
-  only: function only(children) {
-    return children;
-  }
+    only: function only(children) {
+        return children;
+    }
 };
 
 var createFactory = function createFactory(type) {
-  return function () {
-    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
+    return function () {
+        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+        }
 
-    return createElement.apply(undefined, [type].concat(args));
-  };
+        return createElement.apply(undefined, [type].concat(args));
+    };
 };
 
-var index = {
-  Component: Component,
-  createClass: createClass,
-  createElement: createElement,
-  createFactory: createFactory,
-  Children: Children,
-  PropTypes: PropTypes,
-  render: render,
-  findDOMNode: findDOMNode,
-  unmountComponentAtNode: unmountComponentAtNode
+var React = {
+    cloneElement: cloneElement,
+    isValidElement: isValidElement,
+    Component: Component,
+    createClass: createClass,
+    createElement: createElement,
+    createFactory: createFactory,
+    Children: Children,
+    PropTypes: PropTypes,
+    render: render,
+    findDOMNode: findDOMNode,
+    unmountComponentAtNode: unmountComponentAtNode
 };
 
-module.exports = index;
+React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
+    render: render,
+    findDOMNode: findDOMNode,
+    unmountComponentAtNode: unmountComponentAtNode
+};
+
+module.exports = React;

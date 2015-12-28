@@ -1,7 +1,7 @@
 import { render, findDOMNode, unmountComponentAtNode } from './ReactDOM'
 import Component from './component'
 import createClass from './createClass'
-import createElement from './createElement'
+import createElement, { isValidElement, cloneElement } from './createElement'
 
 let check = () => check
 check.isRequired = check
@@ -31,14 +31,24 @@ let Children = {
 
 let createFactory = type => (...args) => createElement(type, ...args)
 
-export default {
-	Component,
-	createClass,
-	createElement,
+let React = {
+    cloneElement,
+    isValidElement,
+    Component,
+    createClass,
+    createElement,
     createFactory,
-	Children,
+    Children,
     PropTypes,
-	render,
+    render,
     findDOMNode,
     unmountComponentAtNode
 }
+
+React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
+    render,
+    findDOMNode,
+    unmountComponentAtNode
+}
+
+export default React

@@ -2,8 +2,8 @@ import * as _ from './util'
 import { renderComponent  } from './virtual-dom'
 
 
-function Updater(instant) {
-	this.instant = instant
+function Updater(instance) {
+	this.instance = instance
 	this.pendingStates = []
 	this.pendingCallbacks = []
 	this.isPending = false
@@ -12,10 +12,10 @@ function Updater(instant) {
 Updater.prototype = {
 	constructor: Updater,
 	emitUpdate(nextProps) {
-		let { instant, pendingStates, pendingCallbacks } = this
+		let { instance, pendingStates, pendingCallbacks } = this
 		if (nextProps || pendingStates.length > 0) {
-			let props = nextProps || instant.props
-			shouldUpdate(instant, props, this.getState(), this.clearCallbacks.bind(this))
+			let props = nextProps || instance.props
+			shouldUpdate(instance, props, this.getState(), this.clearCallbacks.bind(this))
 		}
 	},
 	addState(nextState) {
@@ -32,8 +32,8 @@ Updater.prototype = {
 		pendingStates.push([nextState])
 	},
 	getState() {
-		let { instant, pendingStates } = this
-		let { state, props } = instant
+		let { instance, pendingStates } = this
+		let { state, props } = instance
 		let merge = nextState => {
 			// replace state
 			if (_.isArr(nextState)) {
@@ -41,7 +41,7 @@ Updater.prototype = {
 				return merge(nextState[0])
 			}
 			if (_.isFn(nextState)) {
-				nextState = nextState.call(instant, state, props)
+				nextState = nextState.call(instance, state, props)
 			}
 			state = _.extend({}, state, nextState)
 		}
@@ -50,9 +50,9 @@ Updater.prototype = {
 		return state
 	},
 	clearCallbacks() {
-		let { pendingCallbacks, instant } = this
+		let { pendingCallbacks, instance } = this
 		if (pendingCallbacks.length > 0) {
-			_.eachItem(pendingCallbacks, callback => callback.call(instant))
+			_.eachItem(pendingCallbacks, callback => callback.call(instance))
 			pendingCallbacks.length = 0
 		}
 	},
