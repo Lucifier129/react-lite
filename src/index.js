@@ -1,39 +1,18 @@
 import { render, findDOMNode, unmountComponentAtNode } from './ReactDOM'
 import Component from './Component'
 import createClass from './createClass'
-import createElement, { isValidElement, cloneElement } from './createElement'
-import * as Children from './Children'
-
-let check = () => check
-check.isRequired = check
-let PropTypes = {
-    "array": check,
-    "bool": check,
-    "func": check,
-    "number": check,
-    "object": check,
-    "string": check,
-    "any": check,
-    "arrayOf": check,
-    "element": check,
-    "instanceOf": check,
-    "node": check,
-    "objectOf": check,
-    "oneOf": check,
-    "oneOfType": check,
-    "shape": check
-}
-
-let createFactory = type => (...args) => createElement(type, ...args)
+import createElement, { isValidElement, cloneElement, createFactory } from './createElement'
+import { only, forEach, map, count, toArray } from './Children'
+import PropTypes from './PropTypes'
 
 let React = {
     cloneElement,
     isValidElement,
-    Component,
-    createClass,
     createElement,
     createFactory,
-    Children,
+    Component,
+    createClass,
+    Children: { only, forEach, map, count, toArray },
     PropTypes,
     render,
     findDOMNode,

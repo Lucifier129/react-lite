@@ -214,7 +214,7 @@ export let patchProps = (elem, props, newProps) => {
 			return
 		}
 		let value = newProps[key]
-		let oldValue = props[key]
+		let oldValue = key === 'value' ? elem.value : props[key]
 		if (value === oldValue) {
 			return
 		}
@@ -307,26 +307,16 @@ const isUnitlessNumber = {
 	strokeWidth: true
 }
 
-/**
- * @param {string} prefix vendor-specific prefix, eg: Webkit
- * @param {string} key style name, eg: transitionDuration
- * @return {string} style name prefixed with `prefix`, properly camelCased, eg:
- * WebkitTransitionDuration
- */
-let prefixKey = (prefix, key) => prefix + key.charAt(0).toUpperCase() + key.substring(1)
-
-/**
- * Support style names that may come passed in prefixed by adding permutations
- * of vendor prefixes.
- */
+let isUnitlessNumberWithPrefix = {}
 let prefixes = ['Webkit', 'ms', 'Moz', 'O'];
-
-// Using Object.keys here, or else the vanilla for-in loop makes IE8 go into an
-// infinite loop, because it iterates over the newly added props too.
+let prefixKey = (prefix, key) => prefix + key.charAt(0).toUpperCase() + key.substring(1)
 mapValue(isUnitlessNumber, (_, prop) => {
 	eachItem(prefixes, prefix => 
-		isUnitlessNumber[prefixKey(prefix, prop)] = true
+		isUnitlessNumberWithPrefix[prefixKey(prefix, prop)] = true
 	)
+})
+mapValue(isUnitlessNumberWithPrefix, (value, key) => {
+	isUnitlessNumber[key] = value
 })
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/

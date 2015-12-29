@@ -8,6 +8,11 @@ if (typeof console === 'undefined') {
 }
 
 const Counter = React.createClass({
+	getInitialState() {
+		return {
+			text: '123123123'
+		}
+	},
 	componentWillMount() {
 		console.time('Counter mount')
 	},
@@ -65,6 +70,10 @@ const Counter = React.createClass({
 	getInput(input) {
 		this.input = input
 	},
+	handleChange(e) {
+		let text = e.target.value.replace(/[^\d]+/, '')
+		this.setState({ text })
+	},
 	render() {
 		let { props } = this
 		let { COUNT } = props
@@ -78,7 +87,15 @@ const Counter = React.createClass({
 				{' '}
 				<button onClick={ () => COUNT('INCREMENT_IF_ODD') }>incrementIfOdd</button>
 				{' '}
-				<label htmlFor="myinput">input number:<input type="text" ref={ this.getInput } id="myinput" name="myinput" /></label>
+				<label htmlFor="myinput">input number:
+					<input 
+						type="text" 
+						value={this.state.text}
+						onChange={this.handleChange}
+						ref={ this.getInput } 
+						id="myinput" 
+						name="myinput" />
+				</label>
 				<button onClick={ this.getNum }>run</button>
 				<p dangerouslySetInnerHTML={{ __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2)}}></p>
 			</div>

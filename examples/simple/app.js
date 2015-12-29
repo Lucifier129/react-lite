@@ -62,6 +62,11 @@
 	var Counter = React.createClass({
 		displayName: 'Counter',
 
+		getInitialState: function getInitialState() {
+			return {
+				text: '123123123'
+			};
+		},
 		componentWillMount: function componentWillMount() {
 			console.time('Counter mount');
 		},
@@ -123,6 +128,10 @@
 		getInput: function getInput(input) {
 			this.input = input;
 		},
+		handleChange: function handleChange(e) {
+			var text = e.target.value.replace(/[^\d]+/, '');
+			this.setState({ text: text });
+		},
 		render: function render() {
 			var props = this.props;
 			var COUNT = props.COUNT;
@@ -165,7 +174,13 @@
 					'label',
 					{ htmlFor: 'myinput' },
 					'input number:',
-					React.createElement('input', { type: 'text', ref: this.getInput, id: 'myinput', name: 'myinput' })
+					React.createElement('input', {
+						type: 'text',
+						value: this.state.text,
+						onChange: this.handleChange,
+						ref: this.getInput,
+						id: 'myinput',
+						name: 'myinput' })
 				),
 				React.createElement(
 					'button',

@@ -22,6 +22,8 @@ export let cloneElement = (originElem, props, ...children) => {
 	return vnode
 }
 
+export let createFactory = type => (...args) => createElement(type, ...args)
+
 let createElement = (type, props, ...children) => {
 	let Vnode
 	switch (true) {
@@ -35,13 +37,23 @@ let createElement = (type, props, ...children) => {
 			Vnode = VstatelessComponent
 			break
 		default:
-			throw new Error(`React.createElement: unexpect type ${type}`)
+			throw new Error(`React.createElement: unexpect type [ ${type} ]`)
 	}
 	let vnode = new Vnode(type, _.mergeProps(props, children, type.defaultProps))
-	let hasKey = _.hasKey(vnode, 'key')
-	let hasRef = _.hasKey(vnode, 'ref')
-	vnode.key = hasKey ? vnode.props.key : null
-	vnode.ref = hasRef ? vnode.props.ref : null
+	let key = null
+	let ref = null
+	let hasRef = false
+	if (props != null) {
+		if (!_.isUndefined(props.key)) {
+			key = '' + props.key
+		}
+		if (!_.isUndefined(props.ref)) {
+			ref = props.ref
+			hasRef = true
+		}
+	}
+	vnode.key = key
+	vnode.ref = ref
 	if (hasRef && Vnode !== VstatelessComponent) {
 		collectRef(vnode)
 	}

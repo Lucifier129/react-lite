@@ -22,71 +22,71 @@ describe('ReactChildren', function() {
     //ReactFragment = require('ReactFragment');
   });
 
-  // it('should support identity for simple', function() {
-  //   var callback = jasmine.createSpy().andCallFake(function(kid, index) {
-  //     return kid;
-  //   });
+  it('should support identity for simple', function() {
+    var callback = jasmine.createSpy().andCallFake(function(kid, index) {
+      return kid;
+    });
 
-  //   var simpleKid = <span key="simple" />;
+    var simpleKid = <span key="simple" />;
 
-  //   // First pass children into a component to fully simulate what happens when
-  //   // using structures that arrive from transforms.
+    // First pass children into a component to fully simulate what happens when
+    // using structures that arrive from transforms.
 
-  //   var instance = <div>{simpleKid}</div>;
-  //   ReactChildren.forEach(instance.props.children, callback);
-  //   expect(callback).toHaveBeenCalledWith(simpleKid, 0);
-  //   callback.reset();
-  //   var mappedChildren = ReactChildren.map(instance.props.children, callback);
-  //   expect(callback).toHaveBeenCalledWith(simpleKid, 0);
-  //   expect(mappedChildren[0]).toEqual(<span key=".$simple" />);
-  // });
+    var instance = <div>{simpleKid}</div>;
+    ReactChildren.forEach(instance.props.children, callback);
+    expect(callback).toHaveBeenCalledWith(simpleKid, 0);
+    callback.reset();
+    var mappedChildren = ReactChildren.map(instance.props.children, callback);
+    expect(callback).toHaveBeenCalledWith(simpleKid, 0);
+    expect(mappedChildren[0]).toEqual(<span key=".$simple" />);
+  });
 
-  // it('should treat single arrayless child as being in array', function() {
-  //   var callback = jasmine.createSpy().andCallFake(function(kid, index) {
-  //     return kid;
-  //   });
+  it('should treat single arrayless child as being in array', function() {
+    var callback = jasmine.createSpy().andCallFake(function(kid, index) {
+      return kid;
+    });
 
-  //   var simpleKid = <span />;
-  //   var instance = <div>{simpleKid}</div>;
-  //   ReactChildren.forEach(instance.props.children, callback);
-  //   expect(callback).toHaveBeenCalledWith(simpleKid, 0);
-  //   callback.reset();
-  //   var mappedChildren = ReactChildren.map(instance.props.children, callback);
-  //   expect(callback).toHaveBeenCalledWith(simpleKid, 0);
-  //   expect(mappedChildren[0]).toEqual(<span key=".0" />);
-  // });
+    var simpleKid = <span />;
+    var instance = <div>{simpleKid}</div>;
+    ReactChildren.forEach(instance.props.children, callback);
+    expect(callback).toHaveBeenCalledWith(simpleKid, 0);
+    callback.reset();
+    var mappedChildren = ReactChildren.map(instance.props.children, callback);
+    expect(callback).toHaveBeenCalledWith(simpleKid, 0);
+    expect(mappedChildren[0]).toEqual(<span key=".0" />);
+  });
 
-  // it('should treat single child in array as expected', function() {
-  //   var callback = jasmine.createSpy().andCallFake(function(kid, index) {
-  //     return kid;
-  //   });
+  it('should treat single child in array as expected', function() {
+    var callback = jasmine.createSpy().andCallFake(function(kid, index) {
+      return kid;
+    });
 
-  //   var simpleKid = <span key="simple" />;
-  //   var instance = <div>{[simpleKid]}</div>;
-  //   ReactChildren.forEach(instance.props.children, callback);
-  //   expect(callback).toHaveBeenCalledWith(simpleKid, 0);
-  //   callback.reset();
-  //   var mappedChildren = ReactChildren.map(instance.props.children, callback);
-  //   expect(callback).toHaveBeenCalledWith(simpleKid, 0);
-  //   expect(mappedChildren[0]).toEqual(<span key=".$simple" />);
+    var simpleKid = <span key="simple" />;
+    var instance = <div>{[simpleKid]}</div>;
+    ReactChildren.forEach(instance.props.children, callback);
+    expect(callback).toHaveBeenCalledWith(simpleKid, 0);
+    callback.reset();
+    var mappedChildren = ReactChildren.map(instance.props.children, callback);
+    expect(callback).toHaveBeenCalledWith(simpleKid, 0);
+    expect(mappedChildren[0]).toEqual(<span key=".$simple" />);
 
-  // });
+  });
 
-  // it('should pass key to returned component', function() {
-  //   var mapFn = function(kid, index) {
-  //     return <div>{kid}</div>;
-  //   };
+  it('should pass key to returned component', function() {
+    var mapFn = function(kid, index) {
+      return <div>{kid}</div>;
+    };
 
-  //   var simpleKid = <span key="simple" />;
+    var simpleKid = <span key="simple" />;
 
-  //   var instance = <div>{simpleKid}</div>;
-  //   var mappedChildren = ReactChildren.map(instance.props.children, mapFn);
+    var instance = <div>{simpleKid}</div>;
+    var mappedChildren = ReactChildren.map(instance.props.children, mapFn);
 
-  //   expect(ReactChildren.count(mappedChildren)).toBe(1);
-  //   expect(mappedChildren[0]).not.toBe(simpleKid);
-  //   expect(mappedChildren[0].props.children).toBe(simpleKid);
-  //   expect(mappedChildren[0].key).toBe('/.$simple');
-  // });
+    expect(ReactChildren.count(mappedChildren)).toBe(1);
+    expect(mappedChildren[0]).not.toBe(simpleKid);
+    expect(mappedChildren[0].props.children).toBe(simpleKid);
+    expect(mappedChildren[0].key).toBe('/.$simple');
+  });
 
   it('should invoke callback with the right context', function() {
     var lastContext;
@@ -110,69 +110,69 @@ describe('ReactChildren', function() {
     expect(mappedChildren[0]).toBe(scopeTester);
   });
 
-  // it('should be called for each child', function() {
-  //   var zero = <div key="keyZero" />;
-  //   var one = null;
-  //   var two = <div key="keyTwo" />;
-  //   var three = null;
-  //   var four = <div key="keyFour" />;
+  it('should be called for each child', function() {
+    var zero = <div key="keyZero" />;
+    var one = null;
+    var two = <div key="keyTwo" />;
+    var three = null;
+    var four = <div key="keyFour" />;
 
-  //   var zeroMapped = <div key="giraffe" />;  // Key should be joined to obj key
-  //   var oneMapped = null;  // Key should be added even if we don't supply it!
-  //   var twoMapped = <div />;  // Key should be added even if not supplied!
-  //   var threeMapped = <span />; // Map from null to something.
-  //   var fourMapped = <div key="keyFour" />;
+    var zeroMapped = <div key="giraffe" />;  // Key should be joined to obj key
+    var oneMapped = null;  // Key should be added even if we don't supply it!
+    var twoMapped = <div />;  // Key should be added even if not supplied!
+    var threeMapped = <span />; // Map from null to something.
+    var fourMapped = <div key="keyFour" />;
 
-  //   var callback = jasmine.createSpy().andCallFake(function(kid, index) {
-  //     return index === 0 ? zeroMapped :
-  //       index === 1 ? oneMapped :
-  //       index === 2 ? twoMapped :
-  //       index === 3 ? threeMapped : fourMapped;
-  //   });
+    var callback = jasmine.createSpy().andCallFake(function(kid, index) {
+      return index === 0 ? zeroMapped :
+        index === 1 ? oneMapped :
+        index === 2 ? twoMapped :
+        index === 3 ? threeMapped : fourMapped;
+    });
 
-  //   var instance = (
-  //     <div>
-  //       {zero}
-  //       {one}
-  //       {two}
-  //       {three}
-  //       {four}
-  //     </div>
-  //   );
+    var instance = (
+      <div>
+        {zero}
+        {one}
+        {two}
+        {three}
+        {four}
+      </div>
+    );
 
-  //   ReactChildren.forEach(instance.props.children, callback);
-  //   expect(callback).toHaveBeenCalledWith(zero, 0);
-  //   expect(callback).toHaveBeenCalledWith(one, 1);
-  //   expect(callback).toHaveBeenCalledWith(two, 2);
-  //   expect(callback).toHaveBeenCalledWith(three, 3);
-  //   expect(callback).toHaveBeenCalledWith(four, 4);
-  //   callback.reset();
+    ReactChildren.forEach(instance.props.children, callback);
+    expect(callback).toHaveBeenCalledWith(zero, 0);
+    expect(callback).toHaveBeenCalledWith(one, 1);
+    expect(callback).toHaveBeenCalledWith(two, 2);
+    expect(callback).toHaveBeenCalledWith(three, 3);
+    expect(callback).toHaveBeenCalledWith(four, 4);
+    callback.reset();
 
-  //   var mappedChildren =
-  //     ReactChildren.map(instance.props.children, callback);
-  //   expect(callback.calls.length).toBe(5);
-  //   expect(ReactChildren.count(mappedChildren)).toBe(4);
-  //   // Keys default to indices.
-  //   expect([
-  //     mappedChildren[0].key,
-  //     mappedChildren[1].key,
-  //     mappedChildren[2].key,
-  //     mappedChildren[3].key,
-  //   ]).toEqual(
-  //     ['giraffe/.$keyZero', '/.$keyTwo', '/.3', 'keyFour/.$keyFour']
-  //   );
+    var mappedChildren =
+      ReactChildren.map(instance.props.children, callback);
+    expect(callback.calls.length).toBe(5);
+    expect(ReactChildren.count(mappedChildren)).toBe(4);
+    // Keys default to indices.
+    expect([
+      mappedChildren[0].key,
+      mappedChildren[1].key,
+      mappedChildren[2].key,
+      mappedChildren[3].key,
+    ]).toEqual(
+      ['giraffe/.$keyZero', '/.$keyTwo', '/.3', 'keyFour/.$keyFour']
+    );
 
-  //   expect(callback).toHaveBeenCalledWith(zero, 0);
-  //   expect(callback).toHaveBeenCalledWith(one, 1);
-  //   expect(callback).toHaveBeenCalledWith(two, 2);
-  //   expect(callback).toHaveBeenCalledWith(three, 3);
-  //   expect(callback).toHaveBeenCalledWith(four, 4);
+    expect(callback).toHaveBeenCalledWith(zero, 0);
+    expect(callback).toHaveBeenCalledWith(one, 1);
+    expect(callback).toHaveBeenCalledWith(two, 2);
+    expect(callback).toHaveBeenCalledWith(three, 3);
+    expect(callback).toHaveBeenCalledWith(four, 4);
 
-  //   expect(mappedChildren[0]).toEqual(<div key="giraffe/.$keyZero" />);
-  //   expect(mappedChildren[1]).toEqual(<div key="/.$keyTwo" />);
-  //   expect(mappedChildren[2]).toEqual(<span key="/.3" />);
-  //   expect(mappedChildren[3]).toEqual(<div key="keyFour/.$keyFour" />);
-  // });
+    expect(mappedChildren[0]).toEqual(<div key="giraffe/.$keyZero" />);
+    expect(mappedChildren[1]).toEqual(<div key="/.$keyTwo" />);
+    expect(mappedChildren[2]).toEqual(<span key="/.3" />);
+    expect(mappedChildren[3]).toEqual(<div key="keyFour/.$keyFour" />);
+  });
 
   // it('should be called for each child in nested structure', function() {
   //   var zero = <div key="keyZero" />;
@@ -252,43 +252,43 @@ describe('ReactChildren', function() {
   //   expect(mappedChildren[3]).toEqual(<div key="/.0:$keyFive/=1$keyFiveInner" />);
   // });
 
-  // it('should retain key across two mappings', function() {
-  //   var zeroForceKey = <div key="keyZero" />;
-  //   var oneForceKey = <div key="keyOne" />;
+  it('should retain key across two mappings', function() {
+    var zeroForceKey = <div key="keyZero" />;
+    var oneForceKey = <div key="keyOne" />;
 
-  //   // Key should be joined to object key
-  //   var zeroForceKeyMapped = <div key="giraffe" />;
-  //   // Key should be added even if we don't supply it!
-  //   var oneForceKeyMapped = <div />;
+    // Key should be joined to object key
+    var zeroForceKeyMapped = <div key="giraffe" />;
+    // Key should be added even if we don't supply it!
+    var oneForceKeyMapped = <div />;
 
-  //   var mapFn = function(kid, index) {
-  //     return index === 0 ? zeroForceKeyMapped : oneForceKeyMapped;
-  //   };
+    var mapFn = function(kid, index) {
+      return index === 0 ? zeroForceKeyMapped : oneForceKeyMapped;
+    };
 
-  //   var forcedKeys = (
-  //     <div>
-  //       {zeroForceKey}
-  //       {oneForceKey}
-  //     </div>
-  //   );
+    var forcedKeys = (
+      <div>
+        {zeroForceKey}
+        {oneForceKey}
+      </div>
+    );
 
-  //   var expectedForcedKeys = ['giraffe/.$keyZero', '/.$keyOne'];
-  //   var mappedChildrenForcedKeys =
-  //     ReactChildren.map(forcedKeys.props.children, mapFn);
-  //   var mappedForcedKeys = mappedChildrenForcedKeys.map((c) => c.key);
-  //   expect(mappedForcedKeys).toEqual(expectedForcedKeys);
+    var expectedForcedKeys = ['giraffe/.$keyZero', '/.$keyOne'];
+    var mappedChildrenForcedKeys =
+      ReactChildren.map(forcedKeys.props.children, mapFn);
+    var mappedForcedKeys = mappedChildrenForcedKeys.map((c) => c.key);
+    expect(mappedForcedKeys).toEqual(expectedForcedKeys);
 
-  //   var expectedRemappedForcedKeys = [
-  //     'giraffe/.$giraffe/=1$keyZero',
-  //     '/.$/=1$keyOne',
-  //   ];
-  //   var remappedChildrenForcedKeys =
-  //     ReactChildren.map(mappedChildrenForcedKeys, mapFn);
-  //   expect(
-  //     remappedChildrenForcedKeys.map((c) => c.key)
-  //   ).toEqual(expectedRemappedForcedKeys);
+    // var expectedRemappedForcedKeys = [
+    //   'giraffe/.$giraffe/=1$keyZero',
+    //   '/.$/=1$keyOne',
+    // ];
+    // var remappedChildrenForcedKeys =
+    //   ReactChildren.map(mappedChildrenForcedKeys, mapFn);
+    // expect(
+    //   remappedChildrenForcedKeys.map((c) => c.key)
+    // ).toEqual(expectedRemappedForcedKeys);
 
-  // });
+  });
 
   it('should not throw if key provided is a dupe with array key', function() {
     var zero = <div />;
@@ -395,7 +395,7 @@ describe('ReactChildren', function() {
     expect(flattened.length).toBe(6);
     expect(flattened[1].key).toContain('banana');
     expect(flattened[3].key).toContain('banana');
-    //expect(flattened[1].key).not.toBe(flattened[3].key);
+    expect(flattened[1].key).not.toBe(flattened[3].key);
 
     var reversed = ReactChildren.toArray([
       [<div key="camel" />, <div key="banana" />, <div key="apple" />],

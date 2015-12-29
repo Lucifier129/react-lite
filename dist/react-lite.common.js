@@ -260,7 +260,7 @@ var patchProps = function patchProps(elem, props, newProps) {
 			return;
 		}
 		var value = newProps[key];
-		var oldValue = props[key];
+		var oldValue = key === 'value' ? elem.value : props[key];
 		if (value === oldValue) {
 			return;
 		}
@@ -353,28 +353,18 @@ var isUnitlessNumber = {
 	strokeWidth: true
 };
 
-/**
- * @param {string} prefix vendor-specific prefix, eg: Webkit
- * @param {string} key style name, eg: transitionDuration
- * @return {string} style name prefixed with `prefix`, properly camelCased, eg:
- * WebkitTransitionDuration
- */
+var isUnitlessNumberWithPrefix = {};
+var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
 var prefixKey = function prefixKey(prefix, key) {
 	return prefix + key.charAt(0).toUpperCase() + key.substring(1);
 };
-
-/**
- * Support style names that may come passed in prefixed by adding permutations
- * of vendor prefixes.
- */
-var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
-
-// Using Object.keys here, or else the vanilla for-in loop makes IE8 go into an
-// infinite loop, because it iterates over the newly added props too.
 mapValue(isUnitlessNumber, function (_, prop) {
 	eachItem(prefixes, function (prefix) {
-		return isUnitlessNumber[prefixKey(prefix, prop)] = true;
+		return isUnitlessNumberWithPrefix[prefixKey(prefix, prop)] = true;
 	});
+});
+mapValue(isUnitlessNumberWithPrefix, function (value, key) {
+	isUnitlessNumber[key] = value;
 });
 
 var RE_NUMBER = /^-?\d+(\.\d+)?$/;
@@ -464,62 +454,27 @@ var findDOMNode = function findDOMNode(node) {
 	throw new Error('findDOMNode can not find Node');
 };
 
-var only = function only(children) {
-	if (children != null && !isArr(children)) {
-		return children;
-	}
-	throw new Error('expect only one child');
+var check = function check() {
+    return check;
 };
-
-var forEach = function forEach(children, iteratee, context) {
-	if (children == null) {
-		return;
-	}
-	if (isArr(children)) {
-		forEach$1(children, function (child, index) {
-			iteratee.call(context, child, index);
-		});
-	} else {
-		iteratee.call(context, children, 0);
-	}
+check.isRequired = check;
+var PropTypes = {
+    "array": check,
+    "bool": check,
+    "func": check,
+    "number": check,
+    "object": check,
+    "string": check,
+    "any": check,
+    "arrayOf": check,
+    "element": check,
+    "instanceOf": check,
+    "node": check,
+    "objectOf": check,
+    "oneOf": check,
+    "oneOfType": check,
+    "shape": check
 };
-
-var map = function map(children, iteratee, context) {
-	if (children == null) {
-		return null;
-	}
-	var result = [];
-	forEach(children, function (child, index) {
-		child = iteratee.call(context, child, index) || child;
-		result.push(child);
-	});
-	return result;
-};
-
-var count = function count(children) {
-	var count = 0;
-	forEach(children, function () {
-		return count++;
-	});
-	return count;
-};
-
-var toArray = function toArray(children) {
-	var result = [];
-	forEach(children, function (child, index) {
-		result.push(child);
-	});
-	return result;
-};
-
-
-var Children = Object.freeze({
-	only: only,
-	forEach: forEach,
-	map: map,
-	count: count,
-	toArray: toArray
-});
 
 function Updater(instance) {
 	this.instance = instance;
@@ -1135,9 +1090,19 @@ var cloneElement = function cloneElement(originElem, props) {
 	return vnode;
 };
 
+var createFactory = function createFactory(type) {
+	return function () {
+		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+			args[_key2] = arguments[_key2];
+		}
+
+		return createElement.apply(undefined, [type].concat(args));
+	};
+};
+
 var createElement = function createElement(type, props) {
-	for (var _len2 = arguments.length, children = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
-		children[_key2 - 2] = arguments[_key2];
+	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+		children[_key3 - 2] = arguments[_key3];
 	}
 
 	var Vnode = undefined;
@@ -1152,17 +1117,130 @@ var createElement = function createElement(type, props) {
 			Vnode = VstatelessComponent;
 			break;
 		default:
-			throw new Error('React.createElement: unexpect type ' + type);
+			throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
 	}
 	var vnode = new Vnode(type, mergeProps(props, children, type.defaultProps));
-	var hasKey$$ = hasKey(vnode, 'key');
-	var hasRef = hasKey(vnode, 'ref');
-	vnode.key = hasKey$$ ? vnode.props.key : null;
-	vnode.ref = hasRef ? vnode.props.ref : null;
+	var key = null;
+	var ref = null;
+	var hasRef = false;
+	if (props != null) {
+		if (!isUndefined(props.key)) {
+			key = '' + props.key;
+		}
+		if (!isUndefined(props.ref)) {
+			ref = props.ref;
+			hasRef = true;
+		}
+	}
+	vnode.key = key;
+	vnode.ref = ref;
 	if (hasRef && Vnode !== VstatelessComponent) {
 		collectRef(vnode);
 	}
 	return vnode;
+};
+
+var only = function only(children) {
+	if (children != null && !isArr(children)) {
+		return children;
+	}
+	throw new Error('expect only one child');
+};
+
+var forEach = function forEach(children, iteratee, context) {
+	if (children == null) {
+		return children;
+	}
+	if (isArr(children)) {
+		forEach$1(children, function (child, index) {
+			iteratee.call(context, child, index);
+		});
+	} else {
+		iteratee.call(context, children, 0);
+	}
+};
+
+var map = function map(children, iteratee, context) {
+	if (children == null) {
+		return children;
+	}
+	var store = [];
+	var keyMap = {};
+	forEach(children, function (child, index) {
+		var data = {};
+		data.child = iteratee.call(context, child, index) || child;
+		data.isEqual = data.child === child;
+		var key = data.key = getKey(child, index);
+		if (keyMap.hasOwnProperty(key)) {
+			keyMap[key] = keyMap[key] + 1;
+		} else {
+			keyMap[key] = 0;
+		}
+		data.index = keyMap[key];
+		store.push(data);
+	});
+	var result = [];
+	eachItem(store, function (_ref) {
+		var child = _ref.child;
+		var key = _ref.key;
+		var index = _ref.index;
+		var isEqual = _ref.isEqual;
+
+		if (child == null || isBln(child)) {
+			return;
+		}
+		if (!isValidElement(child) || key == null) {
+			result.push(child);
+			return;
+		}
+		if (keyMap[key] !== 0) {
+			key += ':' + index;
+		}
+		if (!isEqual) {
+			key = escapeUserProvidedKey(child.key || '') + '/' + key;
+		}
+		child = cloneElement(child, { key: key });
+		result.push(child);
+	});
+	return result;
+};
+
+var count = function count(children) {
+	var count = 0;
+	forEach(children, function () {
+		count++;
+	});
+	return count;
+};
+
+var identity = function identity(obj) {
+	return obj;
+};
+var toArray = function toArray(children) {
+	var mappedChildren = map(children, identity) || [];
+	var result = [];
+	eachItem(mappedChildren, function (child) {
+		if (child == null || isBln(child)) {
+			return;
+		}
+		result.push(child);
+	});
+	return result;
+};
+
+var getKey = function getKey(child, index) {
+	var key = undefined;
+	if (isValidElement(child) && isStr(child.key)) {
+		key = '.$' + child.key;
+	} else {
+		key = '.' + index.toString(36);
+	}
+	return key;
+};
+
+var userProvidedKeyEscapeRegex = /\/(?!\/)/g;
+var escapeUserProvidedKey = function escapeUserProvidedKey(text) {
+	return ('' + text).replace(userProvidedKeyEscapeRegex, '//');
 };
 
 var eachMixin = function eachMixin(mixins, iteratee) {
@@ -1254,46 +1332,14 @@ var createClass = function createClass(spec) {
 	return Klass;
 };
 
-var check = function check() {
-    return check;
-};
-check.isRequired = check;
-var PropTypes = {
-    "array": check,
-    "bool": check,
-    "func": check,
-    "number": check,
-    "object": check,
-    "string": check,
-    "any": check,
-    "arrayOf": check,
-    "element": check,
-    "instanceOf": check,
-    "node": check,
-    "objectOf": check,
-    "oneOf": check,
-    "oneOfType": check,
-    "shape": check
-};
-
-var createFactory = function createFactory(type) {
-    return function () {
-        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-            args[_key] = arguments[_key];
-        }
-
-        return createElement.apply(undefined, [type].concat(args));
-    };
-};
-
 var React = {
     cloneElement: cloneElement,
     isValidElement: isValidElement,
-    Component: Component,
-    createClass: createClass,
     createElement: createElement,
     createFactory: createFactory,
-    Children: Children,
+    Component: Component,
+    createClass: createClass,
+    Children: { only: only, forEach: forEach, map: map, count: count, toArray: toArray },
     PropTypes: PropTypes,
     render: render,
     findDOMNode: findDOMNode,
