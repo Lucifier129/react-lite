@@ -110,27 +110,39 @@ export let getAttr = (elem, key) => {
 export let removeAttr = (elem, key) => {
 	elem.removeAttribute(key)
 }
+
+let eventNameAlias = {
+	onDoubleClick: 'ondblclick'
+}
+let getEventName = key => {
+	key = eventNameAlias[key] || key
+	return key.toLowerCase()
+}
 export let setEvent = (elem, key, value) => {
 	if (!isFn(value)) {
 		return
 	}
-	key = key.toLowerCase()
+	key = getEventName(key)
 	elem[key] = value
 	if (key === 'onchange') {
 		elem.oninput = value
 	}
 }
 export let removeEvent = (elem, key) => {
-	key = key.toLowerCase()
+	key = getEventName(key)
 	elem[key] = null
 	if (key === 'onchange') {
 		elem.oninput = null
 	}
 }
 
-let IGNORE_KEYS = /(key)|(ref)|(children)/i
+let ignoreKeys = {
+	key: true,
+	ref: true,
+	children: true
+}
 let EVENT_KEYS = /^on/i
-export let isIgnoreKey = key => IGNORE_KEYS.test(key)
+export let isIgnoreKey = key => ignoreKeys[key]
 export let isEventKey = key => EVENT_KEYS.test(key)
 export let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 export let isStyleKey = key => key === 'style'

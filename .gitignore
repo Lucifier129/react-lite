@@ -1,6 +1,5 @@
 .DS_Store
 *.log
 node_modules
-/lib
 coverage
 _book

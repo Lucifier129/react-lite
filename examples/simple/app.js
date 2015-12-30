@@ -187,6 +187,11 @@
 					{ onClick: this.getNum },
 					'run'
 				),
+				React.createElement(
+					'a',
+					{ href: 'adbadfasdf' },
+					'test link'
+				),
 				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } })
 			);
 		}

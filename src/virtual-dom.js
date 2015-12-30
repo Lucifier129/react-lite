@@ -111,7 +111,6 @@ let unmountTree = vtree => {
 	}
 	vtree.detachRef()
 }
-let destroyTree = vtree => vtree.destroyTree()
 Velem.prototype = new Vtree({
 	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
@@ -158,6 +157,7 @@ Velem.prototype = new Vtree({
 		let { node, props } = this
 		let children = !_.isUndefined(props.children) ? props.children : []
 		let newProps = newVelem.props
+		let count = 0
 		if (!_.isArr(children)) {
 			children = [children]
 		}
@@ -170,18 +170,11 @@ Velem.prototype = new Vtree({
 			} else {
 				newVchild.initTree(node)
 			}
+			count += 1
 		})
-
-		let newVchildLen
-		if (_.isUndefined(newProps.children)) {
-			newVchildLen = 0
-		} else if (_.isArr(newProps.children)) {
-			newVchildLen = newProps.children.length
-		} else {
-			newVchildLen = 1
-		}
-		if (children.length > newVchildLen) {
-			_.eachItem(children.slice(newVchildLen), destroyTree)
+		while (children.length > count) {
+			children[count].destroyTree()
+			count += 1
 		}
 		this.updateRef(newVelem)
 	}
@@ -222,6 +215,7 @@ VstatelessComponent.prototype = new Vtree({
 		let { vtree } = this
 		newVtree.renderTree()
 		vtree.updateTree(newVtree.vtree, parentNode)
+		newVtree.node = newVtree.vtree.node
 	}
 })
 
@@ -270,6 +264,9 @@ Vcomponent.prototype = new Vtree({
 	},
 	destroyTree() {
 		let { component, props } = this
+		if (!component) {
+			return
+		}
 		component.shouldComponentUpdate = neverUpdate
 		component.forceUpdate = noop
 		this.detachRef()
@@ -290,6 +287,7 @@ Vcomponent.prototype = new Vtree({
 		component.componentWillReceiveProps(nextProps)
 		updater.isPending = false
 		updater.emitUpdate(nextProps)
+		newVtree.node = component.node
 		this.updateRef(newVtree)
 	}
 })

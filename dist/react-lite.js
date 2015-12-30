@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.2
+ * react-lite.js v0.0.4
  * (c) 2015 Jade Gu
  * Released under the MIT License.
  */
@@ -152,28 +152,40 @@
     var removeAttr = function removeAttr(elem, key) {
     	elem.removeAttribute(key);
     };
+
+    var eventNameAlias = {
+    	onDoubleClick: 'ondblclick'
+    };
+    var getEventName = function getEventName(key) {
+    	key = eventNameAlias[key] || key;
+    	return key.toLowerCase();
+    };
     var setEvent = function setEvent(elem, key, value) {
     	if (!isFn(value)) {
     		return;
     	}
-    	key = key.toLowerCase();
+    	key = getEventName(key);
     	elem[key] = value;
     	if (key === 'onchange') {
     		elem.oninput = value;
     	}
     };
     var removeEvent = function removeEvent(elem, key) {
-    	key = key.toLowerCase();
+    	key = getEventName(key);
     	elem[key] = null;
     	if (key === 'onchange') {
     		elem.oninput = null;
     	}
     };
 
-    var IGNORE_KEYS = /(key)|(ref)|(children)/i;
+    var ignoreKeys = {
+    	key: true,
+    	ref: true,
+    	children: true
+    };
     var EVENT_KEYS = /^on/i;
     var isIgnoreKey = function isIgnoreKey(key) {
-    	return IGNORE_KEYS.test(key);
+    	return ignoreKeys[key];
     };
     var isEventKey = function isEventKey(key) {
     	return EVENT_KEYS.test(key);
@@ -596,6 +608,7 @@
     		var nextVtree = renderComponent(this);
     		vtree.updateTree(nextVtree, node && node.parentNode);
     		this.vtree = nextVtree;
+    		this.node = nextVtree.node;
     		this.componentDidUpdate(props, state);
     		if (isFn(callback)) {
     			callback.call(this);
@@ -785,9 +798,6 @@
     	}
     	vtree.detachRef();
     };
-    var destroyTree = function destroyTree(vtree) {
-    	return vtree.destroyTree();
-    };
     Velem.prototype = new Vtree({
     	constructor: Velem,
     	vtype: VNODE_TYPE.ELEMENT,
@@ -843,6 +853,7 @@
 
     		var children = !isUndefined(props.children) ? props.children : [];
     		var newProps = newVelem.props;
+    		var count = 0;
     		if (!isArr(children)) {
     			children = [children];
     		}
@@ -855,18 +866,11 @@
     			} else {
     				newVchild.initTree(node);
     			}
+    			count += 1;
     		});
-
-    		var newVchildLen = undefined;
-    		if (isUndefined(newProps.children)) {
-    			newVchildLen = 0;
-    		} else if (isArr(newProps.children)) {
-    			newVchildLen = newProps.children.length;
-    		} else {
-    			newVchildLen = 1;
-    		}
-    		if (children.length > newVchildLen) {
-    			eachItem(children.slice(newVchildLen), destroyTree);
+    		while (children.length > count) {
+    			children[count].destroyTree();
+    			count += 1;
     		}
     		this.updateRef(newVelem);
     	}
@@ -910,6 +914,7 @@
 
     		newVtree.renderTree();
     		vtree.updateTree(newVtree.vtree, parentNode);
+    		newVtree.node = newVtree.vtree.node;
     	}
     });
 
@@ -970,6 +975,9 @@
     		var component = this.component;
     		var props = this.props;
 
+    		if (!component) {
+    			return;
+    		}
     		component.shouldComponentUpdate = neverUpdate;
     		component.forceUpdate = noop;
     		this.detachRef();
@@ -993,6 +1001,7 @@
     		component.componentWillReceiveProps(nextProps);
     		updater.isPending = false;
     		updater.emitUpdate(nextProps);
+    		newVtree.node = component.node;
     		this.updateRef(newVtree);
     	}
     });

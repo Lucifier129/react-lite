@@ -97,6 +97,7 @@ const Counter = React.createClass({
 						name="myinput" />
 				</label>
 				<button onClick={ this.getNum }>run</button>
+				<a href="adbadfasdf">test link</a>
 				<p dangerouslySetInnerHTML={{ __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2)}}></p>
 			</div>
 		)

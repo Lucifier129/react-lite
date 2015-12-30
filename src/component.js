@@ -93,6 +93,7 @@ Component.prototype = {
 		let nextVtree = renderComponent(this)
 		vtree.updateTree(nextVtree, node && node.parentNode)
 		this.vtree = nextVtree
+		this.node = nextVtree.node
 		this.componentDidUpdate(props, state)
 		if (_.isFn(callback)) {
 			callback.call(this)
