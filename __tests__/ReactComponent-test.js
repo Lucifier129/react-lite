@@ -313,4 +313,42 @@ describe('ReactComponent', function() {
     //expect(console.error.calls.length).toBe(3);
   });
 
+  // other
+   it('should pass context to children when not owner', function() {
+    var Parent = React.createClass({
+      render: function() {
+        return <Child><Grandchild /></Child>;
+      },
+    });
+
+    var Child = React.createClass({
+      childContextTypes: {
+        foo: React.PropTypes.string,
+      },
+
+      getChildContext: function() {
+        return {
+          foo: 'bar',
+        };
+      },
+
+      render: function() {
+        return React.Children.only(this.props.children);
+      },
+    });
+
+    var Grandchild = React.createClass({
+      contextTypes: {
+        foo: React.PropTypes.string,
+      },
+
+      render: function() {
+        return <div>{this.context.foo}</div>;
+      },
+    });
+
+    var component = ReactTestUtils.renderIntoDocument(<Parent />);
+    expect(ReactDOM.findDOMNode(component).innerHTML).toBe('bar');
+  });
+
 });

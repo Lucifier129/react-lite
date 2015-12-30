@@ -96,6 +96,9 @@
     			return;
     		}
     		mapValue(source, function (value, key) {
+    			if (isUndefined(value)) {
+    				return;
+    			}
     			target[key] = value;
     		});
     	});
@@ -493,22 +496,27 @@
     };
 
     function Updater(instance) {
+    	var _this = this;
+
     	this.instance = instance;
     	this.pendingStates = [];
     	this.pendingCallbacks = [];
     	this.isPending = false;
+    	this.bindClear = function () {
+    		return _this.clearCallbacks();
+    	};
     }
 
     Updater.prototype = {
     	constructor: Updater,
-    	emitUpdate: function emitUpdate(nextProps) {
+    	emitUpdate: function emitUpdate(nextProps, nextContext) {
     		var instance = this.instance;
     		var pendingStates = this.pendingStates;
-    		var pendingCallbacks = this.pendingCallbacks;
+    		var bindClear = this.bindClear;
 
     		if (nextProps || pendingStates.length > 0) {
     			var props = nextProps || instance.props;
-    			shouldUpdate(instance, props, this.getState(), this.clearCallbacks.bind(this));
+    			shouldUpdate(instance, props, this.getState(), nextContext, bindClear);
     		}
     	},
     	addState: function addState(nextState) {
@@ -572,47 +580,56 @@
     		}
     	}
     };
-    function Component(props) {
+    function Component(props, context) {
     	this.$updater = new Updater(this);
     	this.$cache = { isMounted: false };
     	this.props = props;
     	this.state = {};
     	this.refs = {};
+    	this.context = context || {};
     }
 
+    var noop = function noop() {};
     Component.prototype = {
     	constructor: Component,
-    	componentWillUpdate: function componentWillUpdate(nextProps, nextState) {},
-    	componentDidUpdate: function componentDidUpdate(prevProps, prevState) {},
-    	componentWillReceiveProps: function componentWillReceiveProps(nextProps) {},
-    	componentWillMount: function componentWillMount() {},
-    	componentDidMount: function componentDidMount() {},
-    	componentWillUnmount: function componentWillUnmount() {},
+    	getChildContext: noop,
+    	componentWillUpdate: noop,
+    	componentDidUpdate: noop,
+    	componentWillReceiveProps: noop,
+    	componentWillMount: noop,
+    	componentDidMount: noop,
+    	componentWillUnmount: noop,
     	shouldComponentUpdate: function shouldComponentUpdate(nextProps, nextState) {
     		return true;
     	},
     	forceUpdate: function forceUpdate(callback) {
+    		var $updater = this.$updater;
     		var $cache = this.$cache;
     		var props = this.props;
     		var state = this.state;
+    		var context = this.context;
     		var vtree = this.vtree;
     		var node = this.node;
-    		var refs = this.refs;
 
     		var nextProps = $cache.props || props;
     		var nextState = $cache.state || state;
-    		$cache.props = $cache.state = null;
-    		this.componentWillUpdate(nextProps, nextState);
+    		var nextContext = $cache.context || {};
+    		$cache.props = $cache.state = $cache.context = null;
+    		this.componentWillUpdate(nextProps, nextState, nextContext);
     		this.props = nextProps;
     		this.state = nextState;
-    		var nextVtree = renderComponent(this);
+    		this.context = nextContext;
+    		$updater.isPending = true;
+    		var nextVtree = renderComponent(this, $cache.$context);
     		vtree.updateTree(nextVtree, node && node.parentNode);
+    		$updater.isPending = false;
     		this.vtree = nextVtree;
     		this.node = nextVtree.node;
-    		this.componentDidUpdate(props, state);
+    		this.componentDidUpdate(props, state, context);
     		if (isFn(callback)) {
     			callback.call(this);
     		}
+    		$updater.emitUpdate();
     	},
     	setState: function setState(nextState, callback) {
     		var $updater = this.$updater;
@@ -635,18 +652,19 @@
     	}
     };
 
-    var updatePropsAndState = function updatePropsAndState(component, props, state) {
+    var updatePropsAndState = function updatePropsAndState(component, props, state, context) {
     	component.state = state;
     	component.props = props;
+    	component.context = context || {};
     };
 
-    var shouldUpdate = function shouldUpdate(component, nextProps, nextState, callback) {
-    	var shouldUpdate = component.shouldComponentUpdate(nextProps, nextState);
-    	if (shouldUpdate === false) {
-    		updatePropsAndState(component, nextProps, nextState);
+    var shouldUpdate = function shouldUpdate(component, nextProps, nextState, nextContext, callback) {
+    	var shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext);
+    	if (shouldComponentUpdate === false) {
+    		updatePropsAndState(component, nextProps, nextState, nextContext);
     		return;
     	}
-    	updatePropsAndState(component.$cache, nextProps, nextState);
+    	updatePropsAndState(component.$cache, nextProps, nextState, nextContext);
     	component.forceUpdate(callback);
     };
 
@@ -684,13 +702,13 @@
     	extend(this, properties);
     }
 
-    var noop = function noop() {};
+    var noop$1 = function noop() {};
     var getDOMNode = function getDOMNode() {
     	return this;
     };
     Vtree.prototype = {
     	constructor: Vtree,
-    	mapTree: noop,
+    	mapTree: noop$1,
     	attachRef: function attachRef() {
     		var refKey = this.ref;
     		var refs = this.refs;
@@ -762,9 +780,9 @@
     Vtext.prototype = new Vtree({
     	constructor: Vtext,
     	vtype: VNODE_TYPE.TEXT,
-    	attachRef: noop,
-    	detachRef: noop,
-    	updateRef: noop,
+    	attachRef: noop$1,
+    	detachRef: noop$1,
+    	updateRef: noop$1,
     	update: function update(nextVtext) {
     		var node = this.node;
     		var text = this.text;
@@ -790,13 +808,8 @@
     }
 
     var unmountTree = function unmountTree(vtree) {
-    	var vtype = vtree.vtype;
-
-    	if (vtype === VNODE_TYPE.COMPONENT || vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-    		vtree.destroyTree();
-    		return;
-    	}
-    	vtree.detachRef();
+    	var method = isValidComponent(vtree) ? 'destroyTree' : 'detachRef';
+    	vtree[method]();
     };
     Velem.prototype = new Vtree({
     	constructor: Velem,
@@ -852,16 +865,15 @@
     		var props = this.props;
 
     		var children = !isUndefined(props.children) ? props.children : [];
-    		var newProps = newVelem.props;
     		var count = 0;
     		if (!isArr(children)) {
     			children = [children];
     		}
-    		patchProps(node, props, newProps);
+    		patchProps(node, props, newVelem.props);
     		newVelem.node = node;
     		newVelem.eachChildren(function (newVchild, index) {
     			var vchild = children[index];
-    			if (vchild) {
+    			if (vchild && vchild.node) {
     				vchild.updateTree(newVchild, node);
     			} else {
     				newVchild.initTree(node);
@@ -884,21 +896,27 @@
     VstatelessComponent.prototype = new Vtree({
     	constructor: VstatelessComponent,
     	vtype: VNODE_TYPE.STATELESS_COMPONENT,
-    	attachRef: noop,
-    	detachRef: noop,
-    	updateRef: noop,
+    	attachRef: noop$1,
+    	detachRef: noop$1,
+    	updateRef: noop$1,
     	mapTree: function mapTree(iteratee) {
     		iteratee(this);
     	},
     	renderTree: function renderTree() {
     		var factory = this.type;
     		var props = this.props;
+    		var context = this.context;
 
-    		var vtree = factory(props);
+    		var vtree = factory(props, getContext(context, factory.contextTypes));
     		if (vtree && isFn(vtree.render)) {
     			vtree = vtree.render();
     		}
     		this.vtree = getVnode(vtree);
+    		this.vtree.mapTree(function (item) {
+    			if (isValidComponent(item)) {
+    				item.context = context;
+    			}
+    		});
     	},
     	initTree: function initTree(parentNode) {
     		this.renderTree();
@@ -918,9 +936,22 @@
     	}
     });
 
-    var setRefs = noop;
+    var setRefs = noop$1;
     var collectRef = function collectRef(vnode) {
     	setRefs(vnode);
+    };
+    var getContext = function getContext(curContext, contextTypes) {
+    	var context = {};
+    	if (!isObj(contextTypes) || !isObj(curContext)) {
+    		return context;
+    	}
+    	for (var key in contextTypes) {
+    		if (!contextTypes.hasOwnProperty(key)) {
+    			continue;
+    		}
+    		context[key] = curContext[key];
+    	}
+    	return context;
     };
     var bindRefs = function bindRefs(refs) {
     	return function (vnode) {
@@ -929,10 +960,18 @@
     		}
     	};
     };
-    var renderComponent = function renderComponent(component) {
+
+    var renderComponent = function renderComponent(component, context) {
+    	var curContext = component.getChildContext();
+    	curContext = curContext || context;
     	setRefs = bindRefs(component.refs);
     	var vtree = checkVtree(component.render());
-    	setRefs = noop;
+    	setRefs = noop$1;
+    	vtree.mapTree(function (item) {
+    		if (isValidComponent(item)) {
+    			item.context = curContext;
+    		}
+    	});
     	return vtree;
     };
     var neverUpdate = function neverUpdate() {
@@ -953,16 +992,18 @@
     	initTree: function initTree(parentNode) {
     		var Component = this.type;
     		var props = this.props;
+    		var context = this.context;
 
-    		var component = this.component = new Component(props);
+    		var component = this.component = new Component(props, getContext(context, Component.contextTypes));
     		var updater = component.$updater;
     		var cache = component.$cache;
 
+    		cache.$context = context;
     		updater.isPending = true;
     		component.props = component.props || props;
     		component.componentWillMount();
-    		updatePropsAndState(component, component.props, updater.getState());
-    		var vtree = component.vtree = renderComponent(component);
+    		updatePropsAndState(component, component.props, updater.getState(), component.context);
+    		var vtree = component.vtree = renderComponent(component, context);
     		vtree.initTree(parentNode);
     		cache.isMounted = true;
     		component.node = this.node = vtree.node;
@@ -979,12 +1020,12 @@
     			return;
     		}
     		component.shouldComponentUpdate = neverUpdate;
-    		component.forceUpdate = noop;
+    		component.forceUpdate = noop$1;
     		this.detachRef();
     		component.componentWillUnmount();
     		component.vtree.destroyTree();
     		component.$cache.isMounted = false;
-    		this.component = this.node = component.node = component.refs = null;
+    		this.component = this.node = component.node = component.refs = component.context = null;
     	},
     	update: function update(newVtree, parentNode) {
     		var component = this.component;
@@ -994,13 +1035,17 @@
     		}
     		var Component = newVtree.type;
     		var nextProps = newVtree.props;
-
+    		var nextContext = newVtree.context;
     		var updater = component.$updater;
+    		var $cache = component.$cache;
+
+    		var context = getContext(nextContext, Component.contextTypes);
+    		$cache.$context = nextContext;
     		newVtree.component = component;
     		updater.isPending = true;
-    		component.componentWillReceiveProps(nextProps);
+    		component.componentWillReceiveProps(nextProps, context);
     		updater.isPending = false;
-    		updater.emitUpdate(nextProps);
+    		updater.emitUpdate(nextProps, context);
     		newVtree.node = component.node;
     		this.updateRef(newVtree);
     	}
@@ -1020,7 +1065,7 @@
     		case DIFF_TYPE.REPLACE:
     			node = vtree.node;
     			$removeNode = removeNode;
-    			removeNode = noop;
+    			removeNode = noop$1;
     			vtree.destroyTree();
     			removeNode = $removeNode;
     			newVtree.initTree(function (newNode) {
@@ -1077,6 +1122,17 @@
     		throw new Error('component can not render undefined');
     	}
     	return getVnode(vtree);
+    };
+
+    var isValidComponent = function isValidComponent(obj) {
+    	if (obj == null) {
+    		return false;
+    	}
+    	var vtype = obj.vtype;
+    	if (vtype === VNODE_TYPE.COMPONENT || vtype === VNODE_TYPE.STATELESS_COMPONENT) {
+    		return true;
+    	}
+    	return false;
     };
 
     var isValidElement = function isValidElement(obj) {
@@ -1284,6 +1340,9 @@
     	if (isObj(mixin.propTypes)) {
     		extend(Component.propTypes, mixin.propTypes);
     	}
+    	if (isObj(mixin.contextTypes)) {
+    		extend(Component.contextTypes, mixin.contextTypes);
+    	}
     	if (isFn(mixin.getDefaultProps)) {
     		extend(Component.defaultProps, mixin.getDefaultProps());
     	}
@@ -1325,13 +1384,14 @@
     	var specMixins = spec.mixins || [];
     	var mixins = specMixins.concat(spec);
     	spec.mixins = null;
-    	function Klass(props) {
-    		Component.call(this, props);
+    	function Klass(props, context) {
+    		Component.call(this, props, context);
     		this.constructor = Klass;
     		spec.autobind !== false && bindContext(this, Klass.prototype);
     		this.state = this.getInitialState() || this.state;
     	}
     	Klass.displayName = spec.displayName;
+    	Klass.contextTypes = {};
     	Klass.propTypes = {};
     	Klass.defaultProps = {};
     	var proto = Klass.prototype = new Facade();

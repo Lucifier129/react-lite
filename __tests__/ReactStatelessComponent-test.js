@@ -69,44 +69,44 @@ describe('ReactStatelessComponent', function() {
     expect(container.textContent).toBe('');
   });
 
-  // it('should pass context thru stateless component', function() {
-  //   var Child = React.createClass({
-  //     contextTypes: {
-  //       test: React.PropTypes.string.isRequired,
-  //     },
+  it('should pass context thru stateless component', function() {
+    var Child = React.createClass({
+      contextTypes: {
+        test: React.PropTypes.string.isRequired,
+      },
 
-  //     render: function() {
-  //       return <div>{this.context.test}</div>;
-  //     },
-  //   });
+      render: function() {
+        return <div>{this.context.test}</div>;
+      },
+    });
 
-  //   function Parent() {
-  //     return <Child />;
-  //   }
+    function Parent() {
+      return <Child />;
+    }
 
-  //   var GrandParent = React.createClass({
-  //     childContextTypes: {
-  //       test: React.PropTypes.string.isRequired,
-  //     },
+    var GrandParent = React.createClass({
+      childContextTypes: {
+        test: React.PropTypes.string.isRequired,
+      },
 
-  //     getChildContext() {
-  //       return {test: this.props.test};
-  //     },
+      getChildContext() {
+        return {test: this.props.test};
+      },
 
-  //     render: function() {
-  //       return <Parent />;
-  //     },
-  //   });
+      render: function() {
+        return <Parent />;
+      },
+    });
 
-  //   var el = document.createElement('div');
-  //   ReactDOM.render(<GrandParent test="test" />, el);
+    var el = document.createElement('div');
+    ReactDOM.render(<GrandParent test="test" />, el);
 
-  //   expect(el.textContent).toBe('test');
+    expect(el.textContent).toBe('test');
 
-  //   ReactDOM.render(<GrandParent test="mest" />, el);
+    ReactDOM.render(<GrandParent test="mest" />, el);
 
-  //   expect(el.textContent).toBe('mest');
-  // });
+    expect(el.textContent).toBe('mest');
+  });
 
   it('should support module pattern components', function() {
     function Child({test}) {
@@ -181,27 +181,27 @@ describe('ReactStatelessComponent', function() {
     ReactTestUtils.renderIntoDocument(<Child />);
   });
 
-  // it('should receive context', function() {
-  //   var Parent = React.createClass({
-  //     childContextTypes: {
-  //       lang: React.PropTypes.string,
-  //     },
-  //     getChildContext: function() {
-  //       return {lang: 'en'};
-  //     },
-  //     render: function() {
-  //       return <Child />;
-  //     },
-  //   });
-  //   function Child(props, context) {
-  //     return <div>{context.lang}</div>;
-  //   }
-  //   Child.contextTypes = {lang: React.PropTypes.string};
+  it('should receive context', function() {
+    var Parent = React.createClass({
+      childContextTypes: {
+        lang: React.PropTypes.string,
+      },
+      getChildContext: function() {
+        return {lang: 'en'};
+      },
+      render: function() {
+        return <Child />;
+      },
+    });
+    function Child(props, context) {
+      return <div>{context.lang}</div>;
+    }
+    Child.contextTypes = {lang: React.PropTypes.string};
 
-  //   var el = document.createElement('div');
-  //   ReactDOM.render(<Parent />, el);
-  //   expect(el.textContent).toBe('en');
-  // });
+    var el = document.createElement('div');
+    ReactDOM.render(<Parent />, el);
+    expect(el.textContent).toBe('en');
+  });
 
   it('should work with arrow functions', function() {
     // TODO: actually use arrow functions, probably need node v4 and maybe

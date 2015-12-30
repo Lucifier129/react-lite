@@ -305,43 +305,43 @@ describe('ReactMount', function() {
     //ReactMount.getID(container.querySelector('a'));
   });
 
-  // it('passes the correct callback context', function() {
-  //   var container = document.createElement('div');
-  //   var calls = 0;
+  it('passes the correct callback context', function() {
+    var container = document.createElement('div');
+    var calls = 0;
 
-  //   ReactDOM.render(<div />, container, function() {
-  //     expect(this.nodeName).toBe('DIV');
-  //     calls++;
-  //   });
+    ReactDOM.render(<div />, container, function() {
+      expect(this.nodeName).toBe('DIV');
+      calls++;
+    });
 
-  //   // Update, no type change
-  //   ReactDOM.render(<div />, container, function() {
-  //     expect(this.nodeName).toBe('DIV');
-  //     calls++;
-  //   });
+    // Update, no type change
+    ReactDOM.render(<div />, container, function() {
+      expect(this.nodeName).toBe('DIV');
+      calls++;
+    });
 
-  //   // Update, type change
-  //   ReactDOM.render(<span />, container, function() {
-  //     expect(this.nodeName).toBe('SPAN');
-  //     calls++;
-  //   });
+    // Update, type change
+    ReactDOM.render(<span />, container, function() {
+      expect(this.nodeName).toBe('SPAN');
+      calls++;
+    });
 
-  //   // Batched update, no type change
-  //   ReactDOM.unstable_batchedUpdates(function() {
-  //     ReactDOM.render(<span />, container, function() {
-  //       expect(this.nodeName).toBe('SPAN');
-  //       calls++;
-  //     });
-  //   });
+    // // Batched update, no type change
+    // ReactDOM.unstable_batchedUpdates(function() {
+    //   ReactDOM.render(<span />, container, function() {
+    //     expect(this.nodeName).toBe('SPAN');
+    //     calls++;
+    //   });
+    // });
 
-  //   // Batched update, type change
-  //   ReactDOM.unstable_batchedUpdates(function() {
-  //     ReactDOM.render(<article />, container, function() {
-  //       expect(this.nodeName).toBe('ARTICLE');
-  //       calls++;
-  //     });
-  //   });
+    // // Batched update, type change
+    // ReactDOM.unstable_batchedUpdates(function() {
+    //   ReactDOM.render(<article />, container, function() {
+    //     expect(this.nodeName).toBe('ARTICLE');
+    //     calls++;
+    //   });
+    // });
 
-  //   expect(calls).toBe(5);
-  // });
+    // expect(calls).toBe(5);
+  });
 });

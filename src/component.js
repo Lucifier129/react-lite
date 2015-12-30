@@ -7,15 +7,16 @@ function Updater(instance) {
 	this.pendingStates = []
 	this.pendingCallbacks = []
 	this.isPending = false
+	this.bindClear = () => this.clearCallbacks()
 }
 
 Updater.prototype = {
 	constructor: Updater,
-	emitUpdate(nextProps) {
-		let { instance, pendingStates, pendingCallbacks } = this
+	emitUpdate(nextProps, nextContext) {
+		let { instance, pendingStates, bindClear } = this
 		if (nextProps || pendingStates.length > 0) {
 			let props = nextProps || instance.props
-			shouldUpdate(instance, props, this.getState(), this.clearCallbacks.bind(this))
+			shouldUpdate(instance, props, this.getState(), nextContext, bindClear)
 		}
 	},
 	addState(nextState) {
@@ -63,41 +64,49 @@ Updater.prototype = {
 	}
 }
 
-export default function Component(props) {
+export default function Component(props, context) {
 	this.$updater = new Updater(this)
 	this.$cache = { isMounted: false }
 	this.props = props
 	this.state = {}
 	this.refs = {}
+	this.context = context || {}
 }
 
+let noop = () => {}
 Component.prototype = {
 	constructor: Component,
-	componentWillUpdate(nextProps, nextState) {},
-	componentDidUpdate(prevProps, prevState) {},
-	componentWillReceiveProps(nextProps) {},
-	componentWillMount() {},
-	componentDidMount() {},
-	componentWillUnmount() {},
+	getChildContext: noop,
+	componentWillUpdate: noop,
+	componentDidUpdate: noop,
+	componentWillReceiveProps: noop,
+	componentWillMount: noop,
+	componentDidMount: noop,
+	componentWillUnmount: noop,
 	shouldComponentUpdate(nextProps, nextState) {
 		return true
 	},
 	forceUpdate(callback) {
-		let { $cache, props, state, vtree, node, refs } = this
+		let { $updater, $cache, props, state, context, vtree, node } = this
 		let nextProps = $cache.props || props
 		let nextState = $cache.state || state
-		$cache.props = $cache.state = null
-		this.componentWillUpdate(nextProps, nextState)
+		let nextContext = $cache.context || {}
+		$cache.props = $cache.state = $cache.context = null
+		this.componentWillUpdate(nextProps, nextState, nextContext)
 		this.props = nextProps
 		this.state = nextState
-		let nextVtree = renderComponent(this)
+		this.context = nextContext
+		$updater.isPending = true
+		let nextVtree = renderComponent(this, $cache.$context)
 		vtree.updateTree(nextVtree, node && node.parentNode)
+		$updater.isPending = false
 		this.vtree = nextVtree
 		this.node = nextVtree.node
-		this.componentDidUpdate(props, state)
+		this.componentDidUpdate(props, state, context)
 		if (_.isFn(callback)) {
 			callback.call(this)
 		}
+		$updater.emitUpdate()
 	},
 	setState(nextState, callback) {
 		let { $updater } = this
@@ -118,17 +127,18 @@ Component.prototype = {
 	}
 }
 
-export let updatePropsAndState = (component, props, state) => {
+export let updatePropsAndState = (component, props, state, context) => {
 	component.state = state
 	component.props = props
+	component.context = context || {}
 }
 
-export let shouldUpdate = (component, nextProps, nextState, callback) => {
-	let shouldUpdate = component.shouldComponentUpdate(nextProps, nextState)
-	if (shouldUpdate === false) {
-		updatePropsAndState(component, nextProps, nextState)
+export let shouldUpdate = (component, nextProps, nextState, nextContext, callback) => {
+	let shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext)
+	if (shouldComponentUpdate === false) {
+		updatePropsAndState(component, nextProps, nextState, nextContext)
 		return
 	}
-	updatePropsAndState(component.$cache, nextProps, nextState)
+	updatePropsAndState(component.$cache, nextProps, nextState, nextContext)
 	component.forceUpdate(callback)
 }

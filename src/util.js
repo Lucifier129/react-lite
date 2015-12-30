@@ -68,6 +68,9 @@ export let extend = (target, ...args) => {
 			return
 		}
 		mapValue(source, (value, key) => {
+			if (isUndefined(value)) {
+				return
+			}
 			target[key] = value
 		})
 	})

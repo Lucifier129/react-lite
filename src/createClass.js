@@ -29,6 +29,9 @@ let combineMixinToClass = (Component, mixin) => {
 	if (_.isObj(mixin.propTypes)) {
 		_.extend(Component.propTypes, mixin.propTypes)
 	}
+	if (_.isObj(mixin.contextTypes)) {
+		_.extend(Component.contextTypes, mixin.contextTypes)
+	}
 	if (_.isFn(mixin.getDefaultProps)) {
 		_.extend(Component.defaultProps, mixin.getDefaultProps())
 	}
@@ -68,13 +71,14 @@ export let createClass = spec => {
 	let specMixins = spec.mixins || []
 	let mixins = specMixins.concat(spec)
 	spec.mixins = null
-	function Klass(props) {
-		Component.call(this, props)
+	function Klass(props, context) {
+		Component.call(this, props, context)
 		this.constructor = Klass
 		spec.autobind !== false && bindContext(this, Klass.prototype)
 		this.state = this.getInitialState() || this.state
 	}
 	Klass.displayName = spec.displayName
+	Klass.contextTypes = {}
 	Klass.propTypes = {}
 	Klass.defaultProps = {}
 	let proto = Klass.prototype = new Facade()

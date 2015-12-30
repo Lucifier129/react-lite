@@ -109,36 +109,36 @@ describe('ReactES6Class', function() {
     test(<Foo />, 'SPAN', 'bar');
   });
 
-  // it('renders based on context in the constructor', function() {
-  //   class Foo extends React.Component {
-  //     constructor(props, context) {
-  //       super(props, context);
-  //       this.state = {tag: context.tag, className: this.context.className};
-  //     }
-  //     render() {
-  //       var Tag = this.state.tag;
-  //       return <Tag className={this.state.className} />;
-  //     }
-  //   }
-  //   Foo.contextTypes = {
-  //     tag: React.PropTypes.string,
-  //     className: React.PropTypes.string,
-  //   };
+  it('renders based on context in the constructor', function() {
+    class Foo extends React.Component {
+      constructor(props, context) {
+        super(props, context);
+        this.state = {tag: context.tag, className: this.context.className};
+      }
+      render() {
+        var Tag = this.state.tag;
+        return <Tag className={this.state.className} />;
+      }
+    }
+    Foo.contextTypes = {
+      tag: React.PropTypes.string,
+      className: React.PropTypes.string,
+    };
 
-  //   class Outer extends React.Component {
-  //     getChildContext() {
-  //       return {tag: 'span', className: 'foo'};
-  //     }
-  //     render() {
-  //       return <Foo />;
-  //     }
-  //   }
-  //   Outer.childContextTypes = {
-  //     tag: React.PropTypes.string,
-  //     className: React.PropTypes.string,
-  //   };
-  //   test(<Outer />, 'SPAN', 'foo');
-  // });
+    class Outer extends React.Component {
+      getChildContext() {
+        return {tag: 'span', className: 'foo'};
+      }
+      render() {
+        return <Foo />;
+      }
+    }
+    Outer.childContextTypes = {
+      tag: React.PropTypes.string,
+      className: React.PropTypes.string,
+    };
+    test(<Outer />, 'SPAN', 'foo');
+  });
 
   it('renders only once when setting state in componentWillMount', function() {
     var renderCount = 0;
@@ -419,24 +419,24 @@ describe('ReactES6Class', function() {
   //   );
   // });
 
-  // it('supports this.context passed via getChildContext', function() {
-  //   class Bar extends React.Component {
-  //     render() {
-  //       return <div className={this.context.bar} />;
-  //     }
-  //   }
-  //   Bar.contextTypes = {bar: React.PropTypes.string};
-  //   class Foo extends React.Component {
-  //     getChildContext() {
-  //       return {bar: 'bar-through-context'};
-  //     }
-  //     render() {
-  //       return <Bar />;
-  //     }
-  //   }
-  //   Foo.childContextTypes = {bar: React.PropTypes.string};
-  //   test(<Foo />, 'DIV', 'bar-through-context');
-  // });
+  it('supports this.context passed via getChildContext', function() {
+    class Bar extends React.Component {
+      render() {
+        return <div className={this.context.bar} />;
+      }
+    }
+    Bar.contextTypes = {bar: React.PropTypes.string};
+    class Foo extends React.Component {
+      getChildContext() {
+        return {bar: 'bar-through-context'};
+      }
+      render() {
+        return <Bar />;
+      }
+    }
+    Foo.childContextTypes = {bar: React.PropTypes.string};
+    test(<Foo />, 'DIV', 'bar-through-context');
+  });
 
   it('supports classic refs', function() {
     class Foo extends React.Component {
