@@ -6,8 +6,7 @@
   "jsnext:main": "src/index.js",
   "scripts": {
     "test": "jest",
-    "build:lib": "babel src --out-dir lib",
-    "build": "npm run build:lib && node build.js",
+    "build": "node build.js",
     "prepublish": "npm run build"
   },
   "repository": {
