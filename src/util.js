@@ -10,8 +10,6 @@ export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
 export let isStatelessComponent = obj => obj && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
-export let toArray = Array.from || (obj => Array.prototype.slice.call(obj))
-
 export let pipe = (fn1, fn2) => {
 	return function(...args) {
 		fn1.apply(this, args)
@@ -24,7 +22,7 @@ export let forEach = (list, iteratee, record = { index: 0 }) => {
 		let item = list[i]
 		if (isArr(item)) {
 			forEach(item, iteratee, record)
-		} else if (!isUndefined(item)) {
+		} else if (!isUndefined(item) && !isBln(item)) {
 			iteratee(item, record.index)
 			record.index += 1
 		}
@@ -63,24 +61,23 @@ export let mapKey = (sources, iteratee) => {
 }
 
 export let extend = (target, ...args) => {
+	let setProp = (value, key) => {
+		if (isUndefined(value)) {
+			return
+		}
+		target[key] = value
+	}
 	eachItem(args, source => {
 		if (source == null) {
 			return
 		}
-		mapValue(source, (value, key) => {
-			if (isUndefined(value)) {
-				return
-			}
-			target[key] = value
-		})
+		mapValue(source, setProp)
 	})
 	return target
 }
 
 let uid = 0
 export let getUid = () => ++uid
-
-export let hasKey = (obj, key = 'key') => obj && obj.props && (obj.props.hasOwnProperty(key))
 
 let getChildren = children => {
 	if (children && children.length > 0) {

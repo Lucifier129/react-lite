@@ -71,17 +71,7 @@ export let count = children => {
 
 
 let identity = obj => obj
-export let toArray = children => {
-	let mappedChildren = map(children, identity) || []
-	let result = []
-	_.eachItem(mappedChildren, child => {
-		if (child == null || _.isBln(child)) {
-			return
-		}
-		result.push(child)
-	})
-	return result
-}
+export let toArray = children => map(children, identity) || []
 
 let getKey = (child, index) => {
 	let key

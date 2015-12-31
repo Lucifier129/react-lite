@@ -1,7 +1,6 @@
 import * as _ from './util'
 import { renderComponent  } from './virtual-dom'
 
-
 function Updater(instance) {
 	this.instance = instance
 	this.pendingStates = []
@@ -120,7 +119,7 @@ Component.prototype = {
 	},
 	getDOMNode() {
 		let node = this.vtree.node
-		return node.tagName === 'NOSCRIPT' ? null : node
+		return node && (node.tagName === 'NOSCRIPT') ? null : node
 	},
 	isMounted() {
 		return this.$cache.isMounted

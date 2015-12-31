@@ -82,7 +82,7 @@ export let createClass = spec => {
 	Klass.propTypes = {}
 	Klass.defaultProps = {}
 	let proto = Klass.prototype = new Facade()
-	let getInitialStates = proto.$getInitialStates = []
+	proto.$getInitialStates = []
 	eachMixin(mixins, mixin => {
 		combineMixinToProto(proto, mixin)
 		combineMixinToClass(Klass, mixin)

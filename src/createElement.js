@@ -1,6 +1,6 @@
 import * as _ from './util'
 import { VNODE_TYPE } from './constant'
-import { Velem, Vcomponent, VstatelessComponent, collectRef } from './virtual-dom'
+import { Velem, Vcomponent, VstatelessComponent, handleVnodeWithRef } from './virtual-dom'
 
 export let isValidElement = obj => {
 	if (obj == null) {
@@ -22,7 +22,11 @@ export let cloneElement = (originElem, props, ...children) => {
 	return vnode
 }
 
-export let createFactory = type => (...args) => createElement(type, ...args)
+export let createFactory = type => {
+	let factory = (...args) => createElement(type, ...args)
+	factory.type = type
+	return factory
+}
 
 let createElement = (type, props, ...children) => {
 	let Vnode
@@ -55,7 +59,7 @@ let createElement = (type, props, ...children) => {
 	vnode.key = key
 	vnode.ref = ref
 	if (hasRef && Vnode !== VstatelessComponent) {
-		collectRef(vnode)
+		handleVnodeWithRef(vnode)
 	}
 	return vnode
 }

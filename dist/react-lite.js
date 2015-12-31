@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.4
+ * react-lite.js v0.0.5
  * (c) 2015 Jade Gu
  * Released under the MIT License.
  */
@@ -48,7 +48,7 @@
     		var item = list[i];
     		if (isArr(item)) {
     			forEach(item, iteratee, record);
-    		} else if (!isUndefined(item)) {
+    		} else if (!isUndefined(item) && !isBln(item)) {
     			iteratee(item, record.index);
     			record.index += 1;
     		}
@@ -91,16 +91,17 @@
     		args[_key2 - 1] = arguments[_key2];
     	}
 
+    	var setProp = function setProp(value, key) {
+    		if (isUndefined(value)) {
+    			return;
+    		}
+    		target[key] = value;
+    	};
     	eachItem(args, function (source) {
     		if (source == null) {
     			return;
     		}
-    		mapValue(source, function (value, key) {
-    			if (isUndefined(value)) {
-    				return;
-    			}
-    			target[key] = value;
-    		});
+    		mapValue(source, setProp);
     	});
     	return target;
     };
@@ -110,23 +111,18 @@
     	return ++uid;
     };
 
-    var hasKey = function hasKey(obj) {
-    	var key = arguments.length <= 1 || arguments[1] === undefined ? 'key' : arguments[1];
-    	return obj && obj.props && obj.props.hasOwnProperty(key);
-    };
-
-    var getChildren = function getChildren(_x3) {
+    var getChildren = function getChildren(_x2) {
     	var _again = true;
 
     	_function: while (_again) {
-    		var children = _x3;
+    		var children = _x2;
     		_again = false;
 
     		if (children && children.length > 0) {
     			if (children.length === 1) {
     				children = children[0];
     				if (isArr(children)) {
-    					_x3 = children;
+    					_x2 = children;
     					_again = true;
     					continue _function;
     				}
@@ -428,8 +424,7 @@
     	}
     	store[id] = vtree;
 
-    	var result = undefined;
-
+    	var result = null;
     	switch (vtree.vtype) {
     		case VNODE_TYPE.ELEMENT:
     			result = container.firstChild;
@@ -437,8 +432,6 @@
     		case VNODE_TYPE.COMPONENT:
     			result = vtree.component;
     			break;
-    		default:
-    			result = null;
     	}
 
     	if (isFn(callback)) {
@@ -466,9 +459,9 @@
     		return node;
     	}
     	var component = node;
+    	// if component.node equal to false, component must be unmounted
     	if (isFn(component.getDOMNode) && component.node) {
-    		node = component.getDOMNode();
-    		return node;
+    		return component.getDOMNode();
     	}
     	throw new Error('findDOMNode can not find Node');
     };
@@ -645,7 +638,7 @@
     	},
     	getDOMNode: function getDOMNode() {
     		var node = this.vtree.node;
-    		return node.tagName === 'NOSCRIPT' ? null : node;
+    		return node && node.tagName === 'NOSCRIPT' ? null : node;
     	},
     	isMounted: function isMounted() {
     		return this.$cache.isMounted;
@@ -682,14 +675,14 @@
     		case vnode.type !== newVnode.type:
     			type = DIFF_TYPE.REPLACE;
     			break;
-    		case hasKey(newVnode):
-    			if (!hasKey(vnode) || newVnode.props.key !== vnode.props.key) {
+    		case newVnode.key !== null:
+    			if (vnode.key === null || newVnode.key !== vnode.key) {
     				type = DIFF_TYPE.REPLACE;
     			} else {
     				type = DIFF_TYPE.UPDATE;
     			}
     			break;
-    		case hasKey(vnode):
+    		case vnode.key !== null:
     			type = DIFF_TYPE.REPLACE;
     			break;
     		default:
@@ -720,6 +713,7 @@
     		var refValue = undefined;
     		if (vtype === VNODE_TYPE.ELEMENT) {
     			refValue = this.node;
+    			// support react v0.13 style: this.refs.myInput.getDOMNode()
     			refValue.getDOMNode = getDOMNode;
     		} else if (vtype === VNODE_TYPE.COMPONENT) {
     			refValue = this.component;
@@ -769,7 +763,7 @@
     		}
     	},
     	updateTree: function updateTree(nextVtree, parentNode) {
-    		_updateTree(this, nextVtree, parentNode);
+    		compareTwoTree(this, nextVtree, parentNode);
     	}
     };
 
@@ -780,9 +774,6 @@
     Vtext.prototype = new Vtree({
     	constructor: Vtext,
     	vtype: VNODE_TYPE.TEXT,
-    	attachRef: noop$1,
-    	detachRef: noop$1,
-    	updateRef: noop$1,
     	update: function update(nextVtext) {
     		var node = this.node;
     		var text = this.text;
@@ -790,6 +781,7 @@
     		if (nextVtext.text !== text) {
     			node.replaceData(0, node.length, nextVtext.text);
     		}
+    		// deliver node to the newTree for next updating
     		nextVtext.node = this.node;
     		return this;
     	},
@@ -822,6 +814,7 @@
     			eachItem(children, iteratee);
     			return;
     		}
+    		// the default children often be nesting array, so then here make it flat
     		if (isArr(children)) {
     			var newChildren = [];
     			forEach$1(children, function (vchild, index) {
@@ -854,11 +847,8 @@
     		this.attachRef();
     	},
     	destroyTree: function destroyTree() {
-    		var node = this.node;
-    		var props = this.props;
-
     		this.mapTree(unmountTree);
-    		removeNode(node);
+    		removeNode(this.node);
     	},
     	update: function update(newVelem) {
     		var node = this.node;
@@ -873,13 +863,14 @@
     		newVelem.node = node;
     		newVelem.eachChildren(function (newVchild, index) {
     			var vchild = children[index];
-    			if (vchild && vchild.node) {
+    			if (vchild) {
     				vchild.updateTree(newVchild, node);
     			} else {
     				newVchild.initTree(node);
     			}
     			count += 1;
     		});
+    		// destroy old children not in the newChildren
     		while (children.length > count) {
     			children[count].destroyTree();
     			count += 1;
@@ -896,9 +887,6 @@
     VstatelessComponent.prototype = new Vtree({
     	constructor: VstatelessComponent,
     	vtype: VNODE_TYPE.STATELESS_COMPONENT,
-    	attachRef: noop$1,
-    	detachRef: noop$1,
-    	updateRef: noop$1,
     	mapTree: function mapTree(iteratee) {
     		iteratee(this);
     	},
@@ -907,16 +895,12 @@
     		var props = this.props;
     		var context = this.context;
 
-    		var vtree = factory(props, getContext(context, factory.contextTypes));
+    		var vtree = factory(props, getContextByTypes(context, factory.contextTypes));
     		if (vtree && isFn(vtree.render)) {
     			vtree = vtree.render();
     		}
     		this.vtree = getVnode(vtree);
-    		this.vtree.mapTree(function (item) {
-    			if (isValidComponent(item)) {
-    				item.context = context;
-    			}
-    		});
+    		setContext(context, this.vtree);
     	},
     	initTree: function initTree(parentNode) {
     		this.renderTree();
@@ -928,30 +912,32 @@
     		this.node = this.vtree = null;
     	},
     	update: function update(newVtree, parentNode) {
-    		var vtree = this.vtree;
-
     		newVtree.renderTree();
-    		vtree.updateTree(newVtree.vtree, parentNode);
+    		this.vtree.updateTree(newVtree.vtree, parentNode);
     		newVtree.node = newVtree.vtree.node;
     	}
     });
 
     var setRefs = noop$1;
-    var collectRef = function collectRef(vnode) {
+    var handleVnodeWithRef = function handleVnodeWithRef(vnode) {
     	setRefs(vnode);
     };
-    var getContext = function getContext(curContext, contextTypes) {
+    var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
     	var context = {};
     	if (!isObj(contextTypes) || !isObj(curContext)) {
     		return context;
     	}
-    	for (var key in contextTypes) {
-    		if (!contextTypes.hasOwnProperty(key)) {
-    			continue;
-    		}
+    	mapValue(contextTypes, function (_, key) {
     		context[key] = curContext[key];
-    	}
+    	});
     	return context;
+    };
+    var setContext = function setContext(context, vtree) {
+    	return vtree.mapTree(function (item) {
+    		if (isValidComponent(item)) {
+    			item.context = context;
+    		}
+    	});
     };
     var bindRefs = function bindRefs(refs) {
     	return function (vnode) {
@@ -963,15 +949,11 @@
 
     var renderComponent = function renderComponent(component, context) {
     	var curContext = component.getChildContext();
-    	curContext = curContext || context;
+    	curContext = extend({}, context, curContext);
     	setRefs = bindRefs(component.refs);
     	var vtree = checkVtree(component.render());
     	setRefs = noop$1;
-    	vtree.mapTree(function (item) {
-    		if (isValidComponent(item)) {
-    			item.context = curContext;
-    		}
-    	});
+    	setContext(curContext, vtree);
     	return vtree;
     };
     var neverUpdate = function neverUpdate() {
@@ -994,7 +976,7 @@
     		var props = this.props;
     		var context = this.context;
 
-    		var component = this.component = new Component(props, getContext(context, Component.contextTypes));
+    		var component = this.component = new Component(props, getContextByTypes(context, Component.contextTypes));
     		var updater = component.$updater;
     		var cache = component.$cache;
 
@@ -1014,13 +996,12 @@
     	},
     	destroyTree: function destroyTree() {
     		var component = this.component;
-    		var props = this.props;
 
     		if (!component) {
     			return;
     		}
     		component.shouldComponentUpdate = neverUpdate;
-    		component.forceUpdate = noop$1;
+    		component.forceUpdate = component.setState = noop$1;
     		this.detachRef();
     		component.componentWillUnmount();
     		component.vtree.destroyTree();
@@ -1039,19 +1020,19 @@
     		var updater = component.$updater;
     		var $cache = component.$cache;
 
-    		var context = getContext(nextContext, Component.contextTypes);
+    		var context = getContextByTypes(nextContext, Component.contextTypes);
     		$cache.$context = nextContext;
-    		newVtree.component = component;
     		updater.isPending = true;
     		component.componentWillReceiveProps(nextProps, context);
     		updater.isPending = false;
     		updater.emitUpdate(nextProps, context);
+    		newVtree.component = component;
     		newVtree.node = component.node;
     		this.updateRef(newVtree);
     	}
     });
 
-    var _updateTree = function _updateTree(vtree, newVtree, parentNode) {
+    var compareTwoTree = function compareTwoTree(vtree, newVtree, parentNode) {
     	var diffType = diff(vtree, newVtree);
     	var $removeNode = undefined;
     	var node = undefined;
@@ -1064,6 +1045,7 @@
     			break;
     		case DIFF_TYPE.REPLACE:
     			node = vtree.node;
+    			// don't remove the existNode for replacing
     			$removeNode = removeNode;
     			removeNode = noop$1;
     			vtree.destroyTree();
@@ -1085,6 +1067,7 @@
     };
     var appendNode = function appendNode(parentNode, node) {
     	if (parentNode && node) {
+    		// for replace node
     		if (isFn(parentNode)) {
     			parentNode(node);
     		} else {
@@ -1109,7 +1092,7 @@
     };
 
     var getVnode = function getVnode(vnode) {
-    	if (vnode === null || vnode === false) {
+    	if (vnode === null) {
     		vnode = new Velem('noscript', {});
     	} else if (!isObj(vnode)) {
     		vnode = new Vtext(vnode);
@@ -1160,13 +1143,15 @@
     };
 
     var createFactory = function createFactory(type) {
-    	return function () {
+    	var factory = function factory() {
     		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
     			args[_key2] = arguments[_key2];
     		}
 
     		return createElement.apply(undefined, [type].concat(args));
     	};
+    	factory.type = type;
+    	return factory;
     };
 
     var createElement = function createElement(type, props) {
@@ -1204,7 +1189,7 @@
     	vnode.key = key;
     	vnode.ref = ref;
     	if (hasRef && Vnode !== VstatelessComponent) {
-    		collectRef(vnode);
+    		handleVnodeWithRef(vnode);
     	}
     	return vnode;
     };
@@ -1286,15 +1271,7 @@
     	return obj;
     };
     var toArray = function toArray(children) {
-    	var mappedChildren = map(children, identity) || [];
-    	var result = [];
-    	eachItem(mappedChildren, function (child) {
-    		if (child == null || isBln(child)) {
-    			return;
-    		}
-    		result.push(child);
-    	});
-    	return result;
+    	return map(children, identity) || [];
     };
 
     var getKey = function getKey(child, index) {
@@ -1395,7 +1372,7 @@
     	Klass.propTypes = {};
     	Klass.defaultProps = {};
     	var proto = Klass.prototype = new Facade();
-    	var getInitialStates = proto.$getInitialStates = [];
+    	proto.$getInitialStates = [];
     	eachMixin(mixins, function (mixin) {
     		combineMixinToProto(proto, mixin);
     		combineMixinToClass(Klass, mixin);

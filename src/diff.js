@@ -15,14 +15,14 @@ let diff = (vnode, newVnode) => {
 		case vnode.type !== newVnode.type:
 			type = DIFF_TYPE.REPLACE
 			break
-		case _.hasKey(newVnode):
-			if (!_.hasKey(vnode) || newVnode.props.key !== vnode.props.key) {
+		case newVnode.key !== null:
+			if (vnode.key === null || newVnode.key !== vnode.key) {
 				type = DIFF_TYPE.REPLACE
 			} else {
 				type = DIFF_TYPE.UPDATE
 			}
 			break
-		case _.hasKey(vnode):
+		case vnode.key !== null:
 			type = DIFF_TYPE.REPLACE
 			break
 		default:

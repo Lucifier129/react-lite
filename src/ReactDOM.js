@@ -16,8 +16,7 @@ export let render = (vtree, container, callback) => {
 	}
 	store[id] = vtree
 
-	let result
-
+	let result = null
 	switch (vtree.vtype) {
 		case VNODE_TYPE.ELEMENT:
 			result = container.firstChild
@@ -25,8 +24,6 @@ export let render = (vtree, container, callback) => {
 		case VNODE_TYPE.COMPONENT:
 			result = vtree.component
 			break
-		default:
-			result = null
 	}
 
 	if (_.isFn(callback)) {
@@ -54,9 +51,9 @@ export let findDOMNode = node => {
 		return node
 	}
 	let component = node
+	// if component.node equal to false, component must be unmounted
 	if (_.isFn(component.getDOMNode) && component.node) {
-		node = component.getDOMNode()
-		return  node
+		return component.getDOMNode()
 	}
 	throw new Error('findDOMNode can not find Node')
 }
