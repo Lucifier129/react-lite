@@ -25,6 +25,10 @@ you can install react-lite from npm
 npm install --save react-lite
 ```
 
+## documentation
+
+you can learn react-lite from [React official documentation](http://facebook.github.io/react/)
+
 ## what can react-lite do?
 
 just the same as what react does, see some demos below(I just add the alias to webpack.config.js, no need to do anything else):
@@ -40,6 +44,15 @@ just the same as what react does, see some demos below(I just add the alias to w
 - js-repaint-perf(which is faster?):
 	* [react](https://cdn.rawgit.com/Lucifier129/react-lite/master/examples/js-repaint-perf/react/index.html)
 	* [react-lite](https://cdn.rawgit.com/Lucifier129/react-lite/master/examples/js-repaint-perf/react/lite.html)
+
+## react-lite vs react
+
+via react-lite:
+- virtual-dom can not render to string(no React.renderToString and React.renderToStaticMarkup)
+- event system is base on DOM level1(dom.onclick = handleClick)
+- all of React.PropTypes method is noop(empty function)
+- Do not support React-addons(for example ReactCSSTransitionGroup)
+- use React in server side rendering, and use React-lite in browser
 
 ## test
 react-lite reuses react's unitest(155), you can see them in `__test__`, and run the tests with:
