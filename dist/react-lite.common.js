@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.6
+ * react-lite.js v0.0.7
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -140,12 +140,6 @@ var mergeProps = function mergeProps(props, children, defaultProps) {
 	return result;
 };
 
-var setAttr = function setAttr(elem, key, value) {
-	elem.setAttribute(key, value);
-};
-var getAttr = function getAttr(elem, key) {
-	return elem.getAttribute(key);
-};
 var removeAttr = function removeAttr(elem, key) {
 	elem.removeAttribute(key);
 };
@@ -173,6 +167,11 @@ var removeEvent = function removeEvent(elem, key) {
 	if (key === 'onchange') {
 		elem.oninput = null;
 	}
+};
+
+var onlyGetter = {
+	TEXTAREA: 'type',
+	SELECT: 'type'
 };
 
 var ignoreKeys = {
@@ -207,6 +206,9 @@ var setProp = function setProp(elem, key, value) {
 			value && isStr(value.__html) && (elem.innerHTML = value.__html);
 			break;
 		case key in elem:
+			if (onlyGetter[elem.nodeName] === key) {
+				return;
+			}
 			elem[key] = value;
 			break;
 		default:
@@ -405,7 +407,7 @@ var DIFF_TYPE = {
 	UPDATE: 4
 };
 
-var COMPONENT_ID = 'data-liteid';
+var COMPONENT_ID = 'liteid';
 
 function Updater(instance) {
 	var _this = this;
@@ -1055,86 +1057,6 @@ var isValidComponent = function isValidComponent(obj) {
 	return false;
 };
 
-var store = {};
-var render = function render(vtree, container, callback) {
-	if (!vtree) {
-		throw new Error('cannot render ' + vtree + ' to container');
-	}
-	var id = getAttr(container, COMPONENT_ID);
-	if (store.hasOwnProperty(id)) {
-		store[id].updateTree(vtree, container);
-	} else {
-		setAttr(container, COMPONENT_ID, id = getUid());
-		container.innerHTML = '';
-		vtree.initTree(container);
-	}
-	store[id] = vtree;
-	clearDidMount();
-
-	var result = null;
-	switch (vtree.vtype) {
-		case VNODE_TYPE.ELEMENT:
-			result = container.firstChild;
-			break;
-		case VNODE_TYPE.COMPONENT:
-			result = vtree.component;
-			break;
-	}
-
-	if (isFn(callback)) {
-		callback.call(result);
-	}
-
-	return result;
-};
-
-var unmountComponentAtNode = function unmountComponentAtNode(container) {
-	var id = getAttr(container, COMPONENT_ID);
-	if (store.hasOwnProperty(id)) {
-		store[id].destroyTree();
-		delete store[id];
-		return true;
-	}
-	return false;
-};
-
-var findDOMNode = function findDOMNode(node) {
-	if (node == null) {
-		return null;
-	}
-	if (node.nodeName) {
-		return node;
-	}
-	var component = node;
-	// if component.node equal to false, component must be unmounted
-	if (isFn(component.getDOMNode) && component.node) {
-		return component.getDOMNode();
-	}
-	throw new Error('findDOMNode can not find Node');
-};
-
-var check = function check() {
-    return check;
-};
-check.isRequired = check;
-var PropTypes = {
-    "array": check,
-    "bool": check,
-    "func": check,
-    "number": check,
-    "object": check,
-    "string": check,
-    "any": check,
-    "arrayOf": check,
-    "element": check,
-    "instanceOf": check,
-    "node": check,
-    "objectOf": check,
-    "oneOf": check,
-    "oneOfType": check,
-    "shape": check
-};
-
 var isValidElement = function isValidElement(obj) {
 	if (obj == null) {
 		return false;
@@ -1209,6 +1131,99 @@ var createElement = function createElement(type, props) {
 		handleVnodeWithRef(vnode);
 	}
 	return vnode;
+};
+
+var nodeNames = ["a", "abbr", "address", "area", "article", "aside", "audio", "b", "base", "bdi", "bdo", "big", "blockquote", "body", "br", "button", "canvas", "caption", "cite", "code", "col", "colgroup", "data", "datalist", "dd", "del", "details", "dfn", "dialog", "div", "dl", "dt", "em", "embed", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hgroup", "hr", "html", "i", "iframe", "img", "input", "ins", "kbd", "keygen", "label", "legend", "li", "link", "main", "map", "mark", "menu", "menuitem", "meta", "meter", "nav", "noscript", "object", "ol", "optgroup", "option", "output", "p", "param", "picture", "pre", "progress", "q", "rp", "rt", "ruby", "s", "samp", "script", "section", "select", "small", "source", "span", "strong", "style", "sub", "summary", "sup", "table", "tbody", "td", "textarea", "tfoot", "th", "thead", "time", "title", "tr", "track", "u", "ul", "var", "video", "wbr", "circle", "clipPath", "defs", "ellipse", "g", "image", "line", "linearGradient", "mask", "path", "pattern", "polygon", "polyline", "radialGradient", "rect", "stop", "svg", "text", "tspan"];
+var DOM = {};
+eachItem(nodeNames, function (nodeName) {
+	DOM[nodeName] = createFactory(nodeName);
+});
+
+var store = {};
+var render = function render(vtree, container, callback) {
+	if (!vtree) {
+		throw new Error('cannot render ' + vtree + ' to container');
+	}
+	var id = container[COMPONENT_ID];
+	if (store.hasOwnProperty(id)) {
+		store[id].updateTree(vtree, container);
+	} else {
+		container[COMPONENT_ID] = id = getUid();
+		container.innerHTML = '';
+		vtree.initTree(container);
+	}
+	store[id] = vtree;
+	clearDidMount();
+
+	var result = null;
+	switch (vtree.vtype) {
+		case VNODE_TYPE.ELEMENT:
+			result = vtree.node;
+			break;
+		case VNODE_TYPE.COMPONENT:
+			result = vtree.component;
+			break;
+	}
+
+	if (isFn(callback)) {
+		callback.call(result);
+	}
+
+	return result;
+};
+
+var unmountComponentAtNode = function unmountComponentAtNode(container) {
+	if (!container.nodeName) {
+		throw new Error('expect node');
+	}
+	var id = container[COMPONENT_ID];
+	if (store.hasOwnProperty(id)) {
+		store[id].destroyTree();
+		delete store[id];
+		return true;
+	}
+	return false;
+};
+
+var findDOMNode = function findDOMNode(node) {
+	if (node == null) {
+		return null;
+	}
+	if (node.nodeName) {
+		return node;
+	}
+	var component = node;
+	// if component.node equal to false, component must be unmounted
+	if (isFn(component.getDOMNode) && component.node) {
+		return component.getDOMNode();
+	}
+	throw new Error('findDOMNode can not find Node');
+};
+
+var unstable_renderSubtreeIntoContainer = function unstable_renderSubtreeIntoContainer(parentComponent, nextElement, container, callback) {
+	return render(nextElement, container, callback);
+};
+
+var check = function check() {
+    return check;
+};
+check.isRequired = check;
+var PropTypes = {
+    "array": check,
+    "bool": check,
+    "func": check,
+    "number": check,
+    "object": check,
+    "string": check,
+    "any": check,
+    "arrayOf": check,
+    "element": check,
+    "instanceOf": check,
+    "node": check,
+    "objectOf": check,
+    "oneOf": check,
+    "oneOfType": check,
+    "shape": check
 };
 
 var only = function only(children) {
@@ -1400,6 +1415,7 @@ var createClass = function createClass(spec) {
 };
 
 var React = {
+    version: '0.14.4',
     cloneElement: cloneElement,
     isValidElement: isValidElement,
     createElement: createElement,
@@ -1410,13 +1426,16 @@ var React = {
     PropTypes: PropTypes,
     render: render,
     findDOMNode: findDOMNode,
-    unmountComponentAtNode: unmountComponentAtNode
+    unmountComponentAtNode: unmountComponentAtNode,
+    unstable_renderSubtreeIntoContainer: unstable_renderSubtreeIntoContainer,
+    DOM: DOM
 };
 
 React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
     render: render,
     findDOMNode: findDOMNode,
-    unmountComponentAtNode: unmountComponentAtNode
+    unmountComponentAtNode: unmountComponentAtNode,
+    unstable_renderSubtreeIntoContainer: unstable_renderSubtreeIntoContainer
 };
 
 module.exports = React;

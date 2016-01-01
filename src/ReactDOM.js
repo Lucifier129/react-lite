@@ -7,11 +7,11 @@ export let render = (vtree, container, callback) => {
 	if (!vtree) {
 		throw new Error(`cannot render ${ vtree } to container`)
 	}
-	let id = _.getAttr(container, COMPONENT_ID)
+	let id = container[COMPONENT_ID]
 	if (store.hasOwnProperty(id)) {
 		store[id].updateTree(vtree, container)
 	} else {
-		_.setAttr(container, COMPONENT_ID, id = _.getUid())
+		container[COMPONENT_ID] = id = _.getUid()
 		container.innerHTML = ''
 		vtree.initTree(container)
 	}
@@ -21,7 +21,7 @@ export let render = (vtree, container, callback) => {
 	let result = null
 	switch (vtree.vtype) {
 		case VNODE_TYPE.ELEMENT:
-			result = container.firstChild
+			result = vtree.node
 			break
 		case VNODE_TYPE.COMPONENT:
 			result = vtree.component
@@ -36,7 +36,10 @@ export let render = (vtree, container, callback) => {
 }
 
 export let unmountComponentAtNode = container => {
-	let id = _.getAttr(container, COMPONENT_ID)
+	if (!container.nodeName) {
+		throw new Error('expect node')
+	}
+	let id = container[COMPONENT_ID]
 	if (store.hasOwnProperty(id)) {
 		store[id].destroyTree()
 		delete store[id]
@@ -58,4 +61,8 @@ export let findDOMNode = node => {
 		return component.getDOMNode()
 	}
 	throw new Error('findDOMNode can not find Node')
+}
+
+export let unstable_renderSubtreeIntoContainer = (parentComponent, nextElement, container, callback) => {
+	return render(nextElement, container, callback)
 }

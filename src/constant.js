@@ -11,4 +11,4 @@ export let DIFF_TYPE = {
 	UPDATE: 4
 }
 
-export let COMPONENT_ID = 'data-liteid'
+export let COMPONENT_ID = 'liteid'

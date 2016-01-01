@@ -138,6 +138,11 @@ export let removeEvent = (elem, key) => {
 	}
 }
 
+let onlyGetter = {
+	TEXTAREA: 'type',
+	SELECT: 'type'
+}
+
 let ignoreKeys = {
 	key: true,
 	ref: true,
@@ -162,6 +167,9 @@ export let setProp = (elem, key, value) => {
 			value && isStr(value.__html) && (elem.innerHTML = value.__html)
 			break
 		case key in elem:
+			if (onlyGetter[elem.nodeName] === key) {
+				return
+			}
 			elem[key] = value
 			break
 		default:
