@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { renderComponent  } from './virtual-dom'
+import { renderComponent, clearDidMount  } from './virtual-dom'
 
 function Updater(instance) {
 	this.instance = instance
@@ -72,7 +72,7 @@ export default function Component(props, context) {
 	this.context = context || {}
 }
 
-let noop = () => {}
+let noop = _.noop
 Component.prototype = {
 	constructor: Component,
 	getChildContext: noop,
@@ -87,6 +87,7 @@ Component.prototype = {
 	},
 	forceUpdate(callback) {
 		let { $updater, $cache, props, state, context, vtree, node } = this
+		if ($updater.isPending) { return }
 		let nextProps = $cache.props || props
 		let nextState = $cache.state || state
 		let nextContext = $cache.context || {}
@@ -98,6 +99,7 @@ Component.prototype = {
 		$updater.isPending = true
 		let nextVtree = renderComponent(this, $cache.$context)
 		vtree.updateTree(nextVtree, node && node.parentNode)
+		clearDidMount()
 		$updater.isPending = false
 		this.vtree = nextVtree
 		this.node = nextVtree.node

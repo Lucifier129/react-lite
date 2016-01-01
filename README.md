@@ -13,7 +13,8 @@ If you are using webpack, it's so easy to use react-lite, just config alias in w
 // webpack.config.js
 {
 	alias: {
-		react: 'react-lite'
+		'react': 'react-lite',
+		'react-dom': 'react-lite'
 	}
 }
 ```
@@ -53,6 +54,9 @@ via react-lite:
 - all of React.PropTypes method is noop(empty function)
 - Do not support React-addons(for example ReactCSSTransitionGroup)
 - use React in server side rendering, and use React-lite in browser
+- the rule about setting props
+	* if `propName in dom` is `true` then `dom[propName]=propValue`
+	* else: `dom.setAttribute(propName, propValue)`
 
 ## test
 react-lite reuses react's unitest(155), you can see them in `__test__`, and run the tests with:

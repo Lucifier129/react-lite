@@ -1,6 +1,6 @@
 /*!
- * react-lite.js v0.0.5
- * (c) 2015 Jade Gu
+ * react-lite.js v0.0.6
+ * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
 'use strict';
@@ -25,6 +25,8 @@ var isComponent = function isComponent(obj) {
 var isStatelessComponent = function isStatelessComponent(obj) {
 	return obj && (!obj.prototype || !('forceUpdate' in obj.prototype));
 };
+
+var noop$1 = function noop() {};
 
 var pipe = function pipe(fn1, fn2) {
 	return function () {
@@ -405,85 +407,6 @@ var DIFF_TYPE = {
 
 var COMPONENT_ID = 'data-liteid';
 
-var store = {};
-var render = function render(vtree, container, callback) {
-	if (!vtree) {
-		throw new Error('cannot render ' + vtree + ' to container');
-	}
-	var id = getAttr(container, COMPONENT_ID);
-	if (store.hasOwnProperty(id)) {
-		store[id].updateTree(vtree, container);
-	} else {
-		setAttr(container, COMPONENT_ID, id = getUid());
-		container.innerHTML = '';
-		vtree.initTree(container);
-	}
-	store[id] = vtree;
-
-	var result = null;
-	switch (vtree.vtype) {
-		case VNODE_TYPE.ELEMENT:
-			result = container.firstChild;
-			break;
-		case VNODE_TYPE.COMPONENT:
-			result = vtree.component;
-			break;
-	}
-
-	if (isFn(callback)) {
-		callback.call(result);
-	}
-
-	return result;
-};
-
-var unmountComponentAtNode = function unmountComponentAtNode(container) {
-	var id = getAttr(container, COMPONENT_ID);
-	if (store.hasOwnProperty(id)) {
-		store[id].destroyTree();
-		delete store[id];
-		return true;
-	}
-	return false;
-};
-
-var findDOMNode = function findDOMNode(node) {
-	if (node == null) {
-		return null;
-	}
-	if (node.nodeName) {
-		return node;
-	}
-	var component = node;
-	// if component.node equal to false, component must be unmounted
-	if (isFn(component.getDOMNode) && component.node) {
-		return component.getDOMNode();
-	}
-	throw new Error('findDOMNode can not find Node');
-};
-
-var check = function check() {
-    return check;
-};
-check.isRequired = check;
-var PropTypes = {
-    "array": check,
-    "bool": check,
-    "func": check,
-    "number": check,
-    "object": check,
-    "string": check,
-    "any": check,
-    "arrayOf": check,
-    "element": check,
-    "instanceOf": check,
-    "node": check,
-    "objectOf": check,
-    "oneOf": check,
-    "oneOfType": check,
-    "shape": check
-};
-
 function Updater(instance) {
 	var _this = this;
 
@@ -578,7 +501,7 @@ function Component(props, context) {
 	this.context = context || {};
 }
 
-var noop = function noop() {};
+var noop = noop$1;
 Component.prototype = {
 	constructor: Component,
 	getChildContext: noop,
@@ -600,6 +523,9 @@ Component.prototype = {
 		var vtree = this.vtree;
 		var node = this.node;
 
+		if ($updater.isPending) {
+			return;
+		}
 		var nextProps = $cache.props || props;
 		var nextState = $cache.state || state;
 		var nextContext = $cache.context || {};
@@ -611,6 +537,7 @@ Component.prototype = {
 		$updater.isPending = true;
 		var nextVtree = renderComponent(this, $cache.$context);
 		vtree.updateTree(nextVtree, node && node.parentNode);
+		clearDidMount();
 		$updater.isPending = false;
 		this.vtree = nextVtree;
 		this.node = nextVtree.node;
@@ -691,13 +618,13 @@ function Vtree(properties) {
 	extend(this, properties);
 }
 
-var noop$1 = function noop() {};
+var noop$2 = noop$1;
 var getDOMNode = function getDOMNode() {
 	return this;
 };
 Vtree.prototype = {
 	constructor: Vtree,
-	mapTree: noop$1,
+	mapTree: noop$2,
 	attachRef: function attachRef() {
 		var refKey = this.ref;
 		var refs = this.refs;
@@ -914,7 +841,7 @@ VstatelessComponent.prototype = new Vtree({
 	}
 });
 
-var setRefs = noop$1;
+var setRefs = noop$2;
 var handleVnodeWithRef = function handleVnodeWithRef(vnode) {
 	setRefs(vnode);
 };
@@ -948,14 +875,22 @@ var renderComponent = function renderComponent(component, context) {
 	curContext = extend({}, context, curContext);
 	setRefs = bindRefs(component.refs);
 	var vtree = checkVtree(component.render());
-	setRefs = noop$1;
+	setRefs = noop$2;
 	setContext(curContext, vtree);
 	return vtree;
 };
 var neverUpdate = function neverUpdate() {
 	return false;
 };
-
+var didMountComponents = [];
+var callDidMount = function callDidMount(obj) {
+	return obj.didMount();
+};
+var clearDidMount = function clearDidMount() {
+	var components = didMountComponents;
+	didMountComponents = [];
+	eachItem(components, callDidMount);
+};
 function Vcomponent(type, props) {
 	this.type = type;
 	this.props = props;
@@ -985,6 +920,12 @@ Vcomponent.prototype = new Vtree({
 		vtree.initTree(parentNode);
 		cache.isMounted = true;
 		component.node = this.node = vtree.node;
+		didMountComponents.push(this);
+	},
+	didMount: function didMount() {
+		var component = this.component;
+
+		var updater = component.$updater;
 		component.componentDidMount();
 		updater.isPending = false;
 		this.attachRef();
@@ -997,7 +938,7 @@ Vcomponent.prototype = new Vtree({
 			return;
 		}
 		component.shouldComponentUpdate = neverUpdate;
-		component.forceUpdate = component.setState = noop$1;
+		component.forceUpdate = component.setState = noop$2;
 		this.detachRef();
 		component.componentWillUnmount();
 		component.vtree.destroyTree();
@@ -1043,7 +984,7 @@ var compareTwoTree = function compareTwoTree(vtree, newVtree, parentNode) {
 			node = vtree.node;
 			// don't remove the existNode for replacing
 			$removeNode = removeNode;
-			removeNode = noop$1;
+			removeNode = noop$2;
 			vtree.destroyTree();
 			removeNode = $removeNode;
 			newVtree.initTree(function (newNode) {
@@ -1112,6 +1053,86 @@ var isValidComponent = function isValidComponent(obj) {
 		return true;
 	}
 	return false;
+};
+
+var store = {};
+var render = function render(vtree, container, callback) {
+	if (!vtree) {
+		throw new Error('cannot render ' + vtree + ' to container');
+	}
+	var id = getAttr(container, COMPONENT_ID);
+	if (store.hasOwnProperty(id)) {
+		store[id].updateTree(vtree, container);
+	} else {
+		setAttr(container, COMPONENT_ID, id = getUid());
+		container.innerHTML = '';
+		vtree.initTree(container);
+	}
+	store[id] = vtree;
+	clearDidMount();
+
+	var result = null;
+	switch (vtree.vtype) {
+		case VNODE_TYPE.ELEMENT:
+			result = container.firstChild;
+			break;
+		case VNODE_TYPE.COMPONENT:
+			result = vtree.component;
+			break;
+	}
+
+	if (isFn(callback)) {
+		callback.call(result);
+	}
+
+	return result;
+};
+
+var unmountComponentAtNode = function unmountComponentAtNode(container) {
+	var id = getAttr(container, COMPONENT_ID);
+	if (store.hasOwnProperty(id)) {
+		store[id].destroyTree();
+		delete store[id];
+		return true;
+	}
+	return false;
+};
+
+var findDOMNode = function findDOMNode(node) {
+	if (node == null) {
+		return null;
+	}
+	if (node.nodeName) {
+		return node;
+	}
+	var component = node;
+	// if component.node equal to false, component must be unmounted
+	if (isFn(component.getDOMNode) && component.node) {
+		return component.getDOMNode();
+	}
+	throw new Error('findDOMNode can not find Node');
+};
+
+var check = function check() {
+    return check;
+};
+check.isRequired = check;
+var PropTypes = {
+    "array": check,
+    "bool": check,
+    "func": check,
+    "number": check,
+    "object": check,
+    "string": check,
+    "any": check,
+    "arrayOf": check,
+    "element": check,
+    "instanceOf": check,
+    "node": check,
+    "objectOf": check,
+    "oneOf": check,
+    "oneOfType": check,
+    "shape": check
 };
 
 var isValidElement = function isValidElement(obj) {

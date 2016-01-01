@@ -7,7 +7,7 @@ function Vtree(properties) {
 	_.extend(this, properties)
 }
 
-let noop = () => {}
+let noop = _.noop
 let getDOMNode = function() { return this }
 Vtree.prototype = {
 	constructor: Vtree,
@@ -247,6 +247,13 @@ export let renderComponent = (component, context) => {
 	return vtree
 }
 let neverUpdate = () => false
+let didMountComponents = []
+let callDidMount = obj => obj.didMount()
+export let clearDidMount = () => {
+	let components = didMountComponents
+	didMountComponents = []
+	_.eachItem(components, callDidMount)
+}
 export function Vcomponent(type, props) {
 	this.type = type
 	this.props = props
@@ -270,6 +277,11 @@ Vcomponent.prototype = new Vtree({
 		vtree.initTree(parentNode)
 		cache.isMounted = true
 		component.node = this.node = vtree.node
+		didMountComponents.push(this)
+	},
+	didMount() {
+		let { component } = this
+		let updater = component.$updater
 		component.componentDidMount()
 		updater.isPending = false
 		this.attachRef()

@@ -10,6 +10,8 @@ export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
 export let isStatelessComponent = obj => obj && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
+export let noop = () => {}
+
 export let pipe = (fn1, fn2) => {
 	return function(...args) {
 		fn1.apply(this, args)

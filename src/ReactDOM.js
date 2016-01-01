@@ -1,5 +1,6 @@
 import * as _ from './util'
 import { COMPONENT_ID, VNODE_TYPE } from './constant'
+import { clearDidMount } from './virtual-dom'
 
 let store = {}
 export let render = (vtree, container, callback) => {
@@ -15,6 +16,7 @@ export let render = (vtree, container, callback) => {
 		vtree.initTree(container)
 	}
 	store[id] = vtree
+	clearDidMount()
 
 	let result = null
 	switch (vtree.vtype) {
