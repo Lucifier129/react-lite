@@ -20,7 +20,7 @@ export let pipe = (fn1, fn2) => {
 }
 
 export let forEach = (list, iteratee, record = { index: 0 }) => {
-	for (let i = 0, len = list.length; i < len; i += 1) {
+	for (let i = 0, len = list.length; i < len; i++) {
 		let item = list[i]
 		if (isArr(item)) {
 			forEach(item, iteratee, record)
@@ -32,17 +32,16 @@ export let forEach = (list, iteratee, record = { index: 0 }) => {
 }
 
 export let eachItem = (list, iteratee) => {
-	for (let i = 0, len = list.length; i < len; i += 1) {
+	for (let i = 0, len = list.length; i < len; i++) {
 		iteratee(list[i], i)
 	}
 }
 
 export let mapValue = (obj, iteratee) => {
 	for (let key in obj) {
-		if (!obj.hasOwnProperty(key)) {
-			continue
+		if (obj.hasOwnProperty(key)) {
+			iteratee(obj[key], key)
 		}
-		iteratee(obj[key], key)
 	}
 }
 
@@ -50,7 +49,7 @@ export let mapKey = (sources, iteratee) => {
 	let keyMap = {}
 	let item
 	let key
-	for (let i = 0, len = sources.length; i < len; i += 1) {
+	for (let i = 0, len = sources.length; i < len; i++) {
 		item = sources[i]
 		for (key in item) {
 			if (!item.hasOwnProperty(key) || keyMap[key]) {
@@ -64,16 +63,14 @@ export let mapKey = (sources, iteratee) => {
 
 export let extend = (target, ...args) => {
 	let setProp = (value, key) => {
-		if (isUndefined(value)) {
-			return
+		if (!isUndefined(value)) {
+			target[key] = value
 		}
-		target[key] = value
 	}
 	eachItem(args, source => {
-		if (source == null) {
-			return
+		if (source != null) {
+			mapValue(source, setProp)
 		}
-		mapValue(source, setProp)
 	})
 	return target
 }

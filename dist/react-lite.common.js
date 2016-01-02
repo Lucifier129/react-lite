@@ -42,7 +42,7 @@ var pipe = function pipe(fn1, fn2) {
 var forEach$1 = function forEach(list, iteratee) {
 	var record = arguments.length <= 2 || arguments[2] === undefined ? { index: 0 } : arguments[2];
 
-	for (var i = 0, len = list.length; i < len; i += 1) {
+	for (var i = 0, len = list.length; i < len; i++) {
 		var item = list[i];
 		if (isArr(item)) {
 			forEach(item, iteratee, record);
@@ -54,17 +54,16 @@ var forEach$1 = function forEach(list, iteratee) {
 };
 
 var eachItem = function eachItem(list, iteratee) {
-	for (var i = 0, len = list.length; i < len; i += 1) {
+	for (var i = 0, len = list.length; i < len; i++) {
 		iteratee(list[i], i);
 	}
 };
 
 var mapValue = function mapValue(obj, iteratee) {
 	for (var key in obj) {
-		if (!obj.hasOwnProperty(key)) {
-			continue;
+		if (obj.hasOwnProperty(key)) {
+			iteratee(obj[key], key);
 		}
-		iteratee(obj[key], key);
 	}
 };
 
@@ -72,7 +71,7 @@ var mapKey = function mapKey(sources, iteratee) {
 	var keyMap = {};
 	var item = undefined;
 	var key = undefined;
-	for (var i = 0, len = sources.length; i < len; i += 1) {
+	for (var i = 0, len = sources.length; i < len; i++) {
 		item = sources[i];
 		for (key in item) {
 			if (!item.hasOwnProperty(key) || keyMap[key]) {
@@ -90,16 +89,14 @@ var extend = function extend(target) {
 	}
 
 	var setProp = function setProp(value, key) {
-		if (isUndefined(value)) {
-			return;
+		if (!isUndefined(value)) {
+			target[key] = value;
 		}
-		target[key] = value;
 	};
 	eachItem(args, function (source) {
-		if (source == null) {
-			return;
+		if (source != null) {
+			mapValue(source, setProp);
 		}
-		mapValue(source, setProp);
 	});
 	return target;
 };
@@ -1133,9 +1130,9 @@ var createElement = function createElement(type, props) {
 	return vnode;
 };
 
-var nodeNames = ["a", "abbr", "address", "area", "article", "aside", "audio", "b", "base", "bdi", "bdo", "big", "blockquote", "body", "br", "button", "canvas", "caption", "cite", "code", "col", "colgroup", "data", "datalist", "dd", "del", "details", "dfn", "dialog", "div", "dl", "dt", "em", "embed", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hgroup", "hr", "html", "i", "iframe", "img", "input", "ins", "kbd", "keygen", "label", "legend", "li", "link", "main", "map", "mark", "menu", "menuitem", "meta", "meter", "nav", "noscript", "object", "ol", "optgroup", "option", "output", "p", "param", "picture", "pre", "progress", "q", "rp", "rt", "ruby", "s", "samp", "script", "section", "select", "small", "source", "span", "strong", "style", "sub", "summary", "sup", "table", "tbody", "td", "textarea", "tfoot", "th", "thead", "time", "title", "tr", "track", "u", "ul", "var", "video", "wbr", "circle", "clipPath", "defs", "ellipse", "g", "image", "line", "linearGradient", "mask", "path", "pattern", "polygon", "polyline", "radialGradient", "rect", "stop", "svg", "text", "tspan"];
+var nodeNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';
 var DOM = {};
-eachItem(nodeNames, function (nodeName) {
+eachItem(nodeNames.split('|'), function (nodeName) {
 	DOM[nodeName] = createFactory(nodeName);
 });
 
