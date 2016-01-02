@@ -44,8 +44,7 @@
     "rollup-plugin-babel": "^1.0.0",
     "rollup-plugin-replace": "^1.1.0",
     "uglify-js": "^2.6.1",
-    "webpack": "^1.12.2",
-    "zlib": "^1.0.5"
+    "webpack": "^1.12.2" 
   },
   "npmName": "react-lite",
   "npmFileMap": [
