@@ -69,9 +69,7 @@ export let count = children => {
 	return count
 }
 
-
-let identity = obj => obj
-export let toArray = children => map(children, identity) || []
+export let toArray = children => map(children, _.identity) || []
 
 let getKey = (child, index) => {
 	let key

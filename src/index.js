@@ -1,12 +1,13 @@
-import { render, findDOMNode, unmountComponentAtNode, unstable_renderSubtreeIntoContainer } from './ReactDOM'
 import Component from './Component'
 import createClass from './createClass'
 import createElement, { isValidElement, cloneElement, createFactory } from './createElement'
-import { only, forEach, map, count, toArray } from './Children'
+import * as Children from './Children'
+import * as ReactDOM from './ReactDOM'
 import PropTypes from './PropTypes'
 import DOM from './DOM'
+import * as _ from './util'
 
-let React = {
+let React = _.extend({
     version: '0.14.4',
     cloneElement,
     isValidElement,
@@ -14,20 +15,11 @@ let React = {
     createFactory,
     Component,
     createClass,
-    Children: { only, forEach, map, count, toArray },
+    Children,
     PropTypes,
-    render,
-    findDOMNode,
-    unmountComponentAtNode,
-    unstable_renderSubtreeIntoContainer,
     DOM
-}
+}, ReactDOM)
 
-React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
-    render,
-    findDOMNode,
-    unmountComponentAtNode,
-    unstable_renderSubtreeIntoContainer
-}
+React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactDOM
 
 export default React

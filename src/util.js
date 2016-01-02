@@ -11,6 +11,7 @@ export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.pr
 export let isStatelessComponent = obj => obj && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
 export let noop = () => {}
+export let identity = obj => obj
 
 export let pipe = (fn1, fn2) => {
 	return function(...args) {
@@ -117,11 +118,17 @@ let getEventName = key => {
 	key = eventNameAlias[key] || key
 	return key.toLowerCase()
 }
+let getEventHandler = handleEvent => function(e) {
+	e.stopPropagation()
+	e.nativeEvent = e
+	return handleEvent.call(this, e)
+}
 export let setEvent = (elem, key, value) => {
 	if (!isFn(value)) {
 		return
 	}
 	key = getEventName(key)
+	value = getEventHandler(value)
 	elem[key] = value
 	if (key === 'onchange') {
 		elem.oninput = value
@@ -135,11 +142,6 @@ export let removeEvent = (elem, key) => {
 	}
 }
 
-let onlyGetter = {
-	TEXTAREA: 'type',
-	SELECT: 'type'
-}
-
 let ignoreKeys = {
 	key: true,
 	ref: true,
@@ -150,6 +152,8 @@ export let isIgnoreKey = key => ignoreKeys[key]
 export let isEventKey = key => EVENT_KEYS.test(key)
 export let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 export let isStyleKey = key => key === 'style'
+// Setting .type throws on non-<input> tags
+export let isTypeKey = key => key === 'type'
 export let setProp = (elem, key, value) => {
 	switch (true) {
 		case isIgnoreKey(key):
@@ -163,10 +167,7 @@ export let setProp = (elem, key, value) => {
 		case isInnerHTMLKey(key):
 			value && isStr(value.__html) && (elem.innerHTML = value.__html)
 			break
-		case key in elem:
-			if (onlyGetter[elem.nodeName] === key) {
-				return
-			}
+		case (key in elem) && !isTypeKey(key):
 			elem[key] = value
 			break
 		default:
@@ -348,4 +349,8 @@ export let setStyleValue = (style, key, value) => {
 	} else {
 		style[key] = value
 	}
+}
+
+if (!Object.freeze) {
+	Object.freeze = identity
 }

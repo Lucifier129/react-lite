@@ -40,7 +40,7 @@ rollup.rollup({
         'process.env.NODE_ENV': "'development'"
       }),
       babel({
-        // loose: 'all'
+        loose: 'all'
       })
     ]
   })
@@ -61,7 +61,7 @@ rollup.rollup({
         'process.env.NODE_ENV': "'production'"
       }),
       babel({
-        // loose: 'all'
+        loose: 'all'
       })
     ]
   })

@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.7
+ * react-lite.js v0.0.8
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -27,6 +27,9 @@ var isStatelessComponent = function isStatelessComponent(obj) {
 };
 
 var noop$1 = function noop() {};
+var identity = function identity(obj) {
+	return obj;
+};
 
 var pipe = function pipe(fn1, fn2) {
 	return function () {
@@ -148,11 +151,19 @@ var getEventName = function getEventName(key) {
 	key = eventNameAlias[key] || key;
 	return key.toLowerCase();
 };
+var getEventHandler = function getEventHandler(handleEvent) {
+	return function (e) {
+		e.stopPropagation();
+		e.nativeEvent = e;
+		return handleEvent.call(this, e);
+	};
+};
 var setEvent = function setEvent(elem, key, value) {
 	if (!isFn(value)) {
 		return;
 	}
 	key = getEventName(key);
+	value = getEventHandler(value);
 	elem[key] = value;
 	if (key === 'onchange') {
 		elem.oninput = value;
@@ -164,11 +175,6 @@ var removeEvent = function removeEvent(elem, key) {
 	if (key === 'onchange') {
 		elem.oninput = null;
 	}
-};
-
-var onlyGetter = {
-	TEXTAREA: 'type',
-	SELECT: 'type'
 };
 
 var ignoreKeys = {
@@ -189,6 +195,10 @@ var isInnerHTMLKey = function isInnerHTMLKey(key) {
 var isStyleKey = function isStyleKey(key) {
 	return key === 'style';
 };
+// Setting .type throws on non-<input> tags
+var isTypeKey = function isTypeKey(key) {
+	return key === 'type';
+};
 var setProp = function setProp(elem, key, value) {
 	switch (true) {
 		case isIgnoreKey(key):
@@ -202,10 +212,7 @@ var setProp = function setProp(elem, key, value) {
 		case isInnerHTMLKey(key):
 			value && isStr(value.__html) && (elem.innerHTML = value.__html);
 			break;
-		case key in elem:
-			if (onlyGetter[elem.nodeName] === key) {
-				return;
-			}
+		case key in elem && !isTypeKey(key):
 			elem[key] = value;
 			break;
 		default:
@@ -390,6 +397,10 @@ var setStyleValue = function setStyleValue(style, key, value) {
 		style[key] = value;
 	}
 };
+
+if (!Object.freeze) {
+	Object.freeze = identity;
+}
 
 var VNODE_TYPE = {
 	ELEMENT: 1,
@@ -624,6 +635,29 @@ var getDOMNode = function getDOMNode() {
 Vtree.prototype = {
 	constructor: Vtree,
 	mapTree: noop$2,
+	eachChildren: function eachChildren(iteratee) {
+		var children = this.props.children;
+		var sorted = this.sorted;
+
+		if (sorted) {
+			eachItem(children, iteratee);
+			return;
+		}
+		// the default children often be nesting array, so then here make it flat
+		if (isArr(children)) {
+			var newChildren = [];
+			forEach$1(children, function (vchild, index) {
+				vchild = getVnode(vchild);
+				iteratee(vchild, index);
+				newChildren.push(vchild);
+			});
+			this.props.children = newChildren;
+			this.sorted = true;
+		} else if (!isUndefined(children)) {
+			children = this.props.children = getVnode(children);
+			iteratee(children, 0);
+		}
+	},
 	attachRef: function attachRef() {
 		var refKey = this.ref;
 		var refs = this.refs;
@@ -728,29 +762,6 @@ var unmountTree = function unmountTree(vtree) {
 Velem.prototype = new Vtree({
 	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
-	eachChildren: function eachChildren(iteratee) {
-		var children = this.props.children;
-		var sorted = this.sorted;
-
-		if (sorted) {
-			eachItem(children, iteratee);
-			return;
-		}
-		// the default children often be nesting array, so then here make it flat
-		if (isArr(children)) {
-			var newChildren = [];
-			forEach$1(children, function (vchild, index) {
-				vchild = getVnode(vchild);
-				iteratee(vchild, index);
-				newChildren.push(vchild);
-			});
-			this.props.children = newChildren;
-			this.sorted = true;
-		} else if (!isUndefined(children)) {
-			children = this.props.children = getVnode(children);
-			iteratee(children, 0);
-		}
-	},
 	mapTree: function mapTree(iteratee) {
 		iteratee(this);
 		this.eachChildren(function (vchild) {
@@ -855,9 +866,13 @@ var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
 	return context;
 };
 var setContext = function setContext(context, vtree) {
-	return vtree.mapTree(function (item) {
+	Velem.prototype.mapTree.call(vtree, function (item) {
 		if (isValidComponent(item)) {
-			item.context = context;
+			if (item.context) {
+				item.context = extend(item.context, context);
+			} else {
+				item.context = context;
+			}
 		}
 	});
 };
@@ -1054,88 +1069,6 @@ var isValidComponent = function isValidComponent(obj) {
 	return false;
 };
 
-var isValidElement = function isValidElement(obj) {
-	if (obj == null) {
-		return false;
-	}
-	if (obj.vtype === VNODE_TYPE.ELEMENT || obj.vtype === VNODE_TYPE.COMPONENT) {
-		return true;
-	}
-	return false;
-};
-
-var cloneElement = function cloneElement(originElem, props) {
-	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-		children[_key - 2] = arguments[_key];
-	}
-
-	var type = originElem.type;
-	props = extend({}, originElem.props, props);
-	var vnode = createElement.apply(undefined, [type, props].concat(children));
-	if (vnode.ref === originElem.ref) {
-		vnode.refs = originElem.refs;
-	}
-	return vnode;
-};
-
-var createFactory = function createFactory(type) {
-	var factory = function factory() {
-		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-			args[_key2] = arguments[_key2];
-		}
-
-		return createElement.apply(undefined, [type].concat(args));
-	};
-	factory.type = type;
-	return factory;
-};
-
-var createElement = function createElement(type, props) {
-	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-		children[_key3 - 2] = arguments[_key3];
-	}
-
-	var Vnode = undefined;
-	switch (true) {
-		case isStr(type):
-			Vnode = Velem;
-			break;
-		case isComponent(type):
-			Vnode = Vcomponent;
-			break;
-		case isStatelessComponent(type):
-			Vnode = VstatelessComponent;
-			break;
-		default:
-			throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
-	}
-	var vnode = new Vnode(type, mergeProps(props, children, type.defaultProps));
-	var key = null;
-	var ref = null;
-	var hasRef = false;
-	if (props != null) {
-		if (!isUndefined(props.key)) {
-			key = '' + props.key;
-		}
-		if (!isUndefined(props.ref)) {
-			ref = props.ref;
-			hasRef = true;
-		}
-	}
-	vnode.key = key;
-	vnode.ref = ref;
-	if (hasRef && Vnode !== VstatelessComponent) {
-		handleVnodeWithRef(vnode);
-	}
-	return vnode;
-};
-
-var nodeNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';
-var DOM = {};
-eachItem(nodeNames.split('|'), function (nodeName) {
-	DOM[nodeName] = createFactory(nodeName);
-});
-
 var store = {};
 var render = function render(vtree, container, callback) {
 	if (!vtree) {
@@ -1200,6 +1133,101 @@ var findDOMNode = function findDOMNode(node) {
 var unstable_renderSubtreeIntoContainer = function unstable_renderSubtreeIntoContainer(parentComponent, nextElement, container, callback) {
 	return render(nextElement, container, callback);
 };
+
+
+var ReactDOM = Object.freeze({
+	render: render,
+	unmountComponentAtNode: unmountComponentAtNode,
+	findDOMNode: findDOMNode,
+	unstable_renderSubtreeIntoContainer: unstable_renderSubtreeIntoContainer
+});
+
+var isValidElement = function isValidElement(obj) {
+	if (obj == null) {
+		return false;
+	}
+	if (obj.vtype === VNODE_TYPE.ELEMENT || obj.vtype === VNODE_TYPE.COMPONENT) {
+		return true;
+	}
+	return false;
+};
+
+var cloneElement = function cloneElement(originElem, props) {
+	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+		children[_key - 2] = arguments[_key];
+	}
+
+	var type = originElem.type;
+	var key = originElem.key;
+	var ref = originElem.ref;
+
+	props = extend({ key: key, ref: ref }, originElem.props, props);
+	var vnode = createElement.apply(undefined, [type, props].concat(children));
+	if (vnode.ref === originElem.ref) {
+		vnode.refs = originElem.refs;
+	}
+	return vnode;
+};
+
+var createFactory = function createFactory(type) {
+	var factory = function factory() {
+		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+			args[_key2] = arguments[_key2];
+		}
+
+		return createElement.apply(undefined, [type].concat(args));
+	};
+	factory.type = type;
+	return factory;
+};
+
+var createElement = function createElement(type, props) {
+	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+		children[_key3 - 2] = arguments[_key3];
+	}
+
+	var Vnode = undefined;
+	switch (true) {
+		case isStr(type):
+			Vnode = Velem;
+			break;
+		case isComponent(type):
+			Vnode = Vcomponent;
+			break;
+		case isStatelessComponent(type):
+			Vnode = VstatelessComponent;
+			break;
+		default:
+			throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
+	}
+	var key = null;
+	var ref = null;
+	var hasRef = false;
+	if (props != null) {
+		if (!isUndefined(props.key)) {
+			key = '' + props.key;
+			delete props.key;
+		}
+		if (!isUndefined(props.ref)) {
+			ref = props.ref;
+			delete props.ref;
+			hasRef = true;
+		}
+	}
+	var vnode = new Vnode(type, mergeProps(props, children, type.defaultProps));
+	vnode.key = key;
+	vnode.ref = ref;
+	if (hasRef && Vnode !== VstatelessComponent) {
+		handleVnodeWithRef(vnode);
+	}
+	return vnode;
+};
+
+var tagNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';
+var DOM = {};
+eachItem(tagNames.split('|'), function (tagName) {
+	DOM[tagName] = createFactory(tagName);
+});
 
 var check = function check() {
     return check;
@@ -1296,9 +1324,6 @@ var count = function count(children) {
 	return count;
 };
 
-var identity = function identity(obj) {
-	return obj;
-};
 var toArray = function toArray(children) {
 	return map(children, identity) || [];
 };
@@ -1317,6 +1342,14 @@ var userProvidedKeyEscapeRegex = /\/(?!\/)/g;
 var escapeUserProvidedKey = function escapeUserProvidedKey(text) {
 	return ('' + text).replace(userProvidedKeyEscapeRegex, '//');
 };
+
+var Children = Object.freeze({
+	only: only,
+	forEach: forEach,
+	map: map,
+	count: count,
+	toArray: toArray
+});
 
 var eachMixin = function eachMixin(mixins, iteratee) {
 	eachItem(mixins, function (mixin) {
@@ -1411,7 +1444,7 @@ var createClass = function createClass(spec) {
 	return Klass;
 };
 
-var React = {
+var React = extend({
     version: '0.14.4',
     cloneElement: cloneElement,
     isValidElement: isValidElement,
@@ -1419,20 +1452,11 @@ var React = {
     createFactory: createFactory,
     Component: Component,
     createClass: createClass,
-    Children: { only: only, forEach: forEach, map: map, count: count, toArray: toArray },
+    Children: Children,
     PropTypes: PropTypes,
-    render: render,
-    findDOMNode: findDOMNode,
-    unmountComponentAtNode: unmountComponentAtNode,
-    unstable_renderSubtreeIntoContainer: unstable_renderSubtreeIntoContainer,
     DOM: DOM
-};
+}, ReactDOM);
 
-React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
-    render: render,
-    findDOMNode: findDOMNode,
-    unmountComponentAtNode: unmountComponentAtNode,
-    unstable_renderSubtreeIntoContainer: unstable_renderSubtreeIntoContainer
-};
+React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactDOM;
 
 module.exports = React;

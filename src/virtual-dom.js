@@ -12,6 +12,29 @@ let getDOMNode = function() { return this }
 Vtree.prototype = {
 	constructor: Vtree,
 	mapTree: noop,
+	eachChildren(iteratee) {
+		let { children } = this.props
+		let { sorted } = this
+		
+		if (sorted) {
+			_.eachItem(children, iteratee)
+			return
+		}
+		// the default children often be nesting array, so then here make it flat
+		if (_.isArr(children)) {
+			var newChildren = []
+			_.forEach(children, (vchild, index) => {
+				vchild = getVnode(vchild)
+				iteratee(vchild, index)
+				newChildren.push(vchild)
+			})
+			this.props.children = newChildren
+			this.sorted = true
+		} else if (!_.isUndefined(children)) {
+			children = this.props.children = getVnode(children)
+			iteratee(children, 0)
+		}
+	},
 	attachRef() {
 		let { ref: refKey, refs, vtype } = this
 		if (!refs || refKey == null) {
@@ -109,29 +132,6 @@ let unmountTree = vtree => {
 Velem.prototype = new Vtree({
 	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
-	eachChildren(iteratee) {
-		let { children } = this.props
-		let { sorted } = this
-		
-		if (sorted) {
-			_.eachItem(children, iteratee)
-			return
-		}
-		// the default children often be nesting array, so then here make it flat
-		if (_.isArr(children)) {
-			var newChildren = []
-			_.forEach(children, (vchild, index) => {
-				vchild = getVnode(vchild)
-				iteratee(vchild, index)
-				newChildren.push(vchild)
-			})
-			this.props.children = newChildren
-			this.sorted = true
-		} else if (!_.isUndefined(children)) {
-			children = this.props.children = getVnode(children)
-			iteratee(children, 0)
-		}
-	},
 	mapTree(iteratee) {
 		iteratee(this)
 		this.eachChildren(vchild => vchild.mapTree(iteratee))
@@ -226,11 +226,17 @@ let getContextByTypes = (curContext, contextTypes) => {
 	})
 	return context
 }
-let setContext = (context, vtree) => vtree.mapTree(item => {
-	if (isValidComponent(item)) {
-		item.context = context
-	}
-})
+let setContext = (context, vtree) => {
+	Velem.prototype.mapTree.call(vtree, item => {
+		if (isValidComponent(item)) {
+			if (item.context) {
+				item.context = _.extend(item.context, context)
+			} else {
+				item.context = context
+			}
+		}
+	})
+}
 let bindRefs = refs => vnode => {
 	if (!vnode.refs) {
 		vnode.refs = refs
