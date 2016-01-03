@@ -7,15 +7,17 @@ react-lite is an implementation of React that optimizes for small script size.
 It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no React.renderToString/React.renderToStaticMarkup).
 
-If you are using webpack, it's so easy to use react-lite, just config alias in webpack.config.js:
+If you are using webpack, it's so easy to use react-lite, just [config alias](http://webpack.github.io/docs/configuration.html#resolve-alias) in webpack.config.js:
 
 ```javascript
 // webpack.config.js
 {
-	alias: {
-		'react': 'react-lite',
-		'react-dom': 'react-lite'
-	}
+    resolve: {
+        alias: {
+            'react': 'react-lite',
+            'react-dom': 'react-lite'
+        }
+    }
 }
 ```
 
