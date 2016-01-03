@@ -18,6 +18,8 @@ If you are using webpack, it's so easy to use react-lite, just config alias in w
 	}
 }
 ```
+
+Note: feel free to try react-lite, if something happen and we can't fixed in time, then use [regualr react](https://github.com/facebook/react) instead.
 ## install
 
 you can install react-lite from npm

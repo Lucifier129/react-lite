@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.8
+ * react-lite.js v0.0.9
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -201,7 +201,7 @@ var isTypeKey = function isTypeKey(key) {
 };
 var setProp = function setProp(elem, key, value) {
 	switch (true) {
-		case isIgnoreKey(key):
+		case isIgnoreKey(key) || key === 'title' && value == null:
 			break;
 		case isEventKey(key):
 			setEvent(elem, key, value);
@@ -634,30 +634,6 @@ var getDOMNode = function getDOMNode() {
 };
 Vtree.prototype = {
 	constructor: Vtree,
-	mapTree: noop$2,
-	eachChildren: function eachChildren(iteratee) {
-		var children = this.props.children;
-		var sorted = this.sorted;
-
-		if (sorted) {
-			eachItem(children, iteratee);
-			return;
-		}
-		// the default children often be nesting array, so then here make it flat
-		if (isArr(children)) {
-			var newChildren = [];
-			forEach$1(children, function (vchild, index) {
-				vchild = getVnode(vchild);
-				iteratee(vchild, index);
-				newChildren.push(vchild);
-			});
-			this.props.children = newChildren;
-			this.sorted = true;
-		} else if (!isUndefined(children)) {
-			children = this.props.children = getVnode(children);
-			iteratee(children, 0);
-		}
-	},
 	attachRef: function attachRef() {
 		var refKey = this.ref;
 		var refs = this.refs;
@@ -730,6 +706,9 @@ function Vtext(text) {
 Vtext.prototype = new Vtree({
 	constructor: Vtext,
 	vtype: VNODE_TYPE.TEXT,
+	attachRef: noop$2,
+	detachRef: noop$2,
+	updateRef: noop$2,
 	update: function update(nextVtext) {
 		var node = this.node;
 		var text = this.text;
@@ -756,17 +735,37 @@ function Velem(type, props) {
 }
 
 var unmountTree = function unmountTree(vtree) {
-	var method = isValidComponent(vtree) ? 'destroyTree' : 'detachRef';
-	vtree[method]();
+	if (isValidComponent(vtree)) {
+		vtree.destroyTree();
+		return false; //ignore mapping children
+	}
+	vtree.detachRef();
 };
 Velem.prototype = new Vtree({
 	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
-	mapTree: function mapTree(iteratee) {
-		iteratee(this);
-		this.eachChildren(function (vchild) {
-			return vchild.mapTree(iteratee);
-		});
+	eachChildren: function eachChildren(iteratee) {
+		var children = this.props.children;
+		var sorted = this.sorted;
+
+		if (sorted) {
+			eachItem(children, iteratee);
+			return;
+		}
+		// the default children often be nesting array, so then here make it flat
+		if (isArr(children)) {
+			var newChildren = [];
+			forEach$1(children, function (vchild, index) {
+				vchild = getVnode(vchild);
+				iteratee(vchild, index);
+				newChildren.push(vchild);
+			});
+			this.props.children = newChildren;
+			this.sorted = true;
+		} else if (!isUndefined(children)) {
+			children = this.props.children = getVnode(children);
+			iteratee(children, 0);
+		}
 	},
 	initTree: function initTree(parentNode) {
 		var type = this.type;
@@ -780,7 +779,7 @@ Velem.prototype = new Vtree({
 		this.attachRef();
 	},
 	destroyTree: function destroyTree() {
-		this.mapTree(unmountTree);
+		mapTree(this, unmountTree);
 		removeNode(this.node);
 	},
 	update: function update(newVelem) {
@@ -820,9 +819,9 @@ function VstatelessComponent(type, props) {
 VstatelessComponent.prototype = new Vtree({
 	constructor: VstatelessComponent,
 	vtype: VNODE_TYPE.STATELESS_COMPONENT,
-	mapTree: function mapTree(iteratee) {
-		iteratee(this);
-	},
+	attachRef: noop$2,
+	detachRef: noop$2,
+	updateRef: noop$2,
 	renderTree: function renderTree() {
 		var factory = this.type;
 		var props = this.props;
@@ -865,8 +864,9 @@ var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
 	});
 	return context;
 };
+
 var setContext = function setContext(context, vtree) {
-	Velem.prototype.mapTree.call(vtree, function (item) {
+	mapTree(vtree, function (item) {
 		if (isValidComponent(item)) {
 			if (item.context) {
 				item.context = extend(item.context, context);
@@ -913,9 +913,6 @@ function Vcomponent(type, props) {
 Vcomponent.prototype = new Vtree({
 	constructor: Vcomponent,
 	vtype: VNODE_TYPE.COMPONENT,
-	mapTree: function mapTree(iteratee) {
-		iteratee(this);
-	},
 	initTree: function initTree(parentNode) {
 		var Component = this.type;
 		var props = this.props;
@@ -1040,6 +1037,26 @@ var createElement$1 = function createElement(tagName, props) {
 	var node = document.createElement(tagName);
 	setProps(node, props);
 	return node;
+};
+
+var mapTree = function mapTree(vtree, iteratee) {
+	var stack = [vtree];
+	var item = undefined;
+	var shouldMapChildren = undefined;
+	while (stack.length) {
+		item = stack.shift();
+		shouldMapChildren = iteratee(item);
+		if (shouldMapChildren === false) {
+			continue;
+		}
+		if (item && item.props && !isUndefined(item.props.children)) {
+			if (isArr(item.props.children)) {
+				stack.push.apply(stack, item.props.children);
+			} else {
+				stack.push(item.props.children);
+			}
+		}
+	}
 };
 
 var getVnode = function getVnode(vnode) {

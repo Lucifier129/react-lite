@@ -1,7 +1,7 @@
 {
   "name": "react-lite",
-  "version": "0.0.8",
-  "description": "simple react",
+  "version": "0.0.9",
+  "description": "an implementation of React that optimizes for small script size",
   "main": "dist/react-lite.common.js",
   "jsnext:main": "src/index.js",
   "scripts": {

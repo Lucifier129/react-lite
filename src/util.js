@@ -156,7 +156,7 @@ export let isStyleKey = key => key === 'style'
 export let isTypeKey = key => key === 'type'
 export let setProp = (elem, key, value) => {
 	switch (true) {
-		case isIgnoreKey(key):
+		case isIgnoreKey(key) || (key === 'title' && value == null):
 			break
 		case isEventKey(key):
 			setEvent(elem, key, value)

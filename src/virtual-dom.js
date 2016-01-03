@@ -11,30 +11,6 @@ let noop = _.noop
 let getDOMNode = function() { return this }
 Vtree.prototype = {
 	constructor: Vtree,
-	mapTree: noop,
-	eachChildren(iteratee) {
-		let { children } = this.props
-		let { sorted } = this
-		
-		if (sorted) {
-			_.eachItem(children, iteratee)
-			return
-		}
-		// the default children often be nesting array, so then here make it flat
-		if (_.isArr(children)) {
-			var newChildren = []
-			_.forEach(children, (vchild, index) => {
-				vchild = getVnode(vchild)
-				iteratee(vchild, index)
-				newChildren.push(vchild)
-			})
-			this.props.children = newChildren
-			this.sorted = true
-		} else if (!_.isUndefined(children)) {
-			children = this.props.children = getVnode(children)
-			iteratee(children, 0)
-		}
-	},
 	attachRef() {
 		let { ref: refKey, refs, vtype } = this
 		if (!refs || refKey == null) {
@@ -102,6 +78,9 @@ export function Vtext(text) {
 Vtext.prototype = new Vtree({
 	constructor: Vtext,
 	vtype: VNODE_TYPE.TEXT,
+	attachRef: noop,
+	detachRef: noop,
+	updateRef: noop,
 	update(nextVtext) {
 		let { node, text } = this
 		if (nextVtext.text !== text) {
@@ -126,15 +105,37 @@ export function Velem(type, props) {
 }
 
 let unmountTree = vtree => {
-	let method = isValidComponent(vtree) ? 'destroyTree' : 'detachRef'
-	vtree[method]()
+	if (isValidComponent(vtree)) {
+		vtree.destroyTree()
+		return false //ignore mapping children
+	}
+	vtree.detachRef()
 }
 Velem.prototype = new Vtree({
 	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
-	mapTree(iteratee) {
-		iteratee(this)
-		this.eachChildren(vchild => vchild.mapTree(iteratee))
+	eachChildren(iteratee) {
+		let { children } = this.props
+		let { sorted } = this
+		
+		if (sorted) {
+			_.eachItem(children, iteratee)
+			return
+		}
+		// the default children often be nesting array, so then here make it flat
+		if (_.isArr(children)) {
+			var newChildren = []
+			_.forEach(children, (vchild, index) => {
+				vchild = getVnode(vchild)
+				iteratee(vchild, index)
+				newChildren.push(vchild)
+			})
+			this.props.children = newChildren
+			this.sorted = true
+		} else if (!_.isUndefined(children)) {
+			children = this.props.children = getVnode(children)
+			iteratee(children, 0)
+		}
 	},
 	initTree(parentNode) {
 		let { type, props } = this
@@ -146,7 +147,7 @@ Velem.prototype = new Vtree({
 		this.attachRef()
 	},
 	destroyTree() {
-		this.mapTree(unmountTree)
+		mapTree(this, unmountTree)
 		removeNode(this.node)
 	},
 	update(newVelem) {
@@ -184,9 +185,9 @@ export function VstatelessComponent(type, props) {
 VstatelessComponent.prototype = new Vtree({
 	constructor: VstatelessComponent,
 	vtype: VNODE_TYPE.STATELESS_COMPONENT,
-	mapTree(iteratee) {
-		iteratee(this)
-	},
+	attachRef: noop,
+	detachRef: noop,
+	updateRef: noop,
 	renderTree() {
 		let { type: factory, props, context } = this
 		let vtree = factory(props, getContextByTypes(context, factory.contextTypes))
@@ -226,8 +227,9 @@ let getContextByTypes = (curContext, contextTypes) => {
 	})
 	return context
 }
+
 let setContext = (context, vtree) => {
-	Velem.prototype.mapTree.call(vtree, item => {
+	mapTree(vtree, item => {
 		if (isValidComponent(item)) {
 			if (item.context) {
 				item.context = _.extend(item.context, context)
@@ -267,9 +269,6 @@ export function Vcomponent(type, props) {
 Vcomponent.prototype = new Vtree({
 	constructor: Vcomponent,
 	vtype: VNODE_TYPE.COMPONENT,
-	mapTree(iteratee) {
-		iteratee(this)
-	},
 	initTree(parentNode) {
 		let { type: Component, props, context } = this
 		let component = this.component = new Component(props, getContextByTypes(context, Component.contextTypes))
@@ -380,6 +379,26 @@ let createElement = (tagName, props) =>  {
 	let node = document.createElement(tagName)
 	_.setProps(node, props)
 	return node
+}
+
+let mapTree = (vtree, iteratee) => {
+	let stack = [vtree]
+	let item
+	let shouldMapChildren
+	while (stack.length) {
+		item = stack.shift()
+		shouldMapChildren = iteratee(item)
+		if (shouldMapChildren === false) {
+			continue
+		}
+		if (item && item.props && !_.isUndefined(item.props.children)) {
+			if (_.isArr(item.props.children)) {
+				stack.push.apply(stack, item.props.children)
+			} else {
+				stack.push(item.props.children)
+			}
+		}
+	}
 }
 
 let getVnode = vnode => {
