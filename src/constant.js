@@ -12,3 +12,4 @@ export let DIFF_TYPE = {
 }
 
 export let COMPONENT_ID = 'liteid'
+export let CHANGE_ID = 'changeId'

@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.9
+ * react-lite.js v0.0.10
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -726,6 +726,7 @@ Vtext.prototype = new Vtree({
 	},
 	destroyTree: function destroyTree() {
 		removeNode(this.node);
+		this.node = null;
 	}
 });
 
@@ -748,13 +749,14 @@ Velem.prototype = new Vtree({
 		var children = this.props.children;
 		var sorted = this.sorted;
 
+		var newChildren = undefined;
 		if (sorted) {
 			eachItem(children, iteratee);
 			return;
 		}
 		// the default children often be nesting array, so then here make it flat
 		if (isArr(children)) {
-			var newChildren = [];
+			newChildren = [];
 			forEach$1(children, function (vchild, index) {
 				vchild = getVnode(vchild);
 				iteratee(vchild, index);
@@ -781,6 +783,7 @@ Velem.prototype = new Vtree({
 	destroyTree: function destroyTree() {
 		mapTree(this, unmountTree);
 		removeNode(this.node);
+		this.node = null;
 	},
 	update: function update(newVelem) {
 		var node = this.node;
@@ -802,6 +805,7 @@ Velem.prototype = new Vtree({
 			}
 			count += 1;
 		});
+		var item = undefined;
 		// destroy old children not in the newChildren
 		while (children.length > count) {
 			children[count].destroyTree();

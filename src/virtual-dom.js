@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { VNODE_TYPE, DIFF_TYPE } from './constant'
+import { VNODE_TYPE, DIFF_TYPE, CHANGE_ID } from './constant'
 import { updatePropsAndState } from './Component'
 import diff from './diff'
 
@@ -96,6 +96,7 @@ Vtext.prototype = new Vtree({
 	},
 	destroyTree() {
 		removeNode(this.node)
+		this.node = null
 	}
 })
 
@@ -117,14 +118,14 @@ Velem.prototype = new Vtree({
 	eachChildren(iteratee) {
 		let { children } = this.props
 		let { sorted } = this
-		
+		let newChildren
 		if (sorted) {
 			_.eachItem(children, iteratee)
 			return
 		}
 		// the default children often be nesting array, so then here make it flat
 		if (_.isArr(children)) {
-			var newChildren = []
+			newChildren = []
 			_.forEach(children, (vchild, index) => {
 				vchild = getVnode(vchild)
 				iteratee(vchild, index)
@@ -149,6 +150,7 @@ Velem.prototype = new Vtree({
 	destroyTree() {
 		mapTree(this, unmountTree)
 		removeNode(this.node)
+		this.node = null
 	},
 	update(newVelem) {
 		let { node, props } = this
@@ -168,6 +170,7 @@ Velem.prototype = new Vtree({
 			}
 			count += 1
 		})
+		let item
 		// destroy old children not in the newChildren
 		while (children.length > count) {
 			children[count].destroyTree()
