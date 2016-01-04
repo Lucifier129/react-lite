@@ -128,10 +128,15 @@ let getEventName = key => {
 	key = eventNameAlias[key] || key
 	return key.toLowerCase()
 }
-let getEventHandler = handleEvent => function(e) {
-	e.stopPropagation()
-	e.nativeEvent = e
-	return handleEvent.call(this, e)
+let eventHandlerWrapper = identity
+export let setWraper = fn => eventHandlerWrapper = fn
+let getEventHandler = handleEvent => {
+	handleEvent = eventHandlerWrapper(handleEvent)
+	return function(e) {
+		e.stopPropagation()
+		e.nativeEvent = e
+		return handleEvent.call(this, e)
+	}
 }
 export let setEvent = (elem, key, value) => {
 	if (!isFn(value)) {
@@ -207,7 +212,7 @@ export let removeProp = (elem, key, oldValue) => {
 		case isInnerHTMLKey(key):
 			elem.innerHTML = ''
 			break
-		case !(key in elem):
+		case !(key in elem) || isTypeKey(key):
 			removeAttr(elem, key)
 			break
 		case isFn(oldValue):

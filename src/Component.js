@@ -1,18 +1,60 @@
 import * as _ from './util'
 import { renderComponent, clearDidMount  } from './virtual-dom'
 
+let updateQueue = {
+	updaters: [],
+	isPending: false,
+	reset() {
+		this.isPending = false
+		this.batchUpdate()
+	},
+	add(updater) {
+		if (!this.isPending) {
+			updater.update()
+		} else {
+			this.updaters.push(updater)
+		}
+	},
+	wrapFn(fn) {
+		let context = this
+		return function(...args) {
+			context.isPending = true
+			fn.apply(this, args)
+			context.reset()
+		}
+	},
+	batchUpdate() {
+		let { updaters } = this
+		if (updaters.length === 0) {
+			return
+		}
+		this.updaters = []
+		this.isPending = true
+		_.eachItem(updaters, updater => updater.update())
+		this.reset()
+	}
+}
+
+_.setWraper(fn => updateQueue.wrapFn(fn))
+
 function Updater(instance) {
 	this.instance = instance
 	this.pendingStates = []
 	this.pendingCallbacks = []
 	this.isPending = false
 	this.bindClear = () => this.clearCallbacks()
+	this.nextProps = this.nextContext = null
 }
 
 Updater.prototype = {
 	constructor: Updater,
 	emitUpdate(nextProps, nextContext) {
-		let { instance, pendingStates, bindClear } = this
+		this.nextProps = nextProps
+		this.nextContext = nextContext
+		updateQueue.add(this)
+	},
+	update() {
+		let { instance, pendingStates, bindClear, nextProps, nextContext } = this
 		if (nextProps || pendingStates.length > 0) {
 			let props = nextProps || instance.props
 			shouldUpdate(instance, props, this.getState(), nextContext, bindClear)

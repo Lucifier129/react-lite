@@ -40,15 +40,15 @@ just the same as what react does, see some demos below(I just add the alias to w
 
 - react-lite works with react-router: [examples](http://react-lite-with-react-router.coding.io/)
 - react-lite works with redux:
-	* [async](http://lucifier129.github.io/redux-examples/async/index.html)
-	* [counter](http://lucifier129.github.io/redux-examples/counter/index.html)
-	* [shopping-cart](http://lucifier129.github.io/redux-examples/shopping-cart/index.html)
-	* [todomvc](http://lucifier129.github.io/redux-examples/todomvc/index.html)
-	* [todos-with-undo](http://lucifier129.github.io/redux-examples/todos-with-undo/index.html)
-- react-lite works with react-motion: [demos](https://cdn.rawgit.com/Lucifier129/react-lite/master/examples/react-motion-demos/index.html)
+	* [async](http://lucifier129.github.io/redux-with-react-lite/async/index.html)
+	* [counter](http://lucifier129.github.io/redux-with-react-lite/counter/index.html)
+	* [shopping-cart](http://lucifier129.github.io/redux-with-react-lite/shopping-cart/index.html)
+	* [todomvc](http://lucifier129.github.io/redux-with-react-lite/todomvc/index.html)
+	* [todos-with-undo](http://lucifier129.github.io/redux-with-react-lite/todos-with-undo/index.html)
+- react-lite works with react-motion: [demos](http://lucifier129.github.io/react-motion-with-react-lite/index.html)
 - js-repaint-perf(which is faster?):
-	* [react](https://cdn.rawgit.com/Lucifier129/react-lite/master/examples/js-repaint-perf/react/index.html)
-	* [react-lite](https://cdn.rawgit.com/Lucifier129/react-lite/master/examples/js-repaint-perf/react/lite.html)
+	* [react](http://lucifier129.github.io/react-lite-repaint-perf/react/index.html)
+	* [react-lite](http://lucifier129.github.io/react-lite-repaint-perf/react/lite.html)
 
 ## react-lite vs react
 

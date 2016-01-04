@@ -161,7 +161,12 @@ var getEventName = function getEventName(key) {
 	key = eventNameAlias[key] || key;
 	return key.toLowerCase();
 };
+var eventHandlerWrapper = identity;
+var setWraper = function setWraper(fn) {
+	return eventHandlerWrapper = fn;
+};
 var getEventHandler = function getEventHandler(handleEvent) {
+	handleEvent = eventHandlerWrapper(handleEvent);
 	return function (e) {
 		e.stopPropagation();
 		e.nativeEvent = e;
@@ -252,7 +257,7 @@ var removeProp = function removeProp(elem, key, oldValue) {
 		case isInnerHTMLKey(key):
 			elem.innerHTML = '';
 			break;
-		case !(key in elem):
+		case !(key in elem) || isTypeKey(key):
 			removeAttr(elem, key);
 			break;
 		case isFn(oldValue):
@@ -427,6 +432,52 @@ var DIFF_TYPE = {
 
 var COMPONENT_ID = 'liteid';
 
+var updateQueue = {
+	updaters: [],
+	isPending: false,
+	reset: function reset() {
+		this.isPending = false;
+		this.batchUpdate();
+	},
+	add: function add(updater) {
+		if (!this.isPending) {
+			updater.update();
+		} else {
+			this.updaters.push(updater);
+		}
+	},
+	wrapFn: function wrapFn(fn) {
+		var context = this;
+		return function () {
+			context.isPending = true;
+
+			for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+				args[_key] = arguments[_key];
+			}
+
+			fn.apply(this, args);
+			context.reset();
+		};
+	},
+	batchUpdate: function batchUpdate() {
+		var updaters = this.updaters;
+
+		if (updaters.length === 0) {
+			return;
+		}
+		this.updaters = [];
+		this.isPending = true;
+		eachItem(updaters, function (updater) {
+			return updater.update();
+		});
+		this.reset();
+	}
+};
+
+setWraper(function (fn) {
+	return updateQueue.wrapFn(fn);
+});
+
 function Updater(instance) {
 	var _this = this;
 
@@ -437,14 +488,22 @@ function Updater(instance) {
 	this.bindClear = function () {
 		return _this.clearCallbacks();
 	};
+	this.nextProps = this.nextContext = null;
 }
 
 Updater.prototype = {
 	constructor: Updater,
 	emitUpdate: function emitUpdate(nextProps, nextContext) {
+		this.nextProps = nextProps;
+		this.nextContext = nextContext;
+		updateQueue.add(this);
+	},
+	update: function update() {
 		var instance = this.instance;
 		var pendingStates = this.pendingStates;
 		var bindClear = this.bindClear;
+		var nextProps = this.nextProps;
+		var nextContext = this.nextContext;
 
 		if (nextProps || pendingStates.length > 0) {
 			var props = nextProps || instance.props;
@@ -1124,9 +1183,7 @@ var render = function render(vtree, container, callback) {
 	}
 	var id = container[COMPONENT_ID];
 	if (store.hasOwnProperty(id)) {
-		if (store[id] !== vtree) {
-			store[id].updateTree(vtree, container);
-		}
+		store[id].updateTree(vtree, container);
 	} else {
 		container[COMPONENT_ID] = id = getUid();
 		container.innerHTML = '';
