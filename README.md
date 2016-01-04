@@ -38,6 +38,7 @@ you can learn react-lite from [React official documentation](http://facebook.git
 
 just the same as what react does, see some demos below(I just add the alias to webpack.config.js, no need to do anything else):
 
+- react-lite works with react-bootstrap: [doc demo](http://react-lite-with-react-bootstrap.coding.io/)
 - react-lite works with react-router: [examples](http://react-lite-with-react-router.coding.io/)
 - react-lite works with redux:
 	* [async](http://lucifier129.github.io/redux-with-react-lite/async/index.html)
