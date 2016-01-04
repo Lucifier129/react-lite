@@ -87,7 +87,8 @@ Vtext.prototype = new Vtree({
 			node.replaceData(0, node.length, nextVtext.text)
 		}
 		// deliver node to the newTree for next updating
-		nextVtext.node = this.node
+		nextVtext.node = node
+		this.node = null
 		return this
 	},
 	initTree(parentNode) {
@@ -156,6 +157,7 @@ Velem.prototype = new Vtree({
 		let { node, props } = this
 		let children = !_.isUndefined(props.children) ? props.children : []
 		let count = 0
+		let vindex
 		if (!_.isArr(children)) {
 			children = [children]
 		}
@@ -163,20 +165,28 @@ Velem.prototype = new Vtree({
 		newVelem.node = node
 		newVelem.eachChildren((newVchild, index) => {
 			let vchild = children[index]
+			count += 1
+			// if newVchild.node exist, destroy it and remove it when it's in children
+			if (vchild !== newVchild && newVchild.node) {
+				newVchild.destroyTree()
+				vindex = _.findIndex(children, newVchild, index + 1)
+				if (vindex !== -1) {
+					children.splice(vindex, 1)
+				}
+			}
 			if (vchild) {
 				vchild.updateTree(newVchild, node)
 			} else {
 				newVchild.initTree(node)
 			}
-			count += 1
 		})
-		let item
 		// destroy old children not in the newChildren
 		while (children.length > count) {
 			children[count].destroyTree()
 			count += 1
 		}
 		this.updateRef(newVelem)
+		this.node = null
 	}
 })
 
@@ -213,6 +223,7 @@ VstatelessComponent.prototype = new Vtree({
 		newVtree.renderTree()
 		this.vtree.updateTree(newVtree.vtree, parentNode)
 		newVtree.node = newVtree.vtree.node
+		this.node = this.vtree = null
 	}
 })
 
@@ -235,7 +246,9 @@ let setContext = (context, vtree) => {
 	mapTree(vtree, item => {
 		if (isValidComponent(item)) {
 			if (item.context) {
-				item.context = _.extend(item.context, context)
+				if (item.context !== context) {
+					item.context = _.extend(item.context, context)
+				}
 			} else {
 				item.context = context
 			}
@@ -262,6 +275,9 @@ let didMountComponents = []
 let callDidMount = obj => obj.didMount()
 export let clearDidMount = () => {
 	let components = didMountComponents
+	if (components.length === 0) {
+		return
+	}
 	didMountComponents = []
 	_.eachItem(components, callDidMount)
 }
@@ -324,6 +340,7 @@ Vcomponent.prototype = new Vtree({
 		newVtree.component = component
 		newVtree.node = component.node
 		this.updateRef(newVtree)
+		this.component = this.node = null
 	}
 })
 

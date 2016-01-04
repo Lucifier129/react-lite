@@ -9,7 +9,9 @@ export let render = (vtree, container, callback) => {
 	}
 	let id = container[COMPONENT_ID]
 	if (store.hasOwnProperty(id)) {
-		store[id].updateTree(vtree, container)
+		if (store[id] !== vtree) {
+			store[id].updateTree(vtree, container)
+		}
 	} else {
 		container[COMPONENT_ID] = id = _.getUid()
 		container.innerHTML = ''

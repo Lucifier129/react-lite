@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.10
+ * react-lite.js v0.0.11
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -64,6 +64,16 @@
     	for (var i = 0, len = list.length; i < len; i++) {
     		iteratee(list[i], i);
     	}
+    };
+
+    var findIndex = function findIndex(list, item, startIndex) {
+    	var i = startIndex > 0 ? startIndex : 0;
+    	for (var len = list.length; i < len; i++) {
+    		if (list[i] === item) {
+    			return i;
+    		}
+    	}
+    	return -1;
     };
 
     var mapValue = function mapValue(obj, iteratee) {
@@ -721,7 +731,8 @@
     			node.replaceData(0, node.length, nextVtext.text);
     		}
     		// deliver node to the newTree for next updating
-    		nextVtext.node = this.node;
+    		nextVtext.node = node;
+    		this.node = null;
     		return this;
     	},
     	initTree: function initTree(parentNode) {
@@ -795,6 +806,7 @@
 
     		var children = !isUndefined(props.children) ? props.children : [];
     		var count = 0;
+    		var vindex = undefined;
     		if (!isArr(children)) {
     			children = [children];
     		}
@@ -802,20 +814,28 @@
     		newVelem.node = node;
     		newVelem.eachChildren(function (newVchild, index) {
     			var vchild = children[index];
+    			count += 1;
+    			// if newVchild.node exist, destroy it and remove it when it's in children
+    			if (vchild !== newVchild && newVchild.node) {
+    				newVchild.destroyTree();
+    				vindex = findIndex(children, newVchild, index + 1);
+    				if (vindex !== -1) {
+    					children.splice(vindex, 1);
+    				}
+    			}
     			if (vchild) {
     				vchild.updateTree(newVchild, node);
     			} else {
     				newVchild.initTree(node);
     			}
-    			count += 1;
     		});
-    		var item = undefined;
     		// destroy old children not in the newChildren
     		while (children.length > count) {
     			children[count].destroyTree();
     			count += 1;
     		}
     		this.updateRef(newVelem);
+    		this.node = null;
     	}
     });
 
@@ -855,6 +875,7 @@
     		newVtree.renderTree();
     		this.vtree.updateTree(newVtree.vtree, parentNode);
     		newVtree.node = newVtree.vtree.node;
+    		this.node = this.vtree = null;
     	}
     });
 
@@ -877,7 +898,9 @@
     	mapTree(vtree, function (item) {
     		if (isValidComponent(item)) {
     			if (item.context) {
-    				item.context = extend(item.context, context);
+    				if (item.context !== context) {
+    					item.context = extend(item.context, context);
+    				}
     			} else {
     				item.context = context;
     			}
@@ -910,6 +933,9 @@
     };
     var clearDidMount = function clearDidMount() {
     	var components = didMountComponents;
+    	if (components.length === 0) {
+    		return;
+    	}
     	didMountComponents = [];
     	eachItem(components, callDidMount);
     };
@@ -985,6 +1011,7 @@
     		newVtree.component = component;
     		newVtree.node = component.node;
     		this.updateRef(newVtree);
+    		this.component = this.node = null;
     	}
     });
 
@@ -1101,7 +1128,9 @@
     	}
     	var id = container[COMPONENT_ID];
     	if (store.hasOwnProperty(id)) {
-    		store[id].updateTree(vtree, container);
+    		if (store[id] !== vtree) {
+    			store[id].updateTree(vtree, container);
+    		}
     	} else {
     		container[COMPONENT_ID] = id = getUid();
     		container.innerHTML = '';

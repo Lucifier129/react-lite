@@ -38,6 +38,16 @@ export let eachItem = (list, iteratee) => {
 	}
 }
 
+export let findIndex = (list, item, startIndex) => {
+	let i = startIndex > 0 ? startIndex : 0
+	for (let len = list.length; i < len; i++) {
+		if (list[i] === item) {
+			return i
+		}
+	}
+	return -1
+}
+
 export let mapValue = (obj, iteratee) => {
 	for (let key in obj) {
 		if (obj.hasOwnProperty(key)) {
