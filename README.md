@@ -30,6 +30,11 @@ you can install react-lite from npm
 npm install --save react-lite
 ```
 
+## browser compatibility
+
+react-lite supports IE8+ even without es5-shim/es5-sham
+
+
 ## documentation
 
 you can learn react-lite from [React official documentation](http://facebook.github.io/react/)
