@@ -43,7 +43,7 @@ let combineMixinToClass = (Component, mixin) => {
 let bindContext = (obj, source) => {
 	_.mapValue(source, (value, key) => {
 		if (_.isFn(value)) {
-			obj[key] = value.bind(obj)
+			obj[key] = (...args) => value.apply(obj, args)
 		}
 	})
 }
