@@ -60,7 +60,7 @@ via react-lite:
 - Do not support React-addons(for example ReactCSSTransitionGroup)
 - use React in server side rendering, and use React-lite in browser
 	* react-lite will replace the dom tree with new dom tree
-	* you had better aviod `script|head|link` tag in client side
+	* you had better avoid `script|head|link` tag in client side
 - the rule about setting props
 	* if `propName in dom` is `true` then `dom[propName]=propValue`
 	* else: `dom.setAttribute(propName, propValue)`
