@@ -24,10 +24,10 @@ Vtree.prototype = {
 		} else if (vtype === VNODE_TYPE.COMPONENT) {
 			refValue = this.component
 		}
-		if (refValue) {
+		if (refValue != null) {
 			if (_.isFn(refKey)) {
 				refKey(refValue)
-			} else if (_.isStr(refKey)) {
+			} else {
 				refs[refKey] = refValue
 			}
 		}

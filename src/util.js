@@ -186,7 +186,7 @@ export let setProp = (elem, key, value) => {
 			elem[key] = value
 			break
 		default:
-			elem.setAttribute(key, value)
+			elem.setAttribute(key, '' + value)
 	}
 }
 export let setProps = (elem, props) => {

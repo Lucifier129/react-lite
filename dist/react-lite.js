@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.11
+ * react-lite.js v0.0.12
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -235,7 +235,7 @@
     			elem[key] = value;
     			break;
     		default:
-    			elem.setAttribute(key, value);
+    			elem.setAttribute(key, '' + value);
     	}
     };
     var setProps = function setProps(elem, props) {
@@ -459,8 +459,9 @@
     				args[_key] = arguments[_key];
     			}
 
-    			fn.apply(this, args);
+    			var result = fn.apply(this, args);
     			context.reset();
+    			return result;
     		};
     	},
     	batchUpdate: function batchUpdate() {
@@ -471,11 +472,12 @@
     		}
     		this.updaters = [];
     		this.isPending = true;
-    		eachItem(updaters, function (updater) {
-    			return updater.update();
-    		});
+    		eachItem(updaters, triggerUpdate);
     		this.reset();
     	}
+    };
+    var triggerUpdate = function triggerUpdate(updater) {
+    	return updater.update();
     };
 
     setWraper(function (fn) {
@@ -505,13 +507,14 @@
     	update: function update() {
     		var instance = this.instance;
     		var pendingStates = this.pendingStates;
-    		var bindClear = this.bindClear;
     		var nextProps = this.nextProps;
     		var nextContext = this.nextContext;
 
     		if (nextProps || pendingStates.length > 0) {
-    			var props = nextProps || instance.props;
-    			shouldUpdate(instance, props, this.getState(), nextContext, bindClear);
+    			nextProps = nextProps || instance.props;
+    			nextContext = nextContext || instance.context;
+    			this.nextProps = this.nextContext = null;
+    			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.bindClear);
     		}
     	},
     	addState: function addState(nextState) {
@@ -554,8 +557,10 @@
     				state = extend({}, state, nextState);
     			}
     		};
-    		eachItem(pendingStates, merge);
-    		pendingStates.length = 0;
+    		if (pendingStates.length) {
+    			eachItem(pendingStates, merge);
+    			pendingStates.length = 0;
+    		}
     		return state;
     	},
     	clearCallbacks: function clearCallbacks() {
@@ -723,10 +728,10 @@
     		} else if (vtype === VNODE_TYPE.COMPONENT) {
     			refValue = this.component;
     		}
-    		if (refValue) {
+    		if (refValue != null) {
     			if (isFn(refKey)) {
     				refKey(refValue);
-    			} else if (isStr(refKey)) {
+    			} else {
     				refs[refKey] = refValue;
     			}
     		}
@@ -1257,7 +1262,7 @@
     	if (obj == null) {
     		return false;
     	}
-    	if (obj.vtype === VNODE_TYPE.ELEMENT || obj.vtype === VNODE_TYPE.COMPONENT) {
+    	if (obj.vtype) {
     		return true;
     	}
     	return false;

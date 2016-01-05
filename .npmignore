@@ -6,3 +6,8 @@ coverage
 _book
 book.json
 docs
+src
+jest
+__tests__
+webpack.config.js
+build.js

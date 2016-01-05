@@ -19,8 +19,9 @@ let updateQueue = {
 		let context = this
 		return function(...args) {
 			context.isPending = true
-			fn.apply(this, args)
+			let result = fn.apply(this, args)
 			context.reset()
+			return result
 		}
 	},
 	batchUpdate() {
@@ -30,10 +31,11 @@ let updateQueue = {
 		}
 		this.updaters = []
 		this.isPending = true
-		_.eachItem(updaters, updater => updater.update())
+		_.eachItem(updaters, triggerUpdate)
 		this.reset()
 	}
 }
+let triggerUpdate = updater => updater.update()
 
 _.setWraper(fn => updateQueue.wrapFn(fn))
 
@@ -54,10 +56,12 @@ Updater.prototype = {
 		updateQueue.add(this)
 	},
 	update() {
-		let { instance, pendingStates, bindClear, nextProps, nextContext } = this
+		let { instance, pendingStates, nextProps, nextContext } = this
 		if (nextProps || pendingStates.length > 0) {
-			let props = nextProps || instance.props
-			shouldUpdate(instance, props, this.getState(), nextContext, bindClear)
+			nextProps = nextProps || instance.props
+			nextContext = nextContext || instance.context
+			this.nextProps = this.nextContext = null
+			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.bindClear)
 		}
 	},
 	addState(nextState) {
@@ -87,8 +91,10 @@ Updater.prototype = {
 			}
 			state = _.extend({}, state, nextState)
 		}
-		_.eachItem(pendingStates, merge)
-		pendingStates.length = 0
+		if (pendingStates.length) {
+			_.eachItem(pendingStates, merge)
+			pendingStates.length = 0
+		}
 		return state
 	},
 	clearCallbacks() {

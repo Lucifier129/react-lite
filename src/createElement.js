@@ -1,12 +1,11 @@
 import * as _ from './util'
-import { VNODE_TYPE } from './constant'
 import { Velem, Vcomponent, VstatelessComponent, handleVnodeWithRef } from './virtual-dom'
 
 export let isValidElement = obj => {
 	if (obj == null) {
 		return false
 	}
-	if (obj.vtype === VNODE_TYPE.ELEMENT || obj.vtype === VNODE_TYPE.COMPONENT) {
+	if (obj.vtype) {
 		return true
 	}
 	return false
