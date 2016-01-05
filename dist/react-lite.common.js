@@ -11,7 +11,7 @@ var isType = function isType(type) {
 	};
 };
 var isObj = isType('Object');
-var isStr = isType('String');;
+var isStr = isType('String');
 var isFn = isType('Function');
 var isBln = isType('Boolean');
 var isArr = Array.isArray || isType('Array');
@@ -22,7 +22,7 @@ var isComponent = function isComponent(obj) {
 	return obj && obj.prototype && 'forceUpdate' in obj.prototype;
 };
 var isStatelessComponent = function isStatelessComponent(obj) {
-	return obj && (!obj.prototype || !('forceUpdate' in obj.prototype));
+	return isFn(obj) && (!obj.prototype || !('forceUpdate' in obj.prototype));
 };
 
 var noop$1 = function noop() {};
@@ -134,10 +134,8 @@ var getChildren = function getChildren(_x2) {
 					continue _function;
 				}
 			}
-		} else {
-			children = undefined;
+			return children;
 		}
-		return children;
 	}
 };
 var mergeProps = function mergeProps(props, children, defaultProps) {
@@ -147,10 +145,6 @@ var mergeProps = function mergeProps(props, children, defaultProps) {
 		result.children = children;
 	}
 	return result;
-};
-
-var removeAttr = function removeAttr(elem, key) {
-	elem.removeAttribute(key);
 };
 
 var eventNameAlias = {
@@ -224,7 +218,7 @@ var setProp = function setProp(elem, key, value) {
 			setStyle(elem, value);
 			break;
 		case isInnerHTMLKey(key):
-			value && isStr(value.__html) && (elem.innerHTML = value.__html);
+			value && value.__html != null && (elem.innerHTML = value.__html);
 			break;
 		case key in elem && !isTypeKey(key):
 			elem[key] = value;
@@ -257,7 +251,7 @@ var removeProp = function removeProp(elem, key, oldValue) {
 			elem.innerHTML = '';
 			break;
 		case !(key in elem) || isTypeKey(key):
-			removeAttr(elem, key);
+			elem.removeAttribute(key);
 			break;
 		case isFn(oldValue):
 			elem[key] = null;
@@ -270,12 +264,19 @@ var removeProp = function removeProp(elem, key, oldValue) {
 			break;
 		default:
 			try {
-				elem[key] = null;
+				elem[key] = undefined;
+				delete elem[key];
 			} catch (e) {
 				//pass
 			}
 	}
 };
+
+var keyAboutUserInput = {
+	value: true,
+	checked: true
+};
+
 var patchProps = function patchProps(elem, props, newProps) {
 	if (props === newProps) {
 		return;
@@ -293,7 +294,7 @@ var patchProps = function patchProps(elem, props, newProps) {
 			return;
 		}
 		var value = newProps[key];
-		var oldValue = key === 'value' ? elem.value : props[key];
+		var oldValue = keyAboutUserInput[key] ? elem[key] : props[key];
 		if (value === oldValue) {
 			return;
 		}
@@ -306,9 +307,7 @@ var patchProps = function patchProps(elem, props, newProps) {
 		} else if (isInnerHTMLKey(key)) {
 			var oldHtml = oldValue && oldValue.__html;
 			var html = value && value.__html;
-			if (!isStr(html)) {
-				elem.innerHTML = '';
-			} else if (html !== oldHtml) {
+			if (html != null && html !== oldHtml) {
 				elem.innerHTML = html;
 			}
 		} else {
@@ -402,7 +401,7 @@ mapValue(isUnitlessNumberWithPrefix, function (value, key) {
 
 var RE_NUMBER = /^-?\d+(\.\d+)?$/;
 var setStyleValue = function setStyleValue(style, key, value) {
-	if (isBln(value) || value == null) {
+	if (value == null || isBln(value)) {
 		value = '';
 	}
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {

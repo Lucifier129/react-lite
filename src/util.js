@@ -2,13 +2,12 @@
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 export let isObj = isType('Object')
 export let isStr = isType('String')
-export let isNum = isType('Number')
 export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
-export let isStatelessComponent = obj => obj && (!obj.prototype || !('forceUpdate' in obj.prototype))
+export let isStatelessComponent = obj => isFn(obj) && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
 export let noop = () => {}
 export let identity = obj => obj
@@ -97,10 +96,8 @@ let getChildren = children => {
 				return getChildren(children)
 			}
 		}
-	} else {
-		children = undefined
+		return children
 	}
-	return children
 }
 export let mergeProps = (props, children, defaultProps) => {
 	let result = extend({}, defaultProps, props)
@@ -109,16 +106,6 @@ export let mergeProps = (props, children, defaultProps) => {
 		result.children = children
 	}
 	return result
-}
-
-export let setAttr = (elem, key, value) => {
-	elem.setAttribute(key, value)
-}
-export let getAttr = (elem, key) => {
-	return elem.getAttribute(key)
-}
-export let removeAttr = (elem, key) => {
-	elem.removeAttribute(key)
 }
 
 let eventNameAlias = {
@@ -180,7 +167,7 @@ export let setProp = (elem, key, value) => {
 			setStyle(elem, value)
 			break
 		case isInnerHTMLKey(key):
-			value && isStr(value.__html) && (elem.innerHTML = value.__html)
+			value && value.__html != null && (elem.innerHTML = value.__html)
 			break
 		case (key in elem) && !isTypeKey(key):
 			elem[key] = value
@@ -213,7 +200,7 @@ export let removeProp = (elem, key, oldValue) => {
 			elem.innerHTML = ''
 			break
 		case !(key in elem) || isTypeKey(key):
-			removeAttr(elem, key)
+			elem.removeAttribute(key)
 			break
 		case isFn(oldValue):
 			elem[key] = null
@@ -226,12 +213,19 @@ export let removeProp = (elem, key, oldValue) => {
 			break
 		default:
 			try {
-				elem[key] = null
+				elem[key] = undefined
+				delete elem[key]
 			} catch(e) {
 				//pass
 			}
 	}
 }
+
+let keyAboutUserInput = {
+	value: true,
+	checked: true
+}
+
 export let patchProps = (elem, props, newProps) => {
 	if (props === newProps) {
 		return
@@ -249,7 +243,7 @@ export let patchProps = (elem, props, newProps) => {
 			return
 		}
 		let value = newProps[key]
-		let oldValue = key === 'value' ? elem.value : props[key]
+		let oldValue = keyAboutUserInput[key] ? elem[key] : props[key]
 		if (value === oldValue) {
 			return
 		}
@@ -262,9 +256,7 @@ export let patchProps = (elem, props, newProps) => {
 		} else if (isInnerHTMLKey(key)) {
 			let oldHtml = oldValue && oldValue.__html
 			let html = value && value.__html
-			if (!isStr(html)) {
-				elem.innerHTML = ''
-			} else if (html !== oldHtml) {
+			if (html != null && html !== oldHtml) {
 				elem.innerHTML = html
 			}
 		} else {
@@ -356,7 +348,7 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
 export let setStyleValue = (style, key, value) => {
-	if (isBln(value) || value == null) {
+	if (value == null || isBln(value)) {
 		value = ''
 	}
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
