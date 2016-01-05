@@ -64,9 +64,10 @@ via react-lite:
 - the rule about setting props
 	* if `propName in dom` is `true` then `dom[propName]=propValue`
 	* else: `dom.setAttribute(propName, propValue)`
+- can not use react-dev-tool inspect react-lite, should switch to regular react for debugging
 
 ## test
-react-lite reuses react's unitest(162), you can see them in `__test__`, and run the tests with:
+react-lite reuses react's unitest(168), you can see them in `__test__`, and run the tests with:
 
 ```shell
 npm test
