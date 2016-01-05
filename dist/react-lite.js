@@ -4,11 +4,14 @@
  * Released under the MIT License.
  */
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-    typeof define === 'function' && define.amd ? define(factory) :
-    global.React = factory();
-}(this, function () { 'use strict';
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('jquery')) :
+    typeof define === 'function' && define.amd ? define(['jquery'], factory) :
+    global.React = factory(global.jQuery);
+}(this, function (jQuery) { 'use strict';
 
+    jQuery = 'default' in jQuery ? jQuery['default'] : jQuery;
+
+    var $ = jQuery;
     var isType = function isType(type) {
     	return function (obj) {
     		return obj != null && Object.prototype.toString.call(obj) === '[object ' + type + ']';
@@ -155,7 +158,7 @@
     };
 
     var removeAttr = function removeAttr(elem, key) {
-    	elem.removeAttribute(key);
+    	$.removeAttr(elem, key);
     };
 
     var eventNameAlias = {
@@ -163,7 +166,7 @@
     };
     var getEventName = function getEventName(key) {
     	key = eventNameAlias[key] || key;
-    	return key.toLowerCase();
+    	return key.substr(2).toLowerCase() + '.react';
     };
     var eventHandlerWrapper = identity;
     var setWraper = function setWraper(fn) {
@@ -181,18 +184,33 @@
     	if (!isFn(value)) {
     		return;
     	}
+    	var $elem = $(elem);
+    	removeEvent(elem, key);
     	key = getEventName(key);
     	value = getEventHandler(value);
-    	elem[key] = value;
-    	if (key === 'onchange') {
-    		elem.oninput = value;
+    	$elem.on(key, value);
+    	if (key === 'change.react') {
+    		if ('oninput' in elem) {
+    			$elem.on('input.react', value);
+    		} else if ('onpropertychange' in elem) {
+    			$elem.on('propertychange.react', function (e) {
+    				if (e.originalEvent.propertyName === 'value') {
+    					value.call(this, e);
+    				}
+    			});
+    		}
     	}
     };
     var removeEvent = function removeEvent(elem, key) {
+    	var $elem = $(elem);
     	key = getEventName(key);
-    	elem[key] = null;
-    	if (key === 'onchange') {
-    		elem.oninput = null;
+    	$elem.off(key);
+    	if (key === 'change.react') {
+    		if ('oninput' in elem) {
+    			$elem.off('input.react');
+    		} else if ('onpropertychange' in elem) {
+    			$elem.off('propertychange.react');
+    		}
     	}
     };
 
@@ -229,13 +247,13 @@
     			setStyle(elem, value);
     			break;
     		case isInnerHTMLKey(key):
-    			value && isStr(value.__html) && (elem.innerHTML = value.__html);
+    			value && isStr(value.__html) && $(elem).html(value.__html);
     			break;
     		case key in elem && !isTypeKey(key):
-    			elem[key] = value;
+    			$.prop(elem, key, value);
     			break;
     		default:
-    			elem.setAttribute(key, '' + value);
+    			$.attr(elem, key, '' + value);
     	}
     };
     var setProps = function setProps(elem, props) {
@@ -259,7 +277,7 @@
     			removeStyle(elem, oldValue);
     			break;
     		case isInnerHTMLKey(key):
-    			elem.innerHTML = '';
+    			$(elem).html('');
     			break;
     		case !(key in elem) || isTypeKey(key):
     			removeAttr(elem, key);
@@ -275,7 +293,8 @@
     			break;
     		default:
     			try {
-    				elem[key] = null;
+    				elem[key] = undefined;
+    				delete elem[key];
     			} catch (e) {
     				//pass
     			}
@@ -312,9 +331,9 @@
     			var oldHtml = oldValue && oldValue.__html;
     			var html = value && value.__html;
     			if (!isStr(html)) {
-    				elem.innerHTML = '';
+    				$(elem).html('');
     			} else if (html !== oldHtml) {
-    				elem.innerHTML = html;
+    				$(elem).html(html);
     			}
     		} else {
     			setProp(elem, key, value);
