@@ -22,7 +22,7 @@ If you are using webpack, it's so easy to use react-lite, just [config alias](ht
 ```
 
 Note: feel free to try react-lite, if something happen and we can't fixed in time, then use [regular react](https://github.com/facebook/react) instead.
-## install
+## Installation
 
 you can install react-lite from npm
 
@@ -30,16 +30,16 @@ you can install react-lite from npm
 npm install --save react-lite
 ```
 
-## browser compatibility
+## Browser compatibility
 
 react-lite supports IE8+ even without es5-shim/es5-sham
 
 
-## documentation
+## Documentation
 
 you can learn react-lite from [React official documentation](http://facebook.github.io/react/)
 
-## what can react-lite do?
+## What can react-lite do?
 
 just the same as what react does, see some demos below(I just add the alias to webpack.config.js, no need to do anything else):
 
@@ -56,7 +56,7 @@ just the same as what react does, see some demos below(I just add the alias to w
 	* [react](http://lucifier129.github.io/react-lite-repaint-perf/react/index.html)
 	* [react-lite](http://lucifier129.github.io/react-lite-repaint-perf/react/lite.html)
 
-## react-lite vs react
+## React-lite vs React
 
 via react-lite:
 - virtual-dom can not render to string(no React.renderToString and React.renderToStaticMarkup)
@@ -71,7 +71,7 @@ via react-lite:
 	* else: `dom.setAttribute(propName, propValue)`
 - can not use react-dev-tool inspect react-lite, should switch to regular react for debugging
 
-## test
+## Test
 react-lite reuses react's unitest(168), you can see them in `__test__`, and run the tests with:
 
 ```shell
