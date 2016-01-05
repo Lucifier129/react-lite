@@ -11,8 +11,7 @@ var isType = function isType(type) {
 	};
 };
 var isObj = isType('Object');
-var isStr = isType('String');
-var isNum = isType('Number');
+var isStr = isType('String');;
 var isFn = isType('Function');
 var isBln = isType('Boolean');
 var isArr = Array.isArray || isType('Array');
