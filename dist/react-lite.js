@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.12
+ * react-lite.js v0.0.13
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -159,7 +159,7 @@
     	return key.toLowerCase();
     };
     var eventHandlerWrapper = identity;
-    var setWraper = function setWraper(fn) {
+    var setWrapper = function setWrapper(fn) {
     	return eventHandlerWrapper = fn;
     };
     var getEventHandler = function getEventHandler(handleEvent) {
@@ -437,7 +437,7 @@
     var updateQueue = {
     	updaters: [],
     	isPending: false,
-    	reset: function reset() {
+    	emit: function emit() {
     		this.isPending = false;
     		this.batchUpdate();
     	},
@@ -458,7 +458,7 @@
     			}
 
     			var result = fn.apply(this, args);
-    			context.reset();
+    			context.emit();
     			return result;
     		};
     	},
@@ -471,14 +471,14 @@
     		this.updaters = [];
     		this.isPending = true;
     		eachItem(updaters, triggerUpdate);
-    		this.reset();
+    		this.emit();
     	}
     };
     var triggerUpdate = function triggerUpdate(updater) {
     	return updater.update();
     };
 
-    setWraper(function (fn) {
+    setWrapper(function (fn) {
     	return updateQueue.wrapFn(fn);
     });
 
@@ -831,7 +831,7 @@
     			eachItem(children, iteratee);
     			return;
     		}
-    		// the default children often be nesting array, so then here make it flat
+    		// the default children often be nesting array, make it flat and cache
     		if (isArr(children)) {
     			newChildren = [];
     			forEach$1(children, function (vchild, index) {
@@ -1257,13 +1257,7 @@
     });
 
     var isValidElement = function isValidElement(obj) {
-    	if (obj == null) {
-    		return false;
-    	}
-    	if (obj.vtype) {
-    		return true;
-    	}
-    	return false;
+    	return obj != null && !!obj.vtype;
     };
 
     var cloneElement = function cloneElement(originElem, props) {
@@ -1507,13 +1501,7 @@
     var bindContext = function bindContext(obj, source) {
     	mapValue(source, function (value, key) {
     		if (isFn(value)) {
-    			obj[key] = function () {
-    				for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-    					args[_key] = arguments[_key];
-    				}
-
-    				return value.apply(obj, args);
-    			};
+    			obj[key] = value.bind(obj);
     		}
     	});
     };

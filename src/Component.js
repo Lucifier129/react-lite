@@ -1,10 +1,10 @@
 import * as _ from './util'
-import { renderComponent, clearDidMount  } from './virtual-dom'
+import { renderComponent, clearDidMount } from './virtual-dom'
 
 let updateQueue = {
 	updaters: [],
 	isPending: false,
-	reset() {
+	emit() {
 		this.isPending = false
 		this.batchUpdate()
 	},
@@ -20,7 +20,7 @@ let updateQueue = {
 		return function(...args) {
 			context.isPending = true
 			let result = fn.apply(this, args)
-			context.reset()
+			context.emit()
 			return result
 		}
 	},
@@ -32,12 +32,12 @@ let updateQueue = {
 		this.updaters = []
 		this.isPending = true
 		_.eachItem(updaters, triggerUpdate)
-		this.reset()
+		this.emit()
 	}
 }
 let triggerUpdate = updater => updater.update()
 
-_.setWraper(fn => updateQueue.wrapFn(fn))
+_.setWrapper(fn => updateQueue.wrapFn(fn))
 
 function Updater(instance) {
 	this.instance = instance

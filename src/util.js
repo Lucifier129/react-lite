@@ -116,7 +116,7 @@ let getEventName = key => {
 	return key.toLowerCase()
 }
 let eventHandlerWrapper = identity
-export let setWraper = fn => eventHandlerWrapper = fn
+export let setWrapper = fn => eventHandlerWrapper = fn
 let getEventHandler = handleEvent => {
 	handleEvent = eventHandlerWrapper(handleEvent)
 	return function(e) {

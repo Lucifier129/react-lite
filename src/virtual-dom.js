@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { VNODE_TYPE, DIFF_TYPE, CHANGE_ID } from './constant'
+import { VNODE_TYPE, DIFF_TYPE } from './constant'
 import { updatePropsAndState } from './Component'
 import diff from './diff'
 
@@ -39,7 +39,7 @@ Vtree.prototype = {
 		}
 		if (_.isFn(refKey)) {
 			refKey(null)
-			} else {
+		} else {
 			delete refs[refKey]
 		}
 	},
@@ -124,7 +124,7 @@ Velem.prototype = new Vtree({
 			_.eachItem(children, iteratee)
 			return
 		}
-		// the default children often be nesting array, so then here make it flat
+		// the default children often be nesting array, make it flat and cache
 		if (_.isArr(children)) {
 			newChildren = []
 			_.forEach(children, (vchild, index) => {
@@ -413,7 +413,7 @@ let mapTree = (vtree, iteratee) => {
 		}
 		if (item && item.props && !_.isUndefined(item.props.children)) {
 			if (_.isArr(item.props.children)) {
-				stack.push.apply(stack, item.props.children)
+				stack.push(...item.props.children)
 			} else {
 				stack.push(item.props.children)
 			}
