@@ -32,7 +32,7 @@ npm install --save react-lite
 
 ## Browser compatibility
 
-react-lite supports IE9+, if you want to use react-lite in IE8+, try the branch `es3` of react-lite.
+react-lite supports IE9+, if you want to use react-lite in IE8-, try the branch `es3` of react-lite.
 
 branch `es3` use jQuery for cross browser event system, should work with es5-shim/es5-sham(or you can just implement `Function.prototype.bind` with use for `React.createClass` auto binding).
 
