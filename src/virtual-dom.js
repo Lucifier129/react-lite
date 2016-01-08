@@ -1,6 +1,6 @@
 import * as _ from './util'
 import { VNODE_TYPE, DIFF_TYPE } from './constant'
-import { updatePropsAndState } from './Component'
+import OriginComponent, { updatePropsAndState } from './Component'
 import diff from './diff'
 
 function Vtree(properties) {
@@ -297,7 +297,13 @@ Vcomponent.prototype = new Vtree({
 	vtype: VNODE_TYPE.COMPONENT,
 	initTree(parentNode) {
 		let { type: Component, props, context } = this
-		let component = this.component = new Component(props, getContextByTypes(context, Component.contextTypes))
+		let componentContext = getContextByTypes(context, Component.contextTypes)
+		let component = this.component = new Component(props, componentContext)
+		// make sure OriginComponent constructor was called,
+		// fixed bug when use babel in IE10/IE9's Object.getPrototypeOf
+		if (!component.$cache) {
+			OriginComponent.call(component, props, componentContext)
+		}
 		let { $updater: updater, $cache: cache } = component
 		cache.$context = context
 		updater.isPending = true
