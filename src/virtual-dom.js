@@ -300,9 +300,13 @@ Vcomponent.prototype = new Vtree({
 		let componentContext = getContextByTypes(context, Component.contextTypes)
 		let component = this.component = new Component(props, componentContext)
 		// make sure OriginComponent constructor was called,
-		// fixed bug when use babel in IE10/IE9's Object.getPrototypeOf
+		// fixed bug when use babel to support ES2015 classes
+		// IE10/IE9's Object.getPrototypeOf make no calling
 		if (!component.$cache) {
+			// custom state
+			let state = component.state
 			OriginComponent.call(component, props, componentContext)
+			component.state = state || component.state
 		}
 		let { $updater: updater, $cache: cache } = component
 		cache.$context = context

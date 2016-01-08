@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.15
+ * react-lite.js v0.0.16
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -1022,9 +1022,13 @@ Vcomponent.prototype = new Vtree({
 		var componentContext = getContextByTypes(context, Component$$.contextTypes);
 		var component = this.component = new Component$$(props, componentContext);
 		// make sure OriginComponent constructor was called,
-		// fixed bug when use babel in IE10/IE9's Object.getPrototypeOf
+		// fixed bug when use babel to support ES2015 classes
+		// IE10/IE9's Object.getPrototypeOf make no calling
 		if (!component.$cache) {
+			// custom state
+			var state = component.state;
 			Component.call(component, props, componentContext);
+			component.state = state || component.state;
 		}
 		var updater = component.$updater;
 		var cache = component.$cache;
