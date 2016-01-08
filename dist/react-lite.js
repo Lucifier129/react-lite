@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.12
+ * react-lite.js v0.0.14
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -852,7 +852,7 @@
     			eachItem(children, iteratee);
     			return;
     		}
-    		// the default children often be nesting array, so then here make it flat
+    		// the default children often be nesting array, make it flat and cache
     		if (isArr(children)) {
     			newChildren = [];
     			forEach$1(children, function (vchild, index) {
@@ -879,7 +879,16 @@
     		this.attachRef();
     	},
     	destroyTree: function destroyTree() {
+    		var node = this.node;
+    		var props = this.props;
+
     		mapTree(this, unmountTree);
+    		// remove node eventHandler, since like img.onload will trigger even it was removed
+    		mapValue(props, function (value, key) {
+    			if (isEventKey(key)) {
+    				removeEvent(node, key);
+    			}
+    		});
     		removeNode(this.node);
     		this.node = null;
     	},
