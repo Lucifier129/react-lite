@@ -149,7 +149,14 @@ Velem.prototype = new Vtree({
 		this.attachRef()
 	},
 	destroyTree() {
+		let { node, props } = this
 		mapTree(this, unmountTree)
+		// remove node eventHandler, since like img.onload will trigger even it was removed
+		_.mapValue(props, (value, key) => {
+			if (_.isEventKey(key)) {
+				_.removeEvent(node, key)
+			}
+		})
 		removeNode(this.node)
 		this.node = null
 	},

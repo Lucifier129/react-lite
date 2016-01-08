@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.13
+ * react-lite.js v0.0.14
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -854,7 +854,16 @@ Velem.prototype = new Vtree({
 		this.attachRef();
 	},
 	destroyTree: function destroyTree() {
+		var node = this.node;
+		var props = this.props;
+
 		mapTree(this, unmountTree);
+		// remove node eventHandler, since like img.onload will trigger even it was removed
+		mapValue(props, function (value, key) {
+			if (isEventKey(key)) {
+				removeEvent(node, key);
+			}
+		});
 		removeNode(this.node);
 		this.node = null;
 	},
