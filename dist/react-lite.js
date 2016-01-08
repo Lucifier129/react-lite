@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.14
+ * react-lite.js v0.0.15
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -1019,11 +1019,17 @@
     	constructor: Vcomponent,
     	vtype: VNODE_TYPE.COMPONENT,
     	initTree: function initTree(parentNode) {
-    		var Component = this.type;
+    		var Component$$ = this.type;
     		var props = this.props;
     		var context = this.context;
 
-    		var component = this.component = new Component(props, getContextByTypes(context, Component.contextTypes));
+    		var componentContext = getContextByTypes(context, Component$$.contextTypes);
+    		var component = this.component = new Component$$(props, componentContext);
+    		// make sure OriginComponent constructor was called,
+    		// fixed bug when use babel in IE10/IE9's Object.getPrototypeOf
+    		if (!component.$cache) {
+    			Component.call(component, props, componentContext);
+    		}
     		var updater = component.$updater;
     		var cache = component.$cache;
 
@@ -1067,13 +1073,13 @@
     		if (!component) {
     			return;
     		}
-    		var Component = newVtree.type;
+    		var Component$$ = newVtree.type;
     		var nextProps = newVtree.props;
     		var nextContext = newVtree.context;
     		var updater = component.$updater;
     		var $cache = component.$cache;
 
-    		var context = getContextByTypes(nextContext, Component.contextTypes);
+    		var context = getContextByTypes(nextContext, Component$$.contextTypes);
     		$cache.$context = nextContext;
     		updater.isPending = true;
     		component.componentWillReceiveProps(nextProps, context);
