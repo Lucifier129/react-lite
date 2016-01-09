@@ -142,13 +142,13 @@
 				src: 'http://ww3.sinaimg.cn/bmiddle/887790fagw1ezs0ci6qjxj20c10go0uf.jpg',
 				ref: 'img',
 				onLoad: function () {
-					if (_this2.refs.img == null) {
+					if (_this2.refs == null) {
 						debugger;
 					}
-					console.log('onload this.refs', _this2.refs.img, _this2.refs);
+					console.log('onload this.refs', _this2.refs);
 				},
 				onError: function () {
-					console.log('onerror this.refs', _this2.refs.img);
+					console.log('onerror this.refs', _this2.refs);
 				}
 			});
 			return React.createElement(

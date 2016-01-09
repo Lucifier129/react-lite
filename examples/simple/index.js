@@ -81,13 +81,13 @@ const Counter = React.createClass({
 					src="http://ww3.sinaimg.cn/bmiddle/887790fagw1ezs0ci6qjxj20c10go0uf.jpg"
 					ref="img"
 					onLoad={()=>{
-						if (this.refs.img == null) {
+						if (this.refs == null) {
 							debugger
 						}
-			          console.log('onload this.refs', this.refs.img, this.refs)
+			          console.log('onload this.refs', this.refs)
 			        }}
 			        onError={()=>{
-			          console.log('onerror this.refs', this.refs.img)
+			          console.log('onerror this.refs', this.refs)
 			        }}
 		 />
 		return (

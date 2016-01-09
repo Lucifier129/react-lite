@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.16
+ * react-lite.js v0.0.18
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -816,7 +816,18 @@
     	if (isValidComponent(vtree)) {
     		vtree.destroyTree();
     		return false; //ignore mapping children
-    	}
+    	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
+    			var node = vtree.node;
+    			var props = vtree.props;
+
+    			// aviod triggered when node was removed
+    			if (props.onLoad) {
+    				removeEvent(node, 'onLoad');
+    			}
+    			if (props.onError) {
+    				removeEvent(node, 'onError');
+    			}
+    		}
     	vtree.detachRef();
     };
     Velem.prototype = new Vtree({
@@ -858,16 +869,7 @@
     		this.attachRef();
     	},
     	destroyTree: function destroyTree() {
-    		var node = this.node;
-    		var props = this.props;
-
     		mapTree(this, unmountTree);
-    		// remove node eventHandler, since like img.onload will trigger even it was removed
-    		mapValue(props, function (value, key) {
-    			if (isEventKey(key)) {
-    				removeEvent(node, key);
-    			}
-    		});
     		removeNode(this.node);
     		this.node = null;
     	},

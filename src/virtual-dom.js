@@ -110,6 +110,15 @@ let unmountTree = vtree => {
 	if (isValidComponent(vtree)) {
 		vtree.destroyTree()
 		return false //ignore mapping children
+	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
+		let { node, props } = vtree
+		// aviod triggered when node was removed
+		if (props.onLoad) {
+			_.removeEvent(node, 'onLoad')
+		}
+		if (props.onError) {
+			_.removeEvent(node, 'onError')
+		}
 	}
 	vtree.detachRef()
 }
@@ -149,14 +158,7 @@ Velem.prototype = new Vtree({
 		this.attachRef()
 	},
 	destroyTree() {
-		let { node, props } = this
 		mapTree(this, unmountTree)
-		// remove node eventHandler, since like img.onload will trigger even it was removed
-		_.mapValue(props, (value, key) => {
-			if (_.isEventKey(key)) {
-				_.removeEvent(node, key)
-			}
-		})
 		removeNode(this.node)
 		this.node = null
 	},
