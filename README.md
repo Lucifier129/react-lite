@@ -3,6 +3,17 @@
 ## Introduction
 React under 20k.
 react-lite is an implementation of React that optimizes for small script size.
+### Framework Size Comparison
+
+| Framework              | Version    | Minified Size |
+|------------------------|------------|---------------|
+| Ember                  | 2.2.0      | 446.0kb       |
+| Polymer                | 1.0.6      | 183.0kb       |
+| Angular                | 1.4.8      | 148.0kb       |
+| React                  | 0.14.3     | 136.0kb       |
+| Web Components Polyfill| 0.7.19     | 118.0kb       |
+| Riot                   | 2.3.11     | 20kb          |
+| React-lite             | 0.0.18     | 17.5kb        |
 
 It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no React.renderToString/React.renderToStaticMarkup).
