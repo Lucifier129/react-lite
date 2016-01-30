@@ -20,7 +20,7 @@ Vtree.prototype = {
 		if (vtype === VNODE_TYPE.ELEMENT) {
 			refValue = this.node
 			// support react v0.13 style: this.refs.myInput.getDOMNode()
-			refValue.getDOMNode = getDOMNode
+			this.node.getDOMNode = getDOMNode
 		} else if (vtype === VNODE_TYPE.COMPONENT) {
 			refValue = this.component
 		}
@@ -114,34 +114,29 @@ let unmountTree = vtree => {
 		let { node, props } = vtree
 		// aviod triggered when node was removed
 		if (props.onLoad) {
-			_.removeEvent(node, 'onLoad')
+			node.onload = null
 		}
-		if (props.onError) {
-			_.removeEvent(node, 'onError')
-		}
+		vtree.detachRef()
 	}
-	vtree.detachRef()
 }
 Velem.prototype = new Vtree({
 	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
 	eachChildren(iteratee) {
 		let { children } = this.props
-		let { sorted } = this
 		let newChildren
-		if (sorted) {
+		if (this.sorted) {
 			_.eachItem(children, iteratee)
 			return
 		}
 		// the default children often be nesting array, make it flat and cache
 		if (_.isArr(children)) {
-			newChildren = []
+			this.props.children = newChildren = []
 			_.forEach(children, (vchild, index) => {
 				vchild = getVnode(vchild)
 				iteratee(vchild, index)
 				newChildren.push(vchild)
 			})
-			this.props.children = newChildren
 			this.sorted = true
 		} else if (!_.isUndefined(children)) {
 			children = this.props.children = getVnode(children)
@@ -213,7 +208,7 @@ VstatelessComponent.prototype = new Vtree({
 	renderTree() {
 		let { type: factory, props, context } = this
 		let vtree = factory(props, getContextByTypes(context, factory.contextTypes))
-		if (vtree && _.isFn(vtree.render)) {
+		if (vtree && vtree.render) {
 			vtree = vtree.render()
 		}
 		this.vtree = getVnode(vtree)
@@ -242,7 +237,7 @@ export let handleVnodeWithRef = vnode => {
 }
 let getContextByTypes = (curContext, contextTypes) => {
 	let context = {}
-	if (!_.isObj(contextTypes) || !_.isObj(curContext)) {
+	if (!contextTypes || !curContext) {
 		return context
 	}
 	_.mapValue(contextTypes, (_, key) => {
@@ -279,7 +274,7 @@ export let renderComponent = (component, context) => {
 	setContext(curContext, vtree)
 	return vtree
 }
-let neverUpdate = () => false
+
 let didMountComponents = []
 let callDidMount = obj => obj.didMount()
 export let clearDidMount = () => {
@@ -290,6 +285,8 @@ export let clearDidMount = () => {
 	didMountComponents = []
 	_.eachItem(components, callDidMount)
 }
+
+let neverUpdate = () => false
 export function Vcomponent(type, props) {
 	this.type = type
 	this.props = props
@@ -326,13 +323,18 @@ Vcomponent.prototype = new Vtree({
 		if (!component) {
 			return
 		}
-		component.shouldComponentUpdate = neverUpdate
-		component.forceUpdate = component.setState = noop
 		this.detachRef()
+		component.setState = noop
 		component.componentWillUnmount()
 		component.vtree.destroyTree()
+		delete component.setState
 		component.$cache.isMounted = false
-		this.component = this.node = component.node = component.refs = component.context = null
+		this.component = this.node
+		= component.vtree
+		= component.node
+		= component.refs
+		= component.context
+		= null
 	},
 	update(newVtree, parentNode) {
 		let { component } = this
@@ -382,7 +384,7 @@ let compareTwoTree = (vtree, newVtree, parentNode) => {
 	}
 }
 
-let removeNode = (node) => {
+let removeNode = node => {
 	if (node && node.parentNode) {
 		node.parentNode.removeChild(node)
 	}

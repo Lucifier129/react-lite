@@ -5,6 +5,51 @@
  */
 'use strict';
 
+var VNODE_TYPE = {
+	ELEMENT: 1,
+	COMPONENT: 2,
+	STATELESS_COMPONENT: 3,
+	TEXT: 4
+};
+var DIFF_TYPE = {
+	CREATE: 1,
+	REMOVE: 2,
+	REPLACE: 3,
+	UPDATE: 4
+};
+
+var COMPONENT_ID = 'liteid';
+
+var diff = function diff(vnode, newVnode) {
+	var type = undefined;
+	switch (true) {
+		case vnode === newVnode:
+			return null;
+		case isUndefined(newVnode):
+			type = DIFF_TYPE.REMOVE;
+			break;
+		case isUndefined(vnode):
+			type = DIFF_TYPE.CREATE;
+			break;
+		case vnode.type !== newVnode.type:
+			type = DIFF_TYPE.REPLACE;
+			break;
+		case newVnode.key !== null:
+			if (vnode.key === null || newVnode.key !== vnode.key) {
+				type = DIFF_TYPE.REPLACE;
+			} else {
+				type = DIFF_TYPE.UPDATE;
+			}
+			break;
+		case vnode.key !== null:
+			type = DIFF_TYPE.REPLACE;
+			break;
+		default:
+			type = DIFF_TYPE.UPDATE;
+	}
+	return type;
+};
+
 var isType = function isType(type) {
 	return function (obj) {
 		return obj != null && Object.prototype.toString.call(obj) === '[object ' + type + ']';
@@ -147,44 +192,6 @@ var mergeProps = function mergeProps(props, children, defaultProps) {
 	return result;
 };
 
-var eventNameAlias = {
-	onDoubleClick: 'ondblclick'
-};
-var getEventName = function getEventName(key) {
-	key = eventNameAlias[key] || key;
-	return key.toLowerCase();
-};
-var eventHandlerWrapper = identity;
-var setWrapper = function setWrapper(fn) {
-	return eventHandlerWrapper = fn;
-};
-var getEventHandler = function getEventHandler(handleEvent) {
-	handleEvent = eventHandlerWrapper(handleEvent);
-	return function (e) {
-		e.stopPropagation();
-		e.nativeEvent = e;
-		return handleEvent.call(this, e);
-	};
-};
-var setEvent = function setEvent(elem, key, value) {
-	if (!isFn(value)) {
-		return;
-	}
-	key = getEventName(key);
-	value = getEventHandler(value);
-	elem[key] = value;
-	if (key === 'onchange') {
-		elem.oninput = value;
-	}
-};
-var removeEvent = function removeEvent(elem, key) {
-	key = getEventName(key);
-	elem[key] = null;
-	if (key === 'onchange') {
-		elem.oninput = null;
-	}
-};
-
 var ignoreKeys = {
 	key: true,
 	ref: true,
@@ -212,7 +219,7 @@ var setProp = function setProp(elem, key, value) {
 		case isIgnoreKey(key) || key === 'title' && value == null:
 			break;
 		case isEventKey(key):
-			setEvent(elem, key, value);
+			addEvent(elem, key, value);
 			break;
 		case isStyleKey(key):
 			setStyle(elem, value);
@@ -415,20 +422,494 @@ if (!Object.freeze) {
 	Object.freeze = identity;
 }
 
-var VNODE_TYPE = {
-	ELEMENT: 1,
-	COMPONENT: 2,
-	STATELESS_COMPONENT: 3,
-	TEXT: 4
+function Vtree(properties) {
+	extend(this, properties);
+}
+
+var noop$2 = noop$1;
+var getDOMNode = function getDOMNode() {
+	return this;
 };
-var DIFF_TYPE = {
-	CREATE: 1,
-	REMOVE: 2,
-	REPLACE: 3,
-	UPDATE: 4
+Vtree.prototype = {
+	constructor: Vtree,
+	attachRef: function attachRef() {
+		var refKey = this.ref;
+		var refs = this.refs;
+		var vtype = this.vtype;
+
+		if (!refs || refKey == null) {
+			return;
+		}
+		var refValue = undefined;
+		if (vtype === VNODE_TYPE.ELEMENT) {
+			refValue = this.node;
+			// support react v0.13 style: this.refs.myInput.getDOMNode()
+			this.node.getDOMNode = getDOMNode;
+		} else if (vtype === VNODE_TYPE.COMPONENT) {
+			refValue = this.component;
+		}
+		if (refValue != null) {
+			if (isFn(refKey)) {
+				refKey(refValue);
+			} else {
+				refs[refKey] = refValue;
+			}
+		}
+	},
+	detachRef: function detachRef() {
+		var refKey = this.ref;
+		var refs = this.refs;
+
+		if (!refs || refKey == null) {
+			return;
+		}
+		if (isFn(refKey)) {
+			refKey(null);
+		} else {
+			delete refs[refKey];
+		}
+	},
+	updateRef: function updateRef(newVtree) {
+		if (!this.refs) {
+			newVtree.attachRef();
+			return;
+		}
+		if (!newVtree.refs) {
+			this.detachRef();
+			return;
+		}
+		if (this.refs !== newVtree.refs) {
+			this.detachRef();
+			newVtree.attachRef();
+			return;
+		}
+		var oldRef = this.ref;
+		var newRef = newVtree.ref;
+		if (newRef == null) {
+			this.detachRef();
+		} else if (oldRef !== newRef) {
+			this.detachRef();
+			newVtree.attachRef();
+		}
+	},
+	updateTree: function updateTree(nextVtree, parentNode) {
+		compareTwoTree(this, nextVtree, parentNode);
+	}
 };
 
-var COMPONENT_ID = 'liteid';
+function Vtext(text) {
+	this.text = text;
+}
+
+Vtext.prototype = new Vtree({
+	constructor: Vtext,
+	vtype: VNODE_TYPE.TEXT,
+	attachRef: noop$2,
+	detachRef: noop$2,
+	updateRef: noop$2,
+	update: function update(nextVtext) {
+		var node = this.node;
+		var text = this.text;
+
+		if (nextVtext.text !== text) {
+			node.replaceData(0, node.length, nextVtext.text);
+		}
+		// deliver node to the newTree for next updating
+		nextVtext.node = node;
+		this.node = null;
+		return this;
+	},
+	initTree: function initTree(parentNode) {
+		this.node = createTextNode(this.text);
+		appendNode(parentNode, this.node);
+	},
+	destroyTree: function destroyTree() {
+		removeNode(this.node);
+		this.node = null;
+	}
+});
+
+function Velem(type, props) {
+	this.type = type;
+	this.props = props;
+}
+
+var unmountTree = function unmountTree(vtree) {
+	if (isValidComponent(vtree)) {
+		vtree.destroyTree();
+		return false; //ignore mapping children
+	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
+			var node = vtree.node;
+			var props = vtree.props;
+
+			// aviod triggered when node was removed
+			if (props.onLoad) {
+				node.onload = null;
+			}
+			vtree.detachRef();
+		}
+};
+Velem.prototype = new Vtree({
+	constructor: Velem,
+	vtype: VNODE_TYPE.ELEMENT,
+	eachChildren: function eachChildren(iteratee) {
+		var children = this.props.children;
+
+		var newChildren = undefined;
+		if (this.sorted) {
+			eachItem(children, iteratee);
+			return;
+		}
+		// the default children often be nesting array, make it flat and cache
+		if (isArr(children)) {
+			this.props.children = newChildren = [];
+			forEach$1(children, function (vchild, index) {
+				vchild = getVnode(vchild);
+				iteratee(vchild, index);
+				newChildren.push(vchild);
+			});
+			this.sorted = true;
+		} else if (!isUndefined(children)) {
+			children = this.props.children = getVnode(children);
+			iteratee(children, 0);
+		}
+	},
+	initTree: function initTree(parentNode) {
+		var type = this.type;
+		var props = this.props;
+
+		var node = this.node = createElement$1(type, props);
+		this.eachChildren(function (vchild) {
+			vchild.initTree(node);
+		});
+		appendNode(parentNode, node);
+		this.attachRef();
+	},
+	destroyTree: function destroyTree() {
+		mapTree(this, unmountTree);
+		removeNode(this.node);
+		this.node = null;
+	},
+	update: function update(newVelem) {
+		var node = this.node;
+		var props = this.props;
+
+		var children = !isUndefined(props.children) ? props.children : [];
+		var count = 0;
+		var vindex = undefined;
+		if (!isArr(children)) {
+			children = [children];
+		}
+		patchProps(node, props, newVelem.props);
+		newVelem.node = node;
+		newVelem.eachChildren(function (newVchild, index) {
+			var vchild = children[index];
+			count += 1;
+			// if newVchild.node exist, destroy it and remove it when it's in children
+			if (vchild !== newVchild && newVchild.node) {
+				newVchild.destroyTree();
+				vindex = findIndex(children, newVchild, index + 1);
+				if (vindex !== -1) {
+					children.splice(vindex, 1);
+				}
+			}
+			if (vchild) {
+				vchild.updateTree(newVchild, node);
+			} else {
+				newVchild.initTree(node);
+			}
+		});
+		// destroy old children not in the newChildren
+		while (children.length > count) {
+			children[count].destroyTree();
+			count += 1;
+		}
+		this.updateRef(newVelem);
+		this.node = null;
+	}
+});
+
+function VstatelessComponent(type, props) {
+	this.type = type;
+	this.props = props;
+}
+
+VstatelessComponent.prototype = new Vtree({
+	constructor: VstatelessComponent,
+	vtype: VNODE_TYPE.STATELESS_COMPONENT,
+	attachRef: noop$2,
+	detachRef: noop$2,
+	updateRef: noop$2,
+	renderTree: function renderTree() {
+		var factory = this.type;
+		var props = this.props;
+		var context = this.context;
+
+		var vtree = factory(props, getContextByTypes(context, factory.contextTypes));
+		if (vtree && vtree.render) {
+			vtree = vtree.render();
+		}
+		this.vtree = getVnode(vtree);
+		setContext(context, this.vtree);
+	},
+	initTree: function initTree(parentNode) {
+		this.renderTree();
+		this.vtree.initTree(parentNode);
+		this.node = this.vtree.node;
+	},
+	destroyTree: function destroyTree() {
+		this.vtree.destroyTree();
+		this.node = this.vtree = null;
+	},
+	update: function update(newVtree, parentNode) {
+		newVtree.renderTree();
+		this.vtree.updateTree(newVtree.vtree, parentNode);
+		newVtree.node = newVtree.vtree.node;
+		this.node = this.vtree = null;
+	}
+});
+
+var setRefs = noop$2;
+var handleVnodeWithRef = function handleVnodeWithRef(vnode) {
+	setRefs(vnode);
+};
+var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
+	var context = {};
+	if (!contextTypes || !curContext) {
+		return context;
+	}
+	mapValue(contextTypes, function (_, key) {
+		context[key] = curContext[key];
+	});
+	return context;
+};
+
+var setContext = function setContext(context, vtree) {
+	mapTree(vtree, function (item) {
+		if (isValidComponent(item)) {
+			if (item.context) {
+				if (item.context !== context) {
+					item.context = extend(item.context, context);
+				}
+			} else {
+				item.context = context;
+			}
+		}
+	});
+};
+var bindRefs = function bindRefs(refs) {
+	return function (vnode) {
+		if (!vnode.refs) {
+			vnode.refs = refs;
+		}
+	};
+};
+
+var renderComponent = function renderComponent(component, context) {
+	var curContext = component.getChildContext();
+	curContext = extend({}, context, curContext);
+	setRefs = bindRefs(component.refs);
+	var vtree = checkVtree(component.render());
+	setRefs = noop$2;
+	setContext(curContext, vtree);
+	return vtree;
+};
+
+var didMountComponents = [];
+var callDidMount = function callDidMount(obj) {
+	return obj.didMount();
+};
+var clearDidMount = function clearDidMount() {
+	var components = didMountComponents;
+	if (components.length === 0) {
+		return;
+	}
+	didMountComponents = [];
+	eachItem(components, callDidMount);
+};
+
+function Vcomponent(type, props) {
+	this.type = type;
+	this.props = props;
+}
+
+Vcomponent.prototype = new Vtree({
+	constructor: Vcomponent,
+	vtype: VNODE_TYPE.COMPONENT,
+	initTree: function initTree(parentNode) {
+		var Component = this.type;
+		var props = this.props;
+		var context = this.context;
+
+		var componentContext = getContextByTypes(context, Component.contextTypes);
+		var component = this.component = new Component(props, componentContext);
+		var updater = component.$updater;
+		var cache = component.$cache;
+
+		cache.$context = context;
+		updater.isPending = true;
+		component.props = component.props || props;
+		component.componentWillMount();
+		updatePropsAndState(component, component.props, updater.getState(), component.context);
+		var vtree = component.vtree = renderComponent(component, context);
+		vtree.initTree(parentNode);
+		cache.isMounted = true;
+		component.node = this.node = vtree.node;
+		didMountComponents.push(this);
+	},
+	didMount: function didMount() {
+		var component = this.component;
+
+		var updater = component.$updater;
+		component.componentDidMount();
+		updater.isPending = false;
+		this.attachRef();
+		updater.emitUpdate();
+	},
+	destroyTree: function destroyTree() {
+		var component = this.component;
+
+		if (!component) {
+			return;
+		}
+		this.detachRef();
+		component.setState = noop$2;
+		component.componentWillUnmount();
+		component.vtree.destroyTree();
+		delete component.setState;
+		component.$cache.isMounted = false;
+		this.component = this.node = component.vtree = component.node = component.refs = component.context = null;
+	},
+	update: function update(newVtree, parentNode) {
+		var component = this.component;
+
+		if (!component) {
+			return;
+		}
+		var Component = newVtree.type;
+		var nextProps = newVtree.props;
+		var nextContext = newVtree.context;
+		var updater = component.$updater;
+		var $cache = component.$cache;
+
+		var context = getContextByTypes(nextContext, Component.contextTypes);
+		$cache.$context = nextContext;
+		updater.isPending = true;
+		component.componentWillReceiveProps(nextProps, context);
+		updater.isPending = false;
+		updater.emitUpdate(nextProps, context);
+		newVtree.component = component;
+		newVtree.node = component.node;
+		this.updateRef(newVtree);
+		this.component = this.node = null;
+	}
+});
+
+var compareTwoTree = function compareTwoTree(vtree, newVtree, parentNode) {
+	var diffType = diff(vtree, newVtree);
+	var $removeNode = undefined;
+	var node = undefined;
+	switch (diffType) {
+		case DIFF_TYPE.CREATE:
+			newVtree.initTree(parentNode);
+			break;
+		case DIFF_TYPE.REMOVE:
+			vtree.destroyTree();
+			break;
+		case DIFF_TYPE.REPLACE:
+			node = vtree.node;
+			// don't remove the existNode for replacing
+			$removeNode = removeNode;
+			removeNode = noop$2;
+			vtree.destroyTree();
+			removeNode = $removeNode;
+			newVtree.initTree(function (newNode) {
+				replaceNode(parentNode, newNode, node);
+			});
+			break;
+		case DIFF_TYPE.UPDATE:
+			vtree.update(newVtree, parentNode);
+			break;
+	}
+};
+
+var removeNode = function removeNode(node) {
+	if (node && node.parentNode) {
+		node.parentNode.removeChild(node);
+	}
+};
+var appendNode = function appendNode(parentNode, node) {
+	if (parentNode && node) {
+		// for replace node
+		if (isFn(parentNode)) {
+			parentNode(node);
+		} else {
+			parentNode.appendChild(node);
+		}
+	}
+};
+var replaceNode = function replaceNode(parentNode, newNode, existNode) {
+	if (newNode && existNode) {
+		parentNode = parentNode || existNode.parentNode;
+		parentNode.replaceChild(newNode, existNode);
+	}
+};
+
+var createTextNode = function createTextNode(text) {
+	return document.createTextNode(text);
+};
+var createElement$1 = function createElement(tagName, props) {
+	var node = document.createElement(tagName);
+	setProps(node, props);
+	return node;
+};
+
+var mapTree = function mapTree(vtree, iteratee) {
+	var stack = [vtree];
+	var item = undefined;
+	var shouldMapChildren = undefined;
+	while (stack.length) {
+		item = stack.shift();
+		shouldMapChildren = iteratee(item);
+		if (shouldMapChildren === false) {
+			continue;
+		}
+		if (item && item.props && !isUndefined(item.props.children)) {
+			if (isArr(item.props.children)) {
+				stack.push.apply(stack, item.props.children);
+			} else {
+				stack.push(item.props.children);
+			}
+		}
+	}
+};
+
+var getVnode = function getVnode(vnode) {
+	if (vnode === null) {
+		vnode = new Velem('noscript', {});
+	} else if (!isObj(vnode)) {
+		vnode = new Vtext(vnode);
+	}
+	return vnode;
+};
+
+var checkVtree = function checkVtree(vtree) {
+	if (isUndefined(vtree)) {
+		throw new Error('component can not render undefined');
+	}
+	return getVnode(vtree);
+};
+
+var isValidComponent = function isValidComponent(obj) {
+	if (obj == null) {
+		return false;
+	}
+	var vtype = obj.vtype;
+	if (vtype === VNODE_TYPE.COMPONENT || vtype === VNODE_TYPE.STATELESS_COMPONENT) {
+		return true;
+	}
+	return false;
+};
 
 var updateQueue = {
 	updaters: [],
@@ -439,20 +920,6 @@ var updateQueue = {
 		} else {
 			this.updaters.push(updater);
 		}
-	},
-	wrapFn: function wrapFn(fn) {
-		var context = this;
-		return function () {
-			context.isPending = true;
-
-			for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-				args[_key] = arguments[_key];
-			}
-
-			var result = fn.apply(this, args);
-			context.batchUpdate();
-			return result;
-		};
 	},
 	batchUpdate: function batchUpdate() {
 		var updaters = this.updaters;
@@ -470,10 +937,6 @@ var updateQueue = {
 var triggerUpdate = function triggerUpdate(updater) {
 	return updater.update();
 };
-
-setWrapper(function (fn) {
-	return updateQueue.wrapFn(fn);
-});
 
 function Updater(instance) {
 	var _this = this;
@@ -664,529 +1127,110 @@ var shouldUpdate = function shouldUpdate(component, nextProps, nextState, nextCo
 	component.forceUpdate(callback);
 };
 
-var diff = function diff(vnode, newVnode) {
-	var type = undefined;
-	switch (true) {
-		case vnode === newVnode:
-			return null;
-		case isUndefined(newVnode):
-			type = DIFF_TYPE.REMOVE;
-			break;
-		case isUndefined(vnode):
-			type = DIFF_TYPE.CREATE;
-			break;
-		case vnode.type !== newVnode.type:
-			type = DIFF_TYPE.REPLACE;
-			break;
-		case newVnode.key !== null:
-			if (vnode.key === null || newVnode.key !== vnode.key) {
-				type = DIFF_TYPE.REPLACE;
-			} else {
-				type = DIFF_TYPE.UPDATE;
-			}
-			break;
-		case vnode.key !== null:
-			type = DIFF_TYPE.REPLACE;
-			break;
-		default:
-			type = DIFF_TYPE.UPDATE;
-	}
-	return type;
-};
+var matchHandler = function matchHandler(event) {
+	var path = event.path;
+	var type = event.type;
 
-function Vtree(properties) {
-	extend(this, properties);
-}
+	var eventType = 'on' + type;
+	var syntheticEvent = undefined;
+	for (var i = 0, len = path.length; i < len; i++) {
+		var elem = path[i];
+		var eventStore = elem.eventStore;
 
-var noop$2 = noop$1;
-var getDOMNode = function getDOMNode() {
-	return this;
-};
-Vtree.prototype = {
-	constructor: Vtree,
-	attachRef: function attachRef() {
-		var refKey = this.ref;
-		var refs = this.refs;
-		var vtype = this.vtype;
+		var listener = eventStore && eventStore[eventType];
+		if (listener) {
+			if (!syntheticEvent) {
+				syntheticEvent = {};
 
-		if (!refs || refKey == null) {
-			return;
-		}
-		var refValue = undefined;
-		if (vtype === VNODE_TYPE.ELEMENT) {
-			refValue = this.node;
-			// support react v0.13 style: this.refs.myInput.getDOMNode()
-			refValue.getDOMNode = getDOMNode;
-		} else if (vtype === VNODE_TYPE.COMPONENT) {
-			refValue = this.component;
-		}
-		if (refValue != null) {
-			if (isFn(refKey)) {
-				refKey(refValue);
-			} else {
-				refs[refKey] = refValue;
-			}
-		}
-	},
-	detachRef: function detachRef() {
-		var refKey = this.ref;
-		var refs = this.refs;
+				var _loop = function (key) {
+					if (typeof event[key] === 'function') {
+						syntheticEvent[key] = function () {
+							return event[key].apply(event, arguments);
+						};
+					} else {
+						syntheticEvent[key] = event[key];
+					}
+				};
 
-		if (!refs || refKey == null) {
-			return;
-		}
-		if (isFn(refKey)) {
-			refKey(null);
-		} else {
-			delete refs[refKey];
-		}
-	},
-	updateRef: function updateRef(newVtree) {
-		if (!this.refs) {
-			newVtree.attachRef();
-			return;
-		}
-		if (!newVtree.refs) {
-			this.detachRef();
-			return;
-		}
-		if (this.refs !== newVtree.refs) {
-			this.detachRef();
-			newVtree.attachRef();
-			return;
-		}
-		var oldRef = this.ref;
-		var newRef = newVtree.ref;
-		if (newRef == null) {
-			this.detachRef();
-		} else if (oldRef !== newRef) {
-			this.detachRef();
-			newVtree.attachRef();
-		}
-	},
-	updateTree: function updateTree(nextVtree, parentNode) {
-		compareTwoTree(this, nextVtree, parentNode);
-	}
-};
-
-function Vtext(text) {
-	this.text = text;
-}
-
-Vtext.prototype = new Vtree({
-	constructor: Vtext,
-	vtype: VNODE_TYPE.TEXT,
-	attachRef: noop$2,
-	detachRef: noop$2,
-	updateRef: noop$2,
-	update: function update(nextVtext) {
-		var node = this.node;
-		var text = this.text;
-
-		if (nextVtext.text !== text) {
-			node.replaceData(0, node.length, nextVtext.text);
-		}
-		// deliver node to the newTree for next updating
-		nextVtext.node = node;
-		this.node = null;
-		return this;
-	},
-	initTree: function initTree(parentNode) {
-		this.node = createTextNode(this.text);
-		appendNode(parentNode, this.node);
-	},
-	destroyTree: function destroyTree() {
-		removeNode(this.node);
-		this.node = null;
-	}
-});
-
-function Velem(type, props) {
-	this.type = type;
-	this.props = props;
-}
-
-var unmountTree = function unmountTree(vtree) {
-	if (isValidComponent(vtree)) {
-		vtree.destroyTree();
-		return false; //ignore mapping children
-	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
-			var node = vtree.node;
-			var props = vtree.props;
-
-			// aviod triggered when node was removed
-			if (props.onLoad) {
-				removeEvent(node, 'onLoad');
-			}
-			if (props.onError) {
-				removeEvent(node, 'onError');
-			}
-		}
-	vtree.detachRef();
-};
-Velem.prototype = new Vtree({
-	constructor: Velem,
-	vtype: VNODE_TYPE.ELEMENT,
-	eachChildren: function eachChildren(iteratee) {
-		var children = this.props.children;
-		var sorted = this.sorted;
-
-		var newChildren = undefined;
-		if (sorted) {
-			eachItem(children, iteratee);
-			return;
-		}
-		// the default children often be nesting array, make it flat and cache
-		if (isArr(children)) {
-			newChildren = [];
-			forEach$1(children, function (vchild, index) {
-				vchild = getVnode(vchild);
-				iteratee(vchild, index);
-				newChildren.push(vchild);
-			});
-			this.props.children = newChildren;
-			this.sorted = true;
-		} else if (!isUndefined(children)) {
-			children = this.props.children = getVnode(children);
-			iteratee(children, 0);
-		}
-	},
-	initTree: function initTree(parentNode) {
-		var type = this.type;
-		var props = this.props;
-
-		var node = this.node = createElement$1(type, props);
-		this.eachChildren(function (vchild) {
-			vchild.initTree(node);
-		});
-		appendNode(parentNode, node);
-		this.attachRef();
-	},
-	destroyTree: function destroyTree() {
-		mapTree(this, unmountTree);
-		removeNode(this.node);
-		this.node = null;
-	},
-	update: function update(newVelem) {
-		var node = this.node;
-		var props = this.props;
-
-		var children = !isUndefined(props.children) ? props.children : [];
-		var count = 0;
-		var vindex = undefined;
-		if (!isArr(children)) {
-			children = [children];
-		}
-		patchProps(node, props, newVelem.props);
-		newVelem.node = node;
-		newVelem.eachChildren(function (newVchild, index) {
-			var vchild = children[index];
-			count += 1;
-			// if newVchild.node exist, destroy it and remove it when it's in children
-			if (vchild !== newVchild && newVchild.node) {
-				newVchild.destroyTree();
-				vindex = findIndex(children, newVchild, index + 1);
-				if (vindex !== -1) {
-					children.splice(vindex, 1);
+				for (var key in event) {
+					_loop(key);
 				}
+				syntheticEvent.nativeEvent = event;
 			}
-			if (vchild) {
-				vchild.updateTree(newVchild, node);
-			} else {
-				newVchild.initTree(node);
-			}
-		});
-		// destroy old children not in the newChildren
-		while (children.length > count) {
-			children[count].destroyTree();
-			count += 1;
+			syntheticEvent.currentTarget = elem;
+			updateQueue.isPending = true;
+			listener.call(elem, syntheticEvent);
+			updateQueue.batchUpdate();
 		}
-		this.updateRef(newVelem);
-		this.node = null;
 	}
-});
-
-function VstatelessComponent(type, props) {
-	this.type = type;
-	this.props = props;
-}
-
-VstatelessComponent.prototype = new Vtree({
-	constructor: VstatelessComponent,
-	vtype: VNODE_TYPE.STATELESS_COMPONENT,
-	attachRef: noop$2,
-	detachRef: noop$2,
-	updateRef: noop$2,
-	renderTree: function renderTree() {
-		var factory = this.type;
-		var props = this.props;
-		var context = this.context;
-
-		var vtree = factory(props, getContextByTypes(context, factory.contextTypes));
-		if (vtree && isFn(vtree.render)) {
-			vtree = vtree.render();
-		}
-		this.vtree = getVnode(vtree);
-		setContext(context, this.vtree);
-	},
-	initTree: function initTree(parentNode) {
-		this.renderTree();
-		this.vtree.initTree(parentNode);
-		this.node = this.vtree.node;
-	},
-	destroyTree: function destroyTree() {
-		this.vtree.destroyTree();
-		this.node = this.vtree = null;
-	},
-	update: function update(newVtree, parentNode) {
-		newVtree.renderTree();
-		this.vtree.updateTree(newVtree.vtree, parentNode);
-		newVtree.node = newVtree.vtree.node;
-		this.node = this.vtree = null;
-	}
-});
-
-var setRefs = noop$2;
-var handleVnodeWithRef = function handleVnodeWithRef(vnode) {
-	setRefs(vnode);
-};
-var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
-	var context = {};
-	if (!isObj(contextTypes) || !isObj(curContext)) {
-		return context;
-	}
-	mapValue(contextTypes, function (_, key) {
-		context[key] = curContext[key];
-	});
-	return context;
 };
 
-var setContext = function setContext(context, vtree) {
-	mapTree(vtree, function (item) {
-		if (isValidComponent(item)) {
-			if (item.context) {
-				if (item.context !== context) {
-					item.context = extend(item.context, context);
-				}
-			} else {
-				item.context = context;
-			}
-		}
-	});
+var eventNameAlias = {
+	onDoubleClick: 'ondblclick'
 };
-var bindRefs = function bindRefs(refs) {
-	return function (vnode) {
-		if (!vnode.refs) {
-			vnode.refs = refs;
-		}
-	};
+var getEventName = function getEventName(key) {
+	key = eventNameAlias[key] || key;
+	return key.toLowerCase();
 };
 
-var renderComponent = function renderComponent(component, context) {
-	var curContext = component.getChildContext();
-	curContext = extend({}, context, curContext);
-	setRefs = bindRefs(component.refs);
-	var vtree = checkVtree(component.render());
-	setRefs = noop$2;
-	setContext(curContext, vtree);
-	return vtree;
+var isNotBubble = true;
+var notBubbleEvents = {
+	onload: isNotBubble,
+	onunload: isNotBubble,
+	onscroll: isNotBubble,
+	onfocus: isNotBubble,
+	onblur: isNotBubble,
+	onrowexit: isNotBubble,
+	onbeforeunload: isNotBubble,
+	onstop: isNotBubble,
+	ondragdrop: isNotBubble,
+	ondragenter: isNotBubble,
+	ondragexit: isNotBubble,
+	ondraggesture: isNotBubble,
+	ondragover: isNotBubble,
+	oncontextmenu: isNotBubble
 };
-var neverUpdate = function neverUpdate() {
-	return false;
-};
-var didMountComponents = [];
-var callDidMount = function callDidMount(obj) {
-	return obj.didMount();
-};
-var clearDidMount = function clearDidMount() {
-	var components = didMountComponents;
-	if (components.length === 0) {
+
+var eventTypes = {};
+
+var addEvent = function addEvent(elem, eventType, listener) {
+	eventType = getEventName(eventType);
+	var isNotBubble = notBubbleEvents[eventType];
+
+	if (isNotBubble) {
+		elem[eventType] = listener;
 		return;
 	}
-	didMountComponents = [];
-	eachItem(components, callDidMount);
-};
-function Vcomponent(type, props) {
-	this.type = type;
-	this.props = props;
-}
 
-Vcomponent.prototype = new Vtree({
-	constructor: Vcomponent,
-	vtype: VNODE_TYPE.COMPONENT,
-	initTree: function initTree(parentNode) {
-		var Component = this.type;
-		var props = this.props;
-		var context = this.context;
+	var eventStore = elem.eventStore || (elem.eventStore = {});
+	eventStore[eventType] = listener;
 
-		var componentContext = getContextByTypes(context, Component.contextTypes);
-		var component = this.component = new Component(props, componentContext);
-		var updater = component.$updater;
-		var cache = component.$cache;
-
-		cache.$context = context;
-		updater.isPending = true;
-		component.props = component.props || props;
-		component.componentWillMount();
-		updatePropsAndState(component, component.props, updater.getState(), component.context);
-		var vtree = component.vtree = renderComponent(component, context);
-		vtree.initTree(parentNode);
-		cache.isMounted = true;
-		component.node = this.node = vtree.node;
-		didMountComponents.push(this);
-	},
-	didMount: function didMount() {
-		var component = this.component;
-
-		var updater = component.$updater;
-		component.componentDidMount();
-		updater.isPending = false;
-		this.attachRef();
-		updater.emitUpdate();
-	},
-	destroyTree: function destroyTree() {
-		var component = this.component;
-
-		if (!component) {
-			return;
-		}
-		component.shouldComponentUpdate = neverUpdate;
-		component.forceUpdate = component.setState = noop$2;
-		this.detachRef();
-		component.componentWillUnmount();
-		component.vtree.destroyTree();
-		component.$cache.isMounted = false;
-		this.component = this.node = component.node = component.refs = component.context = null;
-	},
-	update: function update(newVtree, parentNode) {
-		var component = this.component;
-
-		if (!component) {
-			return;
-		}
-		var Component = newVtree.type;
-		var nextProps = newVtree.props;
-		var nextContext = newVtree.context;
-		var updater = component.$updater;
-		var $cache = component.$cache;
-
-		var context = getContextByTypes(nextContext, Component.contextTypes);
-		$cache.$context = nextContext;
-		updater.isPending = true;
-		component.componentWillReceiveProps(nextProps, context);
-		updater.isPending = false;
-		updater.emitUpdate(nextProps, context);
-		newVtree.component = component;
-		newVtree.node = component.node;
-		this.updateRef(newVtree);
-		this.component = this.node = null;
+	if (!eventTypes[eventType]) {
+		// onclick -> click
+		document.addEventListener(eventType.substr(2), matchHandler);
+		eventTypes[eventType] = true;
 	}
-});
 
-var compareTwoTree = function compareTwoTree(vtree, newVtree, parentNode) {
-	var diffType = diff(vtree, newVtree);
-	var $removeNode = undefined;
-	var node = undefined;
-	switch (diffType) {
-		case DIFF_TYPE.CREATE:
-			newVtree.initTree(parentNode);
-			break;
-		case DIFF_TYPE.REMOVE:
-			vtree.destroyTree();
-			break;
-		case DIFF_TYPE.REPLACE:
-			node = vtree.node;
-			// don't remove the existNode for replacing
-			$removeNode = removeNode;
-			removeNode = noop$2;
-			vtree.destroyTree();
-			removeNode = $removeNode;
-			newVtree.initTree(function (newNode) {
-				replaceNode(parentNode, newNode, node);
-			});
-			break;
-		case DIFF_TYPE.UPDATE:
-			vtree.update(newVtree, parentNode);
-			break;
+	if (eventType === 'onchange') {
+		addEvent(elem, 'oninput', listener);
 	}
 };
 
-var removeNode = function removeNode(node) {
-	if (node && node.parentNode) {
-		node.parentNode.removeChild(node);
-	}
-};
-var appendNode = function appendNode(parentNode, node) {
-	if (parentNode && node) {
-		// for replace node
-		if (isFn(parentNode)) {
-			parentNode(node);
-		} else {
-			parentNode.appendChild(node);
-		}
-	}
-};
-var replaceNode = function replaceNode(parentNode, newNode, existNode) {
-	if (newNode && existNode) {
-		parentNode = parentNode || existNode.parentNode;
-		parentNode.replaceChild(newNode, existNode);
-	}
-};
+var removeEvent = function removeEvent(elem, eventType) {
+	eventType = getEventName(eventType);
+	var isNotBubble = notBubbleEvents[eventType];
 
-var createTextNode = function createTextNode(text) {
-	return document.createTextNode(text);
-};
-var createElement$1 = function createElement(tagName, props) {
-	var node = document.createElement(tagName);
-	setProps(node, props);
-	return node;
-};
+	if (isNotBubble) {
+		elem[eventType] = null;
+		return;
+	}
 
-var mapTree = function mapTree(vtree, iteratee) {
-	var stack = [vtree];
-	var item = undefined;
-	var shouldMapChildren = undefined;
-	while (stack.length) {
-		item = stack.shift();
-		shouldMapChildren = iteratee(item);
-		if (shouldMapChildren === false) {
-			continue;
-		}
-		if (item && item.props && !isUndefined(item.props.children)) {
-			if (isArr(item.props.children)) {
-				stack.push.apply(stack, item.props.children);
-			} else {
-				stack.push(item.props.children);
-			}
-		}
-	}
-};
+	var eventStore = elem.eventStore || (elem.eventStore = {});
+	delete eventStore[eventType];
 
-var getVnode = function getVnode(vnode) {
-	if (vnode === null) {
-		vnode = new Velem('noscript', {});
-	} else if (!isObj(vnode)) {
-		vnode = new Vtext(vnode);
+	if (eventType === 'onchange') {
+		delete eventStore['oninput'];
 	}
-	return vnode;
-};
-
-var checkVtree = function checkVtree(vtree) {
-	if (isUndefined(vtree)) {
-		throw new Error('component can not render undefined');
-	}
-	return getVnode(vtree);
-};
-
-var isValidComponent = function isValidComponent(obj) {
-	if (obj == null) {
-		return false;
-	}
-	var vtype = obj.vtype;
-	if (vtype === VNODE_TYPE.COMPONENT || vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-		return true;
-	}
-	return false;
 };
 
 var store = {};

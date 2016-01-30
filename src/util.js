@@ -1,4 +1,5 @@
 // util
+import { addEvent, removeEvent } from './event-system'
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 export let isObj = isType('Object')
 export let isStr = isType('String')
@@ -108,42 +109,6 @@ export let mergeProps = (props, children, defaultProps) => {
 	return result
 }
 
-let eventNameAlias = {
-	onDoubleClick: 'ondblclick'
-}
-let getEventName = key => {
-	key = eventNameAlias[key] || key
-	return key.toLowerCase()
-}
-let eventHandlerWrapper = identity
-export let setWrapper = fn => eventHandlerWrapper = fn
-let getEventHandler = handleEvent => {
-	handleEvent = eventHandlerWrapper(handleEvent)
-	return function(e) {
-		e.stopPropagation()
-		e.nativeEvent = e
-		return handleEvent.call(this, e)
-	}
-}
-export let setEvent = (elem, key, value) => {
-	if (!isFn(value)) {
-		return
-	}
-	key = getEventName(key)
-	value = getEventHandler(value)
-	elem[key] = value
-	if (key === 'onchange') {
-		elem.oninput = value
-	}
-}
-export let removeEvent = (elem, key) => {
-	key = getEventName(key)
-	elem[key] = null
-	if (key === 'onchange') {
-		elem.oninput = null
-	}
-}
-
 let ignoreKeys = {
 	key: true,
 	ref: true,
@@ -161,7 +126,7 @@ export let setProp = (elem, key, value) => {
 		case isIgnoreKey(key) || (key === 'title' && value == null):
 			break
 		case isEventKey(key):
-			setEvent(elem, key, value)
+			addEvent(elem, key, value)
 			break
 		case isStyleKey(key):
 			setStyle(elem, value)

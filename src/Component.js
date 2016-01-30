@@ -1,7 +1,7 @@
 import * as _ from './util'
 import { renderComponent, clearDidMount } from './virtual-dom'
 
-let updateQueue = {
+export let updateQueue = {
 	updaters: [],
 	isPending: false,
 	add(updater) {
@@ -9,15 +9,6 @@ let updateQueue = {
 			updater.update()
 		} else {
 			this.updaters.push(updater)
-		}
-	},
-	wrapFn(fn) {
-		let context = this
-		return function(...args) {
-			context.isPending = true
-			let result = fn.apply(this, args)
-			context.batchUpdate()
-			return result
 		}
 	},
 	batchUpdate() {
@@ -33,8 +24,6 @@ let updateQueue = {
 	}
 }
 let triggerUpdate = updater => updater.update()
-
-_.setWrapper(fn => updateQueue.wrapFn(fn))
 
 function Updater(instance) {
 	this.instance = instance
