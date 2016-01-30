@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.18
+ * react-lite.js v0.0.19
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -433,10 +433,6 @@ var COMPONENT_ID = 'liteid';
 var updateQueue = {
 	updaters: [],
 	isPending: false,
-	emit: function emit() {
-		this.isPending = false;
-		this.batchUpdate();
-	},
 	add: function add(updater) {
 		if (!this.isPending) {
 			updater.update();
@@ -454,7 +450,7 @@ var updateQueue = {
 			}
 
 			var result = fn.apply(this, args);
-			context.emit();
+			context.batchUpdate();
 			return result;
 		};
 	},
@@ -467,7 +463,8 @@ var updateQueue = {
 		this.updaters = [];
 		this.isPending = true;
 		eachItem(updaters, triggerUpdate);
-		this.emit();
+		this.isPending = false;
+		this.batchUpdate();
 	}
 };
 var triggerUpdate = function triggerUpdate(updater) {
@@ -523,6 +520,7 @@ Updater.prototype = {
 		var pendingStates = this.pendingStates;
 
 		pendingStates.pop();
+		// push special params to point out replacing state
 		pendingStates.push([nextState]);
 	},
 	getState: function getState() {
@@ -1017,21 +1015,12 @@ Vcomponent.prototype = new Vtree({
 	constructor: Vcomponent,
 	vtype: VNODE_TYPE.COMPONENT,
 	initTree: function initTree(parentNode) {
-		var Component$$ = this.type;
+		var Component = this.type;
 		var props = this.props;
 		var context = this.context;
 
-		var componentContext = getContextByTypes(context, Component$$.contextTypes);
-		var component = this.component = new Component$$(props, componentContext);
-		// make sure OriginComponent constructor was called,
-		// fixed bug when use babel to support ES2015 classes
-		// IE10/IE9's Object.getPrototypeOf make no calling
-		if (!component.$cache) {
-			// custom state
-			var state = component.state;
-			Component.call(component, props, componentContext);
-			component.state = state || component.state;
-		}
+		var componentContext = getContextByTypes(context, Component.contextTypes);
+		var component = this.component = new Component(props, componentContext);
 		var updater = component.$updater;
 		var cache = component.$cache;
 
@@ -1075,13 +1064,13 @@ Vcomponent.prototype = new Vtree({
 		if (!component) {
 			return;
 		}
-		var Component$$ = newVtree.type;
+		var Component = newVtree.type;
 		var nextProps = newVtree.props;
 		var nextContext = newVtree.context;
 		var updater = component.$updater;
 		var $cache = component.$cache;
 
-		var context = getContextByTypes(nextContext, Component$$.contextTypes);
+		var context = getContextByTypes(nextContext, Component.contextTypes);
 		$cache.$context = nextContext;
 		updater.isPending = true;
 		component.componentWillReceiveProps(nextProps, context);

@@ -4,10 +4,6 @@ import { renderComponent, clearDidMount } from './virtual-dom'
 let updateQueue = {
 	updaters: [],
 	isPending: false,
-	emit() {
-		this.isPending = false
-		this.batchUpdate()
-	},
 	add(updater) {
 		if (!this.isPending) {
 			updater.update()
@@ -20,7 +16,7 @@ let updateQueue = {
 		return function(...args) {
 			context.isPending = true
 			let result = fn.apply(this, args)
-			context.emit()
+			context.batchUpdate()
 			return result
 		}
 	},
@@ -32,7 +28,8 @@ let updateQueue = {
 		this.updaters = []
 		this.isPending = true
 		_.eachItem(updaters, triggerUpdate)
-		this.emit()
+		this.isPending = false
+		this.batchUpdate()
 	}
 }
 let triggerUpdate = updater => updater.update()
@@ -75,6 +72,7 @@ Updater.prototype = {
 	replaceState(nextState) {
 		let { pendingStates } = this
 		pendingStates.pop()
+		// push special params to point out replacing state
 		pendingStates.push([nextState])
 	},
 	getState() {
