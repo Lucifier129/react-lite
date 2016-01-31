@@ -1,33 +1,5 @@
 import { updateQueue } from './Component'
 
-let matchHandler = event => {
-	let { path, type } = event
-	let eventType = 'on' + type
-	let syntheticEvent
-	for (let i = 0, len = path.length; i < len; i++) {
-		let elem = path[i]
-		let { eventStore } = elem
-		let listener = eventStore && eventStore[eventType]
-		if (listener) {
-			if (!syntheticEvent) {
-				syntheticEvent = {}
-				for (let key in event) {
-					if (typeof event[key] === 'function') {
-						syntheticEvent[key] = (...args) => event[key](...args)
-					} else {
-						syntheticEvent[key] = event[key]
-					}
-				}
-				syntheticEvent.nativeEvent = event
-			}
-			syntheticEvent.currentTarget = elem
-			updateQueue.isPending = true
-			listener.call(elem, syntheticEvent)
-			updateQueue.batchUpdate()
-		}
-	}
-}
-
 let eventNameAlias = {
 	onDoubleClick: 'ondblclick'
 }
@@ -96,10 +68,30 @@ export let removeEvent = (elem, eventType) => {
 	}
 }
 
-
-
-
-
-
-
-
+let matchHandler = event => {
+	let { target, type } = event
+	let eventType = 'on' + type
+	let syntheticEvent
+	updateQueue.isPending = true
+	while (target) {
+		let { eventStore } = target
+		let listener = eventStore && eventStore[eventType]
+		if (!listener) {
+			target = target.parentNode
+			continue
+		}
+		if (!syntheticEvent) {
+			syntheticEvent = {}
+			syntheticEvent.nativeEvent = event
+			for (let key in event) {
+				syntheticEvent[key] = typeof event[key] === 'function'
+				? event[key].bind(event)
+				: event[key]
+			}
+		}
+		syntheticEvent.currentTarget = target
+		listener.call(target, syntheticEvent)
+		target = target.parentNode
+	}
+	updateQueue.batchUpdate()
+}

@@ -5,22 +5,27 @@ export let updateQueue = {
 	updaters: [],
 	isPending: false,
 	add(updater) {
-		if (!this.isPending) {
-			updater.update()
-		} else {
-			this.updaters.push(updater)
-		}
+		/*
+		 event bubbles from bottom-level to top-level
+		 reverse the updater order can merge some props and state and reduce the refresh times
+		 see Updater.update method below to know why
+		*/
+		this.isPending
+		? this.updaters.splice(0, 0, updater)
+		: updater.update()
 	},
 	batchUpdate() {
-		let { updaters } = this
-		if (updaters.length === 0) {
-			return
-		}
-		this.updaters = []
 		this.isPending = true
-		_.eachItem(updaters, triggerUpdate)
+		/*
+		  each updater.update may add new updater to updateQueue
+		  clear them with a loop
+		*/
+		while (this.updaters.length) {
+			let { updaters } = this
+			this.updaters = []
+			_.eachItem(updaters, triggerUpdate)
+		}
 		this.isPending = false
-		this.batchUpdate()
 	}
 }
 let triggerUpdate = updater => updater.update()
@@ -30,8 +35,10 @@ function Updater(instance) {
 	this.pendingStates = []
 	this.pendingCallbacks = []
 	this.isPending = false
-	this.bindClear = () => this.clearCallbacks()
 	this.nextProps = this.nextContext = null
+	this.bindClear = () => {
+		this.clearCallbacks()
+	}
 }
 
 Updater.prototype = {
@@ -47,6 +54,7 @@ Updater.prototype = {
 			nextProps = nextProps || instance.props
 			nextContext = nextContext || instance.context
 			this.nextProps = this.nextContext = null
+			// merge the nextProps and nextState and update by one time
 			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.bindClear)
 		}
 	},

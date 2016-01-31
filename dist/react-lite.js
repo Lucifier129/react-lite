@@ -81,18 +81,13 @@
 
     var pipe = function pipe(fn1, fn2) {
     	return function () {
-    		for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-    			args[_key] = arguments[_key];
-    		}
-
-    		fn1.apply(this, args);
-    		return fn2.apply(this, args);
+    		fn1.apply(this, arguments);
+    		return fn2.apply(this, arguments);
     	};
     };
 
-    var forEach$1 = function forEach(list, iteratee) {
-    	var record = arguments.length <= 2 || arguments[2] === undefined ? { index: 0 } : arguments[2];
-
+    var forEach$1 = function forEach(list, iteratee, record) {
+    	record = record || { index: 0 };
     	for (var i = 0, len = list.length; i < len; i++) {
     		var item = list[i];
     		if (isArr(item)) {
@@ -145,16 +140,13 @@
     };
 
     var extend = function extend(target) {
-    	for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-    		args[_key2 - 1] = arguments[_key2];
-    	}
-
+    	var sources = Array.prototype.slice.call(arguments, 1);
     	var setProp = function setProp(value, key) {
     		if (!isUndefined(value)) {
     			target[key] = value;
     		}
     	};
-    	eachItem(args, function (source) {
+    	eachItem(sources, function (source) {
     		if (source != null) {
     			mapValue(source, setProp);
     		}
@@ -167,18 +159,18 @@
     	return ++uid;
     };
 
-    var getChildren = function getChildren(_x2) {
+    var getChildren = function getChildren(_x) {
     	var _again = true;
 
     	_function: while (_again) {
-    		var children = _x2;
+    		var children = _x;
     		_again = false;
 
     		if (children && children.length > 0) {
     			if (children.length === 1) {
     				children = children[0];
     				if (isArr(children)) {
-    					_x2 = children;
+    					_x = children;
     					_again = true;
     					continue _function;
     				}
@@ -550,6 +542,9 @@
     			if (props.onLoad) {
     				node.onload = null;
     			}
+    			if (node.eventStore) {
+    				node.eventStore = null;
+    			}
     			vtree.detachRef();
     		}
     };
@@ -919,23 +914,26 @@
     	updaters: [],
     	isPending: false,
     	add: function add(updater) {
-    		if (!this.isPending) {
-    			updater.update();
-    		} else {
-    			this.updaters.push(updater);
-    		}
+    		/*
+       event bubbles from bottom-level to top-level
+       reverse the updater order can merge some props and state and reduce the refresh times
+       see Updater.update method below to know why
+      */
+    		this.isPending ? this.updaters.splice(0, 0, updater) : updater.update();
     	},
     	batchUpdate: function batchUpdate() {
-    		var updaters = this.updaters;
-
-    		if (updaters.length === 0) {
-    			return;
-    		}
-    		this.updaters = [];
     		this.isPending = true;
-    		eachItem(updaters, triggerUpdate);
+    		/*
+        each updater.update may add new updater to updateQueue
+        clear them with a loop
+      */
+    		while (this.updaters.length) {
+    			var updaters = this.updaters;
+
+    			this.updaters = [];
+    			eachItem(updaters, triggerUpdate);
+    		}
     		this.isPending = false;
-    		this.batchUpdate();
     	}
     };
     var triggerUpdate = function triggerUpdate(updater) {
@@ -949,10 +947,10 @@
     	this.pendingStates = [];
     	this.pendingCallbacks = [];
     	this.isPending = false;
-    	this.bindClear = function () {
-    		return _this.clearCallbacks();
-    	};
     	this.nextProps = this.nextContext = null;
+    	this.bindClear = function () {
+    		_this.clearCallbacks();
+    	};
     }
 
     Updater.prototype = {
@@ -972,6 +970,7 @@
     			nextProps = nextProps || instance.props;
     			nextContext = nextContext || instance.context;
     			this.nextProps = this.nextContext = null;
+    			// merge the nextProps and nextState and update by one time
     			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.bindClear);
     		}
     	},
@@ -1131,44 +1130,6 @@
     	component.forceUpdate(callback);
     };
 
-    var matchHandler = function matchHandler(event) {
-    	var path = event.path;
-    	var type = event.type;
-
-    	var eventType = 'on' + type;
-    	var syntheticEvent = undefined;
-    	for (var i = 0, len = path.length; i < len; i++) {
-    		var elem = path[i];
-    		var eventStore = elem.eventStore;
-
-    		var listener = eventStore && eventStore[eventType];
-    		if (listener) {
-    			if (!syntheticEvent) {
-    				syntheticEvent = {};
-
-    				var _loop = function (key) {
-    					if (typeof event[key] === 'function') {
-    						syntheticEvent[key] = function () {
-    							return event[key].apply(event, arguments);
-    						};
-    					} else {
-    						syntheticEvent[key] = event[key];
-    					}
-    				};
-
-    				for (var key in event) {
-    					_loop(key);
-    				}
-    				syntheticEvent.nativeEvent = event;
-    			}
-    			syntheticEvent.currentTarget = elem;
-    			updateQueue.isPending = true;
-    			listener.call(elem, syntheticEvent);
-    			updateQueue.batchUpdate();
-    		}
-    	}
-    };
-
     var eventNameAlias = {
     	onDoubleClick: 'ondblclick'
     };
@@ -1235,6 +1196,36 @@
     	if (eventType === 'onchange') {
     		delete eventStore['oninput'];
     	}
+    };
+
+    var matchHandler = function matchHandler(event) {
+    	var target = event.target;
+    	var type = event.type;
+
+    	var eventType = 'on' + type;
+    	var syntheticEvent = undefined;
+    	updateQueue.isPending = true;
+    	while (target) {
+    		var _target = target;
+    		var eventStore = _target.eventStore;
+
+    		var listener = eventStore && eventStore[eventType];
+    		if (!listener) {
+    			target = target.parentNode;
+    			continue;
+    		}
+    		if (!syntheticEvent) {
+    			syntheticEvent = {};
+    			syntheticEvent.nativeEvent = event;
+    			for (var key in event) {
+    				syntheticEvent[key] = typeof event[key] === 'function' ? event[key].bind(event) : event[key];
+    			}
+    		}
+    		syntheticEvent.currentTarget = target;
+    		listener.call(target, syntheticEvent);
+    		target = target.parentNode;
+    	}
+    	updateQueue.batchUpdate();
     };
 
     var store = {};
@@ -1315,10 +1306,7 @@
     };
 
     var cloneElement = function cloneElement(originElem, props) {
-    	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-    		children[_key - 2] = arguments[_key];
-    	}
-
+    	var children = Array.prototype.slice.call(arguments, 2);
     	var type = originElem.type;
     	var key = originElem.key;
     	var ref = originElem.ref;
@@ -1333,10 +1321,7 @@
 
     var createFactory = function createFactory(type) {
     	var factory = function factory() {
-    		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-    			args[_key2] = arguments[_key2];
-    		}
-
+    		var args = Array.prototype.slice.call(arguments);
     		return createElement.apply(undefined, [type].concat(args));
     	};
     	factory.type = type;
@@ -1344,10 +1329,7 @@
     };
 
     var createElement = function createElement(type, props) {
-    	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-    		children[_key3 - 2] = arguments[_key3];
-    	}
-
+    	var children = Array.prototype.slice.call(arguments, 2);
     	var Vnode = undefined;
     	switch (true) {
     		case isStr(type):
@@ -1607,7 +1589,7 @@
     };
 
     var React = extend({
-        version: '0.14.4',
+        version: '0.14.7',
         cloneElement: cloneElement,
         isValidElement: isValidElement,
         createElement: createElement,
@@ -1618,8 +1600,6 @@
         PropTypes: PropTypes,
         DOM: DOM
     }, ReactDOM);
-
-    React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactDOM;
 
     return React;
 

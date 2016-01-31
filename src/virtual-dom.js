@@ -116,6 +116,9 @@ let unmountTree = vtree => {
 		if (props.onLoad) {
 			node.onload = null
 		}
+		if (node.eventStore) {
+			node.eventStore = null
+		}
 		vtree.detachRef()
 	}
 }

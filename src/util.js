@@ -14,13 +14,14 @@ export let noop = () => {}
 export let identity = obj => obj
 
 export let pipe = (fn1, fn2) => {
-	return function(...args) {
-		fn1.apply(this, args)
-		return fn2.apply(this, args)
+	return function() {
+		fn1.apply(this, arguments)
+		return fn2.apply(this, arguments)
 	}
 }
 
-export let forEach = (list, iteratee, record = { index: 0 }) => {
+export let forEach = (list, iteratee, record) => {
+	record = record || { index: 0 }
 	for (let i = 0, len = list.length; i < len; i++) {
 		let item = list[i]
 		if (isArr(item)) {
@@ -72,13 +73,14 @@ export let mapKey = (sources, iteratee) => {
 	}
 }
 
-export let extend = (target, ...args) => {
+export let extend = function(target) {
+	let sources = Array.prototype.slice.call(arguments, 1)
 	let setProp = (value, key) => {
 		if (!isUndefined(value)) {
 			target[key] = value
 		}
 	}
-	eachItem(args, source => {
+	eachItem(sources, source => {
 		if (source != null) {
 			mapValue(source, setProp)
 		}

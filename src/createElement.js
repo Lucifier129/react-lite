@@ -3,7 +3,8 @@ import { Velem, Vcomponent, VstatelessComponent, handleVnodeWithRef } from './vi
 
 export let isValidElement = obj => obj != null && !!obj.vtype
 
-export let cloneElement = (originElem, props, ...children) => {
+export let cloneElement = function(originElem, props) {
+	let children = Array.prototype.slice.call(arguments, 2)
 	let { type, key, ref } = originElem
 	props = _.extend({ key, ref }, originElem.props, props)
 	let vnode = createElement(type, props, ...children)
@@ -14,12 +15,16 @@ export let cloneElement = (originElem, props, ...children) => {
 }
 
 export let createFactory = type => {
-	let factory = (...args) => createElement(type, ...args)
+	let factory = function() {
+		let args = Array.prototype.slice.call(arguments)
+		return createElement(type, ...args)
+	}
 	factory.type = type
 	return factory
 }
 
-let createElement = (type, props, ...children) => {
+let createElement = function(type, props) {
+	let children = Array.prototype.slice.call(arguments, 2)
 	let Vnode
 	switch (true) {
 		case _.isStr(type):
