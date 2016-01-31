@@ -43,14 +43,12 @@ npm install --save react-lite
 
 ## Browser compatibility
 
-react-lite supports IE9+, if you want to use react-lite in IE8-, try the branch `es3` of react-lite.
-
-branch `es3` use jQuery for crossing browser event system, should work with es5-shim/es5-sham(or you can just implement `Function.prototype.bind` which use for `React.createClass` auto binding).
+supports IE9+ ／ ES5 enviroment
 
 
 ## Documentation
 
-you can learn react-lite from [React official documentation](http://facebook.github.io/react/)
+learn react-lite from [React official documentation](http://facebook.github.io/react/)
 
 ## What can react-lite do?
 
@@ -73,7 +71,7 @@ just the same as what react does, see some demos below(I just add the alias to w
 
 via react-lite:
 - virtual-dom can not render to string(no React.renderToString and React.renderToStaticMarkup)
-- event system is base on DOM level1(dom.onclick = handleClick)
+- event system is base on delegation pattern(since v0.0.19)
 - all of React.PropTypes method is noop(empty function)
 - Do not support React-addons(for example ReactCSSTransitionGroup)
 - use React in server side rendering, and use React-lite in browser
