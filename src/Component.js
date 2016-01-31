@@ -10,9 +10,7 @@ export let updateQueue = {
 		 reverse the updater order can merge some props and state and reduce the refresh times
 		 see Updater.update method below to know why
 		*/
-		this.isPending
-		? this.updaters.splice(0, 0, updater)
-		: updater.update()
+		this.updaters.splice(0, 0, updater)
 	},
 	batchUpdate() {
 		this.isPending = true
@@ -42,11 +40,12 @@ function Updater(instance) {
 }
 
 Updater.prototype = {
-	constructor: Updater,
 	emitUpdate(nextProps, nextContext) {
 		this.nextProps = nextProps
 		this.nextContext = nextContext
-		updateQueue.add(this)
+		updateQueue.isPending
+		? updateQueue.add(this)
+		: this.update()
 	},
 	update() {
 		let { instance, pendingStates, nextProps, nextContext } = this

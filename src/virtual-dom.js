@@ -10,7 +10,6 @@ function Vtree(properties) {
 let noop = _.noop
 let getDOMNode = function() { return this }
 Vtree.prototype = {
-	constructor: Vtree,
 	attachRef() {
 		let { ref: refKey, refs, vtype } = this
 		if (!refs || refKey == null) {
@@ -76,7 +75,6 @@ export function Vtext(text) {
 }
 
 Vtext.prototype = new Vtree({
-	constructor: Vtext,
 	vtype: VNODE_TYPE.TEXT,
 	attachRef: noop,
 	detachRef: noop,
@@ -123,7 +121,6 @@ let unmountTree = vtree => {
 	}
 }
 Velem.prototype = new Vtree({
-	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
 	eachChildren(iteratee) {
 		let { children } = this.props
@@ -203,7 +200,6 @@ export function VstatelessComponent(type, props) {
 }
 
 VstatelessComponent.prototype = new Vtree({
-	constructor: VstatelessComponent,
 	vtype: VNODE_TYPE.STATELESS_COMPONENT,
 	attachRef: noop,
 	detachRef: noop,
@@ -295,7 +291,6 @@ export function Vcomponent(type, props) {
 	this.props = props
 }
 Vcomponent.prototype = new Vtree({
-	constructor: Vcomponent,
 	vtype: VNODE_TYPE.COMPONENT,
 	initTree(parentNode) {
 		let { type: Component, props, context } = this

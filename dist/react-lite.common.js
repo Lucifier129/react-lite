@@ -136,7 +136,10 @@ var mapKey = function mapKey(sources, iteratee) {
 };
 
 var extend = function extend(target) {
-	var sources = Array.prototype.slice.call(arguments, 1);
+	for (var _len = arguments.length, sources = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+		sources[_key - 1] = arguments[_key];
+	}
+
 	var setProp = function setProp(value, key) {
 		if (!isUndefined(value)) {
 			target[key] = value;
@@ -423,7 +426,6 @@ var getDOMNode = function getDOMNode() {
 	return this;
 };
 Vtree.prototype = {
-	constructor: Vtree,
 	attachRef: function attachRef() {
 		var refKey = this.ref;
 		var refs = this.refs;
@@ -494,7 +496,6 @@ function Vtext(text) {
 }
 
 Vtext.prototype = new Vtree({
-	constructor: Vtext,
 	vtype: VNODE_TYPE.TEXT,
 	attachRef: noop$2,
 	detachRef: noop$2,
@@ -545,7 +546,6 @@ var unmountTree = function unmountTree(vtree) {
 		}
 };
 Velem.prototype = new Vtree({
-	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
 	eachChildren: function eachChildren(iteratee) {
 		var children = this.props.children;
@@ -630,7 +630,6 @@ function VstatelessComponent(type, props) {
 }
 
 VstatelessComponent.prototype = new Vtree({
-	constructor: VstatelessComponent,
 	vtype: VNODE_TYPE.STATELESS_COMPONENT,
 	attachRef: noop$2,
 	detachRef: noop$2,
@@ -729,7 +728,6 @@ function Vcomponent(type, props) {
 }
 
 Vcomponent.prototype = new Vtree({
-	constructor: Vcomponent,
 	vtype: VNODE_TYPE.COMPONENT,
 	initTree: function initTree(parentNode) {
 		var Component = this.type;
@@ -915,7 +913,7 @@ var updateQueue = {
    reverse the updater order can merge some props and state and reduce the refresh times
    see Updater.update method below to know why
   */
-		this.isPending ? this.updaters.splice(0, 0, updater) : updater.update();
+		this.updaters.splice(0, 0, updater);
 	},
 	batchUpdate: function batchUpdate() {
 		this.isPending = true;
@@ -950,11 +948,10 @@ function Updater(instance) {
 }
 
 Updater.prototype = {
-	constructor: Updater,
 	emitUpdate: function emitUpdate(nextProps, nextContext) {
 		this.nextProps = nextProps;
 		this.nextContext = nextContext;
-		updateQueue.add(this);
+		updateQueue.isPending ? updateQueue.add(this) : this.update();
 	},
 	update: function update() {
 		var instance = this.instance;
@@ -1302,7 +1299,10 @@ var isValidElement = function isValidElement(obj) {
 };
 
 var cloneElement = function cloneElement(originElem, props) {
-	var children = Array.prototype.slice.call(arguments, 2);
+	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+		children[_key - 2] = arguments[_key];
+	}
+
 	var type = originElem.type;
 	var key = originElem.key;
 	var ref = originElem.ref;
@@ -1317,7 +1317,10 @@ var cloneElement = function cloneElement(originElem, props) {
 
 var createFactory = function createFactory(type) {
 	var factory = function factory() {
-		var args = Array.prototype.slice.call(arguments);
+		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+			args[_key2] = arguments[_key2];
+		}
+
 		return createElement.apply(undefined, [type].concat(args));
 	};
 	factory.type = type;
@@ -1325,7 +1328,10 @@ var createFactory = function createFactory(type) {
 };
 
 var createElement = function createElement(type, props) {
-	var children = Array.prototype.slice.call(arguments, 2);
+	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+		children[_key3 - 2] = arguments[_key3];
+	}
+
 	var Vnode = undefined;
 	switch (true) {
 		case isStr(type):

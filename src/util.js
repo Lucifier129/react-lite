@@ -73,8 +73,7 @@ export let mapKey = (sources, iteratee) => {
 	}
 }
 
-export let extend = function(target) {
-	let sources = Array.prototype.slice.call(arguments, 1)
+export let extend = (target, ...sources) => {
 	let setProp = (value, key) => {
 		if (!isUndefined(value)) {
 			target[key] = value
