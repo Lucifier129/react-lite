@@ -1,28 +1,29 @@
 // util
 import jQuery from 'jquery'
+import { addEvent, removeEvent } from './event-system'
 let $ = jQuery
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 export let isObj = isType('Object')
 export let isStr = isType('String')
-export let isNum = isType('Number')
 export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
-export let isStatelessComponent = obj => obj && (!obj.prototype || !('forceUpdate' in obj.prototype))
+export let isStatelessComponent = obj => isFn(obj) && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
 export let noop = () => {}
 export let identity = obj => obj
 
 export let pipe = (fn1, fn2) => {
-	return function(...args) {
-		fn1.apply(this, args)
-		return fn2.apply(this, args)
+	return function() {
+		fn1.apply(this, arguments)
+		return fn2.apply(this, arguments)
 	}
 }
 
-export let forEach = (list, iteratee, record = { index: 0 }) => {
+export let forEach = (list, iteratee, record) => {
+	record = record || { index: 0 }
 	for (let i = 0, len = list.length; i < len; i++) {
 		let item = list[i]
 		if (isArr(item)) {
@@ -74,13 +75,13 @@ export let mapKey = (sources, iteratee) => {
 	}
 }
 
-export let extend = (target, ...args) => {
+export let extend = (target, ...sources) => {
 	let setProp = (value, key) => {
 		if (!isUndefined(value)) {
 			target[key] = value
 		}
 	}
-	eachItem(args, source => {
+	eachItem(sources, source => {
 		if (source != null) {
 			mapValue(source, setProp)
 		}
@@ -99,10 +100,8 @@ let getChildren = children => {
 				return getChildren(children)
 			}
 		}
-	} else {
-		children = undefined
+		return children
 	}
-	return children
 }
 export let mergeProps = (props, children, defaultProps) => {
 	let result = extend({}, defaultProps, props)
@@ -111,67 +110,6 @@ export let mergeProps = (props, children, defaultProps) => {
 		result.children = children
 	}
 	return result
-}
-
-export let setAttr = (elem, key, value) => {
-	$.attr(elem, key, value)
-}
-export let getAttr = (elem, key) => {
-	return $.attr(elem, key)
-}
-export let removeAttr = (elem, key) => {
-	$.removeAttr(elem, key)
-}
-
-let eventNameAlias = {
-	onDoubleClick: 'ondblclick'
-}
-let getEventName = key => {
-	key = eventNameAlias[key] || key
-	return key.substr(2).toLowerCase() + '.react'
-}
-let eventHandlerWrapper = identity
-export let setWraper = fn => eventHandlerWrapper = fn
-let getEventHandler = handleEvent => {
-	handleEvent = eventHandlerWrapper(handleEvent)
-	return function(e) {
-		e.stopPropagation()
-		e.nativeEvent = e
-		return handleEvent.call(this, e)
-	}
-}
-export let setEvent = (elem, key, value) => {
-	if (!isFn(value)) {
-		return
-	}
-	let $elem = $(elem)
-	removeEvent(elem, key)
-	key = getEventName(key)
-	value = getEventHandler(value)
-	$elem.on(key, value)
-	if (key === 'change.react') {
-		if ('oninput' in elem) {
-			$elem.on('input.react', value)
-		} else if ('onpropertychange' in elem) {
-			$elem.on('propertychange.react', function(e) {
-				if (e.originalEvent.propertyName === 'value') {
-					value.call(this, e)
-				}
-			})
-		}
-	}
-}
-export let removeEvent = (elem, key) => {
-	let $elem = $(elem)
-	key = getEventName(key)
-	$elem.off(key)
-	if (key === 'change.react') {
-		if ('oninput' in elem) {
-			$elem.off('input.react')
-		} else if ('onpropertychange' in elem) {
-			$elem.off('propertychange.react')
-		}
-	}
 }
 
 let ignoreKeys = {
@@ -191,7 +129,7 @@ export let setProp = (elem, key, value) => {
 		case isIgnoreKey(key) || (key === 'title' && value == null):
 			break
 		case isEventKey(key):
-			setEvent(elem, key, value)
+			addEvent(elem, key, value)
 			break
 		case isStyleKey(key):
 			setStyle(elem, value)
@@ -230,7 +168,7 @@ export let removeProp = (elem, key, oldValue) => {
 			$(elem).html('')
 			break
 		case !(key in elem) || isTypeKey(key):
-			removeAttr(elem, key)
+			$.removeAttr(elem, key)
 			break
 		case isFn(oldValue):
 			elem[key] = null
@@ -250,6 +188,12 @@ export let removeProp = (elem, key, oldValue) => {
 			}
 	}
 }
+
+let keyAboutUserInput = {
+	value: true,
+	checked: true
+}
+
 export let patchProps = (elem, props, newProps) => {
 	if (props === newProps) {
 		return
@@ -267,7 +211,7 @@ export let patchProps = (elem, props, newProps) => {
 			return
 		}
 		let value = newProps[key]
-		let oldValue = key === 'value' ? elem.value : props[key]
+		let oldValue = keyAboutUserInput[key] ? elem[key] : props[key]
 		if (value === oldValue) {
 			return
 		}
@@ -280,9 +224,7 @@ export let patchProps = (elem, props, newProps) => {
 		} else if (isInnerHTMLKey(key)) {
 			let oldHtml = oldValue && oldValue.__html
 			let html = value && value.__html
-			if (!isStr(html)) {
-				$(elem).html('')
-			} else if (html !== oldHtml) {
+			if (html != null && html !== oldHtml) {
 				$(elem).html(html)
 			}
 		} else {
@@ -374,7 +316,7 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
 export let setStyleValue = (style, key, value) => {
-	if (isBln(value) || value == null) {
+	if (value == null || isBln(value)) {
 		value = ''
 	}
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {

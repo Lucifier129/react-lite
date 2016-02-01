@@ -77,6 +77,19 @@ const Counter = React.createClass({
 	render() {
 		let { props } = this
 		let { COUNT } = props
+		var img = <img
+					src="http://ww3.sinaimg.cn/bmiddle/887790fagw1ezs0ci6qjxj20c10go0uf.jpg"
+					ref="img"
+					onLoad={()=>{
+						if (this.refs == null) {
+							debugger
+						}
+			          console.log('onload this.refs', this.refs)
+			        }}
+			        onError={()=>{
+			          console.log('onerror this.refs', this.refs)
+			        }}
+		 />
 		return (
 			<div id="abc">
 				<span ref={Math.random() > 0.5 ? '' : 'test-ref'} data-test="abaasdf">count: { props.count }</span>
@@ -99,6 +112,7 @@ const Counter = React.createClass({
 				<button onClick={ this.getNum }>run</button>
 				<a href="adbadfasdf">test link</a>
 				<p dangerouslySetInnerHTML={{ __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2)}}></p>
+				{ Math.random() > 0.5 && img }
 			</div>
 		)
 	}

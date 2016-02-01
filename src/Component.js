@@ -1,59 +1,51 @@
 import * as _ from './util'
-import { renderComponent, clearDidMount  } from './virtual-dom'
+import { renderComponent, clearDidMount } from './virtual-dom'
 
-let updateQueue = {
+export let updateQueue = {
 	updaters: [],
 	isPending: false,
-	reset() {
-		this.isPending = false
-		this.batchUpdate()
-	},
 	add(updater) {
-		if (!this.isPending) {
-			updater.update()
-		} else {
-			this.updaters.push(updater)
-		}
-	},
-	wrapFn(fn) {
-		let context = this
-		return function(...args) {
-			context.isPending = true
-			let result = fn.apply(this, args)
-			context.reset()
-			return result
-		}
+		/*
+		 event bubbles from bottom-level to top-level
+		 reverse the updater order can merge some props and state and reduce the refresh times
+		 see Updater.update method below to know why
+		*/
+		this.updaters.splice(0, 0, updater)
 	},
 	batchUpdate() {
-		let { updaters } = this
-		if (updaters.length === 0) {
-			return
-		}
-		this.updaters = []
 		this.isPending = true
-		_.eachItem(updaters, triggerUpdate)
-		this.reset()
+		/*
+		  each updater.update may add new updater to updateQueue
+		  clear them with a loop
+		*/
+		while (this.updaters.length) {
+			let { updaters } = this
+			this.updaters = []
+			_.eachItem(updaters, triggerUpdate)
+		}
+		this.isPending = false
 	}
 }
 let triggerUpdate = updater => updater.update()
-
-_.setWraper(fn => updateQueue.wrapFn(fn))
 
 function Updater(instance) {
 	this.instance = instance
 	this.pendingStates = []
 	this.pendingCallbacks = []
 	this.isPending = false
-	this.bindClear = () => this.clearCallbacks()
 	this.nextProps = this.nextContext = null
+	this.bindClear = () => {
+		this.clearCallbacks()
+	}
 }
 
 Updater.prototype = {
-	constructor: Updater,
 	emitUpdate(nextProps, nextContext) {
 		this.nextProps = nextProps
 		this.nextContext = nextContext
-		updateQueue.add(this)
+		updateQueue.isPending
+		? updateQueue.add(this)
+		: this.update()
 	},
 	update() {
 		let { instance, pendingStates, nextProps, nextContext } = this
@@ -61,6 +53,7 @@ Updater.prototype = {
 			nextProps = nextProps || instance.props
 			nextContext = nextContext || instance.context
 			this.nextProps = this.nextContext = null
+			// merge the nextProps and nextState and update by one time
 			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.bindClear)
 		}
 	},
@@ -75,6 +68,7 @@ Updater.prototype = {
 	replaceState(nextState) {
 		let { pendingStates } = this
 		pendingStates.pop()
+		// push special params to point out replacing state
 		pendingStates.push([nextState])
 	},
 	getState() {

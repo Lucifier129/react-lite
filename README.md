@@ -3,6 +3,17 @@
 ## Introduction
 React under 20k.
 react-lite is an implementation of React that optimizes for small script size.
+### Framework Size Comparison
+
+| Framework              | Version    | Minified Size |
+|------------------------|------------|---------------|
+| Ember                  | 2.2.0      | 446.0kb       |
+| Polymer                | 1.0.6      | 183.0kb       |
+| Angular                | 1.4.8      | 148.0kb       |
+| React                  | 0.14.3     | 136.0kb       |
+| Web Components Polyfill| 0.7.19     | 118.0kb       |
+| Riot                   | 2.3.11     | 20kb          |
+| React-lite             | 0.0.18     | 17.5kb        |
 
 It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no React.renderToString/React.renderToStaticMarkup).
@@ -22,7 +33,7 @@ If you are using webpack, it's so easy to use react-lite, just [config alias](ht
 ```
 
 Note: feel free to try react-lite, if something happen and we can't fixed in time, then use [regular react](https://github.com/facebook/react) instead.
-## install
+## Installation
 
 you can install react-lite from npm
 
@@ -30,11 +41,16 @@ you can install react-lite from npm
 npm install --save react-lite
 ```
 
-## documentation
+## Browser compatibility
 
-you can learn react-lite from [React official documentation](http://facebook.github.io/react/)
+supports IE9+ ／ ES5 enviroment
 
-## what can react-lite do?
+
+## Documentation
+
+learn react-lite from [React official documentation](http://facebook.github.io/react/)
+
+## What can react-lite do?
 
 just the same as what react does, see some demos below(I just add the alias to webpack.config.js, no need to do anything else):
 
@@ -51,11 +67,11 @@ just the same as what react does, see some demos below(I just add the alias to w
 	* [react](http://lucifier129.github.io/react-lite-repaint-perf/react/index.html)
 	* [react-lite](http://lucifier129.github.io/react-lite-repaint-perf/react/lite.html)
 
-## react-lite vs react
+## React-lite vs React
 
 via react-lite:
 - virtual-dom can not render to string(no React.renderToString and React.renderToStaticMarkup)
-- event system is base on DOM level1(dom.onclick = handleClick)
+- event system is base on delegation pattern(since v0.0.19)
 - all of React.PropTypes method is noop(empty function)
 - Do not support React-addons(for example ReactCSSTransitionGroup)
 - use React in server side rendering, and use React-lite in browser
@@ -64,9 +80,10 @@ via react-lite:
 - the rule about setting props
 	* if `propName in dom` is `true` then `dom[propName]=propValue`
 	* else: `dom.setAttribute(propName, propValue)`
+- can not use react-dev-tool inspect react-lite, should switch to regular react for debugging
 
-## test
-react-lite reuses react's unitest(162), you can see them in `__test__`, and run the tests with:
+## Test
+react-lite reuses react's unitest(168), you can see them in `__test__`, and run the tests with:
 
 ```shell
 npm test
