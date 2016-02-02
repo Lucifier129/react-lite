@@ -153,12 +153,13 @@ Velem.prototype = new Vtree({
 		}
 		// the default children often be nesting array, make it flat and cache
 		if (_.isArr(children)) {
-			this.props.children = newChildren = []
+			newChildren = []
 			_.forEach(children, (vchild, index) => {
 				vchild = getVnode(vchild)
 				iteratee(vchild, index)
 				newChildren.push(vchild)
 			})
+			this.props.children = newChildren
 			this.sorted = true
 		} else if (!_.isUndefined(children)) {
 			children = this.props.children = getVnode(children)
@@ -395,6 +396,11 @@ let mapTree = (vtree, iteratee) => {
 	let stack = [vtree]
 	while (stack.length) {
 		let item = stack.shift()
+		// as you know, vnode's children may be nested list,
+		if (_.isArr(item)) {
+			stack = item.concat(stack)
+			continue
+		}
 		if (iteratee(item) === false) {
 			continue
 		}

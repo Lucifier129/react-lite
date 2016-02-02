@@ -585,12 +585,13 @@
     		}
     		// the default children often be nesting array, make it flat and cache
     		if (isArr(children)) {
-    			this.props.children = newChildren = [];
+    			newChildren = [];
     			forEach$1(children, function (vchild, index) {
     				vchild = getVnode(vchild);
     				iteratee(vchild, index);
     				newChildren.push(vchild);
     			});
+    			this.props.children = newChildren;
     			this.sorted = true;
     		} else if (!isUndefined(children)) {
     			children = this.props.children = getVnode(children);
@@ -845,12 +846,19 @@
     	var stack = [vtree];
     	while (stack.length) {
     		var item = stack.shift();
+    		// as you know, vnode's children may be nested list,
+    		if (isArr(item)) {
+    			stack = item.concat(stack);
+    			continue;
+    		}
     		if (iteratee(item) === false) {
     			continue;
     		}
     		if (item && item.props && !isUndefined(item.props.children)) {
     			if (isArr(item.props.children)) {
-    				stack.push.apply(stack, item.props.children);
+    				var _stack;
+
+    				(_stack = stack).push.apply(_stack, item.props.children);
     			} else {
     				stack.push(item.props.children);
     			}
