@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.20
+ * react-lite.js v0.0.21
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -278,7 +278,8 @@
     	}
     };
 
-    var keyAboutUserInput = {
+    // 用 dom 属性作为 oldValue
+    var shouldUseDOMProp = {
     	value: true,
     	checked: true
     };
@@ -300,7 +301,7 @@
     			return;
     		}
     		var value = newProps[key];
-    		var oldValue = keyAboutUserInput[key] ? elem[key] : props[key];
+    		var oldValue = shouldUseDOMProp[key] ? elem[key] : props[key];
     		if (value === oldValue) {
     			return;
     		}
@@ -490,8 +491,31 @@
     			newVtree.attachRef();
     		}
     	},
-    	updateTree: function updateTree(nextVtree, parentNode) {
-    		compareTwoTree(this, nextVtree, parentNode);
+    	updateTree: function updateTree(newVtree, parentNode) {
+    		var node = this.node;
+
+    		var $removeNode = undefined;
+    		switch (diff(this, newVtree)) {
+    			case DIFF_TYPE.CREATE:
+    				newVtree.initTree(parentNode);
+    				break;
+    			case DIFF_TYPE.REMOVE:
+    				this.destroyTree();
+    				break;
+    			case DIFF_TYPE.REPLACE:
+    				// don't remove the existNode for replacing
+    				$removeNode = removeNode;
+    				removeNode = noop$2;
+    				this.destroyTree();
+    				removeNode = $removeNode;
+    				newVtree.initTree(function (newNode) {
+    					return parentNode.replaceChild(newNode, node);
+    				});
+    				break;
+    			case DIFF_TYPE.UPDATE:
+    				this.update(newVtree, parentNode);
+    				break;
+    		}
     	}
     };
 
@@ -517,7 +541,7 @@
     		return this;
     	},
     	initTree: function initTree(parentNode) {
-    		this.node = createTextNode(this.text);
+    		this.node = document.createTextNode(this.text);
     		appendNode(parentNode, this.node);
     	},
     	destroyTree: function destroyTree() {
@@ -577,7 +601,9 @@
     		var type = this.type;
     		var props = this.props;
 
-    		var node = this.node = createElement$1(type, props);
+    		var node = document.createElement(type);
+    		setProps(node, props);
+    		this.node = node;
     		this.eachChildren(function (vchild) {
     			vchild.initTree(node);
     		});
@@ -707,7 +733,11 @@
     	var curContext = component.getChildContext();
     	curContext = extend({}, context, curContext);
     	setRefs = bindRefs(component.refs);
-    	var vtree = checkVtree(component.render());
+    	var vtree = component.render();
+    	if (isUndefined(vtree)) {
+    		throw new Error('component can not render undefined');
+    	}
+    	vtree = getVnode(vtree);
     	setRefs = noop$2;
     	setContext(curContext, vtree);
     	return vtree;
@@ -802,73 +832,26 @@
     	}
     });
 
-    var compareTwoTree = function compareTwoTree(vtree, newVtree, parentNode) {
-    	var diffType = diff(vtree, newVtree);
-    	var $removeNode = undefined;
-    	var node = undefined;
-    	switch (diffType) {
-    		case DIFF_TYPE.CREATE:
-    			newVtree.initTree(parentNode);
-    			break;
-    		case DIFF_TYPE.REMOVE:
-    			vtree.destroyTree();
-    			break;
-    		case DIFF_TYPE.REPLACE:
-    			node = vtree.node;
-    			// don't remove the existNode for replacing
-    			$removeNode = removeNode;
-    			removeNode = noop$2;
-    			vtree.destroyTree();
-    			removeNode = $removeNode;
-    			newVtree.initTree(function (newNode) {
-    				replaceNode(parentNode, newNode, node);
-    			});
-    			break;
-    		case DIFF_TYPE.UPDATE:
-    			vtree.update(newVtree, parentNode);
-    			break;
-    	}
-    };
-
     var removeNode = function removeNode(node) {
+    	// if node.parentNode had set innerHTML, do nothing
     	if (node && node.parentNode) {
     		node.parentNode.removeChild(node);
     	}
     };
     var appendNode = function appendNode(parentNode, node) {
-    	if (parentNode && node) {
-    		// for replace node
-    		if (isFn(parentNode)) {
-    			parentNode(node);
-    		} else {
-    			parentNode.appendChild(node);
-    		}
+    	// for replacing node
+    	if (isFn(parentNode)) {
+    		parentNode(node);
+    	} else {
+    		parentNode.appendChild(node);
     	}
-    };
-    var replaceNode = function replaceNode(parentNode, newNode, existNode) {
-    	if (newNode && existNode) {
-    		parentNode = parentNode || existNode.parentNode;
-    		parentNode.replaceChild(newNode, existNode);
-    	}
-    };
-
-    var createTextNode = function createTextNode(text) {
-    	return document.createTextNode(text);
-    };
-    var createElement$1 = function createElement(tagName, props) {
-    	var node = document.createElement(tagName);
-    	setProps(node, props);
-    	return node;
     };
 
     var mapTree = function mapTree(vtree, iteratee) {
     	var stack = [vtree];
-    	var item = undefined;
-    	var shouldMapChildren = undefined;
     	while (stack.length) {
-    		item = stack.shift();
-    		shouldMapChildren = iteratee(item);
-    		if (shouldMapChildren === false) {
+    		var item = stack.shift();
+    		if (iteratee(item) === false) {
     			continue;
     		}
     		if (item && item.props && !isUndefined(item.props.children)) {
@@ -888,13 +871,6 @@
     		vnode = new Vtext(vnode);
     	}
     	return vnode;
-    };
-
-    var checkVtree = function checkVtree(vtree) {
-    	if (isUndefined(vtree)) {
-    		throw new Error('component can not render undefined');
-    	}
-    	return getVnode(vtree);
     };
 
     var isValidComponent = function isValidComponent(obj) {

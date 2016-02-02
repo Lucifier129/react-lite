@@ -187,7 +187,8 @@ export let removeProp = (elem, key, oldValue) => {
 	}
 }
 
-let keyAboutUserInput = {
+// 用 dom 属性作为 oldValue
+let shouldUseDOMProp = {
 	value: true,
 	checked: true
 }
@@ -209,7 +210,7 @@ export let patchProps = (elem, props, newProps) => {
 			return
 		}
 		let value = newProps[key]
-		let oldValue = keyAboutUserInput[key] ? elem[key] : props[key]
+		let oldValue = shouldUseDOMProp[key] ? elem[key] : props[key]
 		if (value === oldValue) {
 			return
 		}
