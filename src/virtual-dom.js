@@ -269,16 +269,10 @@ let getContextByTypes = (curContext, contextTypes) => {
 	return context
 }
 
-let setContext = (context, vtree) => {
+export let setContext = (context, vtree) => {
 	mapTree(vtree, item => {
 		if (isValidComponent(item)) {
-			if (item.context) {
-				if (item.context !== context) {
-					item.context = _.extend(item.context, context)
-				}
-			} else {
-				item.context = context
-			}
+			item.context = context
 		}
 	})
 }
@@ -288,17 +282,17 @@ let bindRefs = refs => vnode => {
 	}
 }
 
-export let renderComponent = (component, context) => {
+export let renderComponent = (component, parentContext) => {
 	let curContext = component.getChildContext()
-	curContext = _.extend({}, context, curContext)
+	curContext = _.extend({}, parentContext, curContext)
 	setRefs = bindRefs(component.refs)
 	let vtree = component.render()
 	if (_.isUndefined(vtree)) {
 		throw new Error('component can not render undefined')
 	}
 	vtree = getVnode(vtree)
-	setRefs = noop
 	setContext(curContext, vtree)
+	setRefs = noop
 	return vtree
 }
 

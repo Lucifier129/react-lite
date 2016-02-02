@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.21
+ * react-lite.js v0.0.22
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -707,13 +707,7 @@ var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
 var setContext = function setContext(context, vtree) {
 	mapTree(vtree, function (item) {
 		if (isValidComponent(item)) {
-			if (item.context) {
-				if (item.context !== context) {
-					item.context = extend(item.context, context);
-				}
-			} else {
-				item.context = context;
-			}
+			item.context = context;
 		}
 	});
 };
@@ -725,17 +719,17 @@ var bindRefs = function bindRefs(refs) {
 	};
 };
 
-var renderComponent = function renderComponent(component, context) {
+var renderComponent = function renderComponent(component, parentContext) {
 	var curContext = component.getChildContext();
-	curContext = extend({}, context, curContext);
+	curContext = extend({}, parentContext, curContext);
 	setRefs = bindRefs(component.refs);
 	var vtree = component.render();
 	if (isUndefined(vtree)) {
 		throw new Error('component can not render undefined');
 	}
 	vtree = getVnode(vtree);
-	setRefs = noop$2;
 	setContext(curContext, vtree);
+	setRefs = noop$2;
 	return vtree;
 };
 
@@ -1475,10 +1469,12 @@ var Children = Object.freeze({
 
 var eachMixin = function eachMixin(mixins, iteratee) {
 	eachItem(mixins, function (mixin) {
-		if (isArr(mixin.mixins)) {
-			eachMixin(mixin.mixins, iteratee);
+		if (mixin) {
+			if (isArr(mixin.mixins)) {
+				eachMixin(mixin.mixins, iteratee);
+			}
+			iteratee(mixin);
 		}
-		iteratee(mixin);
 	});
 };
 
