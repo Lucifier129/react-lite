@@ -718,9 +718,7 @@
     };
     var bindRefs = function bindRefs(refs) {
     	return function (vnode) {
-    		if (!vnode.refs) {
-    			vnode.refs = refs;
-    		}
+    		vnode.refs = vnode.refs || refs;
     	};
     };
 
@@ -842,26 +840,21 @@
     	}
     };
 
-    var mapTree = function mapTree(vtree, iteratee) {
-    	var stack = [vtree];
-    	while (stack.length) {
-    		var item = stack.shift();
-    		// as you know, vnode's children may be nested list,
+    var mapTree = function mapTree(tree, iteratee) {
+    	var queue = [tree];
+    	while (queue.length) {
+    		var item = queue.shift();
+    		// as you know, vnode's children may be nested list
     		if (isArr(item)) {
-    			stack = item.concat(stack);
+    			queue.splice.apply(queue, [0, 0].concat(item));
     			continue;
     		}
+    		// if iteratee return false, ignore mapping children
     		if (iteratee(item) === false) {
     			continue;
     		}
     		if (item && item.props && !isUndefined(item.props.children)) {
-    			if (isArr(item.props.children)) {
-    				var _stack;
-
-    				(_stack = stack).push.apply(_stack, item.props.children);
-    			} else {
-    				stack.push(item.props.children);
-    			}
+    			isArr(item.props.children) ? queue.push.apply(queue, item.props.children) : queue.push(item.props.children);
     		}
     	}
     };
@@ -917,23 +910,20 @@
     };
 
     function Updater(instance) {
-    	var _this = this;
-
     	this.instance = instance;
     	this.pendingStates = [];
     	this.pendingCallbacks = [];
     	this.isPending = false;
     	this.nextProps = this.nextContext = null;
-    	this.bindClear = function () {
-    		_this.clearCallbacks();
-    	};
+    	this.clearCallbacks = this.clearCallbacks.bind(this);
     }
 
     Updater.prototype = {
     	emitUpdate: function emitUpdate(nextProps, nextContext) {
     		this.nextProps = nextProps;
     		this.nextContext = nextContext;
-    		updateQueue.isPending ? updateQueue.add(this) : this.update();
+    		// receive nextProps!! should update immediately
+    		!nextProps && updateQueue.isPending ? updateQueue.add(this) : this.update();
     	},
     	update: function update() {
     		var instance = this.instance;
@@ -946,7 +936,7 @@
     			nextContext = nextContext || instance.context;
     			this.nextProps = this.nextContext = null;
     			// merge the nextProps and nextState and update by one time
-    			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.bindClear);
+    			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.clearCallbacks);
     		}
     	},
     	addState: function addState(nextState) {
@@ -961,7 +951,7 @@
     		var pendingStates = this.pendingStates;
 
     		pendingStates.pop();
-    		// push special params to point out replacing state
+    		// push special params to point out should replace state
     		pendingStates.push([nextState]);
     	},
     	getState: function getState() {
@@ -970,28 +960,19 @@
     		var state = instance.state;
     		var props = instance.props;
 
-    		var merge = function merge(_x) {
-    			var _again = true;
-
-    			_function: while (_again) {
-    				var nextState = _x;
-    				_again = false;
-
+    		if (pendingStates.length) {
+    			state = extend({}, state);
+    			eachItem(pendingStates, function (nextState) {
     				// replace state
     				if (isArr(nextState)) {
-    					state = null;
-    					_x = nextState[0];
-    					_again = true;
-    					continue _function;
+    					state = extend({}, nextState[0]);
+    					return;
     				}
     				if (isFn(nextState)) {
     					nextState = nextState.call(instance, state, props);
     				}
-    				state = extend({}, state, nextState);
-    			}
-    		};
-    		if (pendingStates.length) {
-    			eachItem(pendingStates, merge);
+    				extend(state, nextState);
+    			});
     			pendingStates.length = 0;
     		}
     		return state;
@@ -1051,11 +1032,11 @@
     		var nextState = $cache.state || state;
     		var nextContext = $cache.context || {};
     		$cache.props = $cache.state = $cache.context = null;
-    		this.componentWillUpdate(nextProps, nextState, nextContext);
-    		this.props = nextProps;
-    		this.state = nextState;
-    		this.context = nextContext;
     		$updater.isPending = true;
+    		this.componentWillUpdate(nextProps, nextState, nextContext);
+    		this.state = nextState;
+    		this.props = nextProps;
+    		this.context = nextContext;
     		var nextVtree = renderComponent(this, $cache.$context);
     		vtree.updateTree(nextVtree, node && node.parentNode);
     		clearDidMount();

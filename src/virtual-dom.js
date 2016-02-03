@@ -278,9 +278,7 @@ export let setContext = (context, vtree) => {
 	})
 }
 let bindRefs = refs => vnode => {
-	if (!vnode.refs) {
-		vnode.refs = refs
-	}
+	vnode.refs = vnode.refs || refs
 }
 
 export let renderComponent = (component, parentContext) => {
@@ -392,24 +390,23 @@ let appendNode = (parentNode, node) => {
 	}
 }
 
-let mapTree = (vtree, iteratee) => {
-	let stack = [vtree]
-	while (stack.length) {
-		let item = stack.shift()
-		// as you know, vnode's children may be nested list,
+let mapTree = (tree, iteratee) => {
+	let queue = [tree]
+	while (queue.length) {
+		let item = queue.shift()
+		// as you know, vnode's children may be nested list
 		if (_.isArr(item)) {
-			stack = item.concat(stack)
+			queue.splice(0, 0, ...item)
 			continue
 		}
+		// if iteratee return false, ignore mapping children
 		if (iteratee(item) === false) {
 			continue
 		}
 		if (item && item.props && !_.isUndefined(item.props.children)) {
-			if (_.isArr(item.props.children)) {
-				stack.push(...item.props.children)
-			} else {
-				stack.push(item.props.children)
-			}
+			_.isArr(item.props.children)
+			? queue.push(...item.props.children)
+			: queue.push(item.props.children)
 		}
 	}
 }

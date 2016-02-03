@@ -41,17 +41,22 @@ const Counter = React.createClass({
 	componentWillUpdate() {
 		// debugger
 		console.log('willUpdate', 'Counter')
+		if (this.state.text === '123123123') {
+			this.setState({
+				text: '[text set by willUpdate]'
+			})
+		}
+		console.log(this.state.text, 'WillUpdate')
+		
 	},
 	componentDidUpdate() {
+		console.log(this.state.text, 'DidUpdate')
 		this;
 		//debugger
 		console.log('DidUpdate', 'Counter')
 	},
 	componentWillReceiveProps(nextProps) {
 		let state = this.state
-		this.setState({
-			test: 100
-		})
 		console.log('Counter: receiveProps:setState', state === this.state)
 	},
 	shouldComponentUpdate(nextProps, nextState) {
