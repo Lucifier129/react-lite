@@ -1372,7 +1372,7 @@ var PropTypes = {
 };
 
 var only = function only(children) {
-	if (children != null && !isArr(children)) {
+	if (isValidElement(children)) {
 		return children;
 	}
 	throw new Error('expect only one child');
