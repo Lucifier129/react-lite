@@ -209,6 +209,15 @@ var isStyleKey = function isStyleKey(key) {
 var isTypeKey = function isTypeKey(key) {
 	return key === 'type';
 };
+
+/*
+  DOM Properties which are only getter
+*/
+var readOnlyProps = 'nodeName|nodeValue|nodeType|parentNode|childNodes|classList|firstChild|lastChild|previousSibling|previousElementSibling|nextSibling|nextElementSibling|attributes|ownerDocument|namespaceURI|localName|baseURI|prefix|length|specified|tagName|offsetTop|offsetLeft|offsetWidth|offsetHeight|offsetParent|scrollWidth|scrollHeight|clientTop|clientLeft|clientWidth|clientHeight|x|y';
+var readOnlys = {};
+eachItem(readOnlyProps.split('|'), function (key) {
+	readOnlys[key] = true;
+});
 var setProp = function setProp(elem, key, value) {
 	switch (true) {
 		case isIgnoreKey(key) || key === 'title' && value == null:
@@ -223,7 +232,7 @@ var setProp = function setProp(elem, key, value) {
 			value && value.__html != null && (elem.innerHTML = value.__html);
 			break;
 		case key in elem && !isTypeKey(key):
-			elem[key] = value;
+			readOnlys[key] === true || (elem[key] = value);
 			break;
 		default:
 			elem.setAttribute(key, '' + value);
@@ -776,6 +785,9 @@ Vcomponent.prototype = new Vtree({
 	didMount: function didMount() {
 		var component = this.component;
 
+		if (!component) {
+			return;
+		}
 		var updater = component.$updater;
 		component.componentDidMount();
 		updater.isPending = false;
@@ -1242,6 +1254,9 @@ var findDOMNode = function findDOMNode(node) {
 };
 
 var unstable_renderSubtreeIntoContainer = function unstable_renderSubtreeIntoContainer(parentComponent, nextElement, container, callback) {
+	var $cache = parentComponent.$cache;
+
+	setContext($cache.$context, nextElement);
 	return render(nextElement, container, callback);
 };
 

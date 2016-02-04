@@ -122,6 +122,16 @@ export let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 export let isStyleKey = key => key === 'style'
 // Setting .type throws on non-<input> tags
 export let isTypeKey = key => key === 'type'
+
+
+/*
+  DOM Properties which are only getter
+*/
+let readOnlyProps = 'nodeName|nodeValue|nodeType|parentNode|childNodes|classList|firstChild|lastChild|previousSibling|previousElementSibling|nextSibling|nextElementSibling|attributes|ownerDocument|namespaceURI|localName|baseURI|prefix|length|specified|tagName|offsetTop|offsetLeft|offsetWidth|offsetHeight|offsetParent|scrollWidth|scrollHeight|clientTop|clientLeft|clientWidth|clientHeight|x|y'
+let readOnlys = {}
+eachItem(readOnlyProps.split('|'), key => {
+	readOnlys[key] = true
+})
 export let setProp = (elem, key, value) => {
 	switch (true) {
 		case isIgnoreKey(key) || (key === 'title' && value == null):
@@ -136,7 +146,7 @@ export let setProp = (elem, key, value) => {
 			value && value.__html != null && (elem.innerHTML = value.__html)
 			break
 		case (key in elem) && !isTypeKey(key):
-			elem[key] = value
+			readOnlys[key] === true || (elem[key] = value)
 			break
 		default:
 			elem.setAttribute(key, '' + value)

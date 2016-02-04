@@ -331,6 +331,9 @@ Vcomponent.prototype = new Vtree({
 	},
 	didMount() {
 		let { component } = this
+		if (!component) {
+			return
+		}
 		let updater = component.$updater
 		component.componentDidMount()
 		updater.isPending = false

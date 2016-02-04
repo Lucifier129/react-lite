@@ -1,6 +1,6 @@
 import * as _ from './util'
 import { COMPONENT_ID, VNODE_TYPE } from './constant'
-import { clearDidMount } from './virtual-dom'
+import { clearDidMount, setContext } from './virtual-dom'
 
 let store = {}
 export let render = (vtree, container, callback) => {
@@ -64,5 +64,7 @@ export let findDOMNode = node => {
 }
 
 export let unstable_renderSubtreeIntoContainer = (parentComponent, nextElement, container, callback) => {
+	let { $cache } = parentComponent
+	setContext($cache.$context, nextElement)
 	return render(nextElement, container, callback)
 }
