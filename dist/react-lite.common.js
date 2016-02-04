@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.20
+ * react-lite.js v0.0.22
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -213,6 +213,15 @@ var isStyleKey = function isStyleKey(key) {
 var isTypeKey = function isTypeKey(key) {
 	return key === 'type';
 };
+
+/*
+  DOM Properties which are only getter
+*/
+var readOnlyProps = 'nodeName|nodeValue|nodeType|parentNode|childNodes|classList|firstChild|lastChild|previousSibling|previousElementSibling|nextSibling|nextElementSibling|attributes|ownerDocument|namespaceURI|localName|baseURI|prefix|length|specified|tagName|offsetTop|offsetLeft|offsetWidth|offsetHeight|offsetParent|scrollWidth|scrollHeight|clientTop|clientLeft|clientWidth|clientHeight|x|y';
+var readOnlys = {};
+eachItem(readOnlyProps.split('|'), function (key) {
+	readOnlys[key] = true;
+});
 var setProp = function setProp(elem, key, value) {
 	switch (true) {
 		case isIgnoreKey(key) || key === 'title' && value == null:
@@ -227,7 +236,7 @@ var setProp = function setProp(elem, key, value) {
 			value && isStr(value.__html) && $(elem).html(value.__html);
 			break;
 		case key in elem && !isTypeKey(key):
-			$.prop(elem, key, value);
+			readOnlys[key] === true || $.prop(elem, key, value);
 			break;
 		default:
 			$.attr(elem, key, '' + value);
@@ -278,7 +287,8 @@ var removeProp = function removeProp(elem, key, oldValue) {
 	}
 };
 
-var keyAboutUserInput = {
+// 用 dom 属性作为 oldValue
+var shouldUseDOMProp = {
 	value: true,
 	checked: true
 };
@@ -300,7 +310,7 @@ var patchProps = function patchProps(elem, props, newProps) {
 			return;
 		}
 		var value = newProps[key];
-		var oldValue = keyAboutUserInput[key] ? elem[key] : props[key];
+		var oldValue = shouldUseDOMProp[key] ? elem[key] : props[key];
 		if (value === oldValue) {
 			return;
 		}
@@ -490,8 +500,31 @@ Vtree.prototype = {
 			newVtree.attachRef();
 		}
 	},
-	updateTree: function updateTree(nextVtree, parentNode) {
-		compareTwoTree(this, nextVtree, parentNode);
+	updateTree: function updateTree(newVtree, parentNode) {
+		var node = this.node;
+
+		var $removeNode = undefined;
+		switch (diff(this, newVtree)) {
+			case DIFF_TYPE.CREATE:
+				newVtree.initTree(parentNode);
+				break;
+			case DIFF_TYPE.REMOVE:
+				this.destroyTree();
+				break;
+			case DIFF_TYPE.REPLACE:
+				// don't remove the existNode for replacing
+				$removeNode = removeNode;
+				removeNode = noop$2;
+				this.destroyTree();
+				removeNode = $removeNode;
+				newVtree.initTree(function (newNode) {
+					return parentNode.replaceChild(newNode, node);
+				});
+				break;
+			case DIFF_TYPE.UPDATE:
+				this.update(newVtree, parentNode);
+				break;
+		}
 	}
 };
 
@@ -517,7 +550,7 @@ Vtext.prototype = new Vtree({
 		return this;
 	},
 	initTree: function initTree(parentNode) {
-		this.node = createTextNode(this.text);
+		this.node = document.createTextNode(this.text);
 		appendNode(parentNode, this.node);
 	},
 	destroyTree: function destroyTree() {
@@ -561,12 +594,13 @@ Velem.prototype = new Vtree({
 		}
 		// the default children often be nesting array, make it flat and cache
 		if (isArr(children)) {
-			this.props.children = newChildren = [];
+			newChildren = [];
 			forEach$1(children, function (vchild, index) {
 				vchild = getVnode(vchild);
 				iteratee(vchild, index);
 				newChildren.push(vchild);
 			});
+			this.props.children = newChildren;
 			this.sorted = true;
 		} else if (!isUndefined(children)) {
 			children = this.props.children = getVnode(children);
@@ -577,7 +611,9 @@ Velem.prototype = new Vtree({
 		var type = this.type;
 		var props = this.props;
 
-		var node = this.node = createElement$1(type, props);
+		var node = document.createElement(type);
+		setProps(node, props);
+		this.node = node;
 		this.eachChildren(function (vchild) {
 			vchild.initTree(node);
 		});
@@ -685,31 +721,27 @@ var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
 var setContext = function setContext(context, vtree) {
 	mapTree(vtree, function (item) {
 		if (isValidComponent(item)) {
-			if (item.context) {
-				if (item.context !== context) {
-					item.context = extend(item.context, context);
-				}
-			} else {
-				item.context = context;
-			}
+			item.context = context;
 		}
 	});
 };
 var bindRefs = function bindRefs(refs) {
 	return function (vnode) {
-		if (!vnode.refs) {
-			vnode.refs = refs;
-		}
+		vnode.refs = vnode.refs || refs;
 	};
 };
 
-var renderComponent = function renderComponent(component, context) {
+var renderComponent = function renderComponent(component, parentContext) {
 	var curContext = component.getChildContext();
-	curContext = extend({}, context, curContext);
+	curContext = extend({}, parentContext, curContext);
 	setRefs = bindRefs(component.refs);
-	var vtree = checkVtree(component.render());
-	setRefs = noop$2;
+	var vtree = component.render();
+	if (isUndefined(vtree)) {
+		throw new Error('component can not render undefined');
+	}
+	vtree = getVnode(vtree);
 	setContext(curContext, vtree);
+	setRefs = noop$2;
 	return vtree;
 };
 
@@ -757,6 +789,9 @@ Vcomponent.prototype = new Vtree({
 	didMount: function didMount() {
 		var component = this.component;
 
+		if (!component) {
+			return;
+		}
 		var updater = component.$updater;
 		component.componentDidMount();
 		updater.isPending = false;
@@ -802,81 +837,36 @@ Vcomponent.prototype = new Vtree({
 	}
 });
 
-var compareTwoTree = function compareTwoTree(vtree, newVtree, parentNode) {
-	var diffType = diff(vtree, newVtree);
-	var $removeNode = undefined;
-	var node = undefined;
-	switch (diffType) {
-		case DIFF_TYPE.CREATE:
-			newVtree.initTree(parentNode);
-			break;
-		case DIFF_TYPE.REMOVE:
-			vtree.destroyTree();
-			break;
-		case DIFF_TYPE.REPLACE:
-			node = vtree.node;
-			// don't remove the existNode for replacing
-			$removeNode = removeNode;
-			removeNode = noop$2;
-			vtree.destroyTree();
-			removeNode = $removeNode;
-			newVtree.initTree(function (newNode) {
-				replaceNode(parentNode, newNode, node);
-			});
-			break;
-		case DIFF_TYPE.UPDATE:
-			vtree.update(newVtree, parentNode);
-			break;
-	}
-};
-
 var removeNode = function removeNode(node) {
+	// if node.parentNode had set innerHTML, do nothing
 	if (node && node.parentNode) {
 		node.parentNode.removeChild(node);
 	}
 };
 var appendNode = function appendNode(parentNode, node) {
-	if (parentNode && node) {
-		// for replace node
-		if (isFn(parentNode)) {
-			parentNode(node);
-		} else {
-			parentNode.appendChild(node);
+	// for replacing node
+	if (isFn(parentNode)) {
+		parentNode(node);
+	} else {
+		parentNode.appendChild(node);
+	}
+};
+
+var mapTree = function mapTree(tree, iteratee) {
+	var queue = [tree];
+	while (queue.length) {
+		var item = queue.shift();
+		// as you know, vnode's children may be nested list
+		if (isArr(item)) {
+			queue.splice.apply(queue, [0, 0].concat(item));
+			continue;
 		}
-	}
-};
-var replaceNode = function replaceNode(parentNode, newNode, existNode) {
-	if (newNode && existNode) {
-		parentNode = parentNode || existNode.parentNode;
-		parentNode.replaceChild(newNode, existNode);
-	}
-};
-
-var createTextNode = function createTextNode(text) {
-	return document.createTextNode(text);
-};
-var createElement$1 = function createElement(tagName, props) {
-	var node = document.createElement(tagName);
-	setProps(node, props);
-	return node;
-};
-
-var mapTree = function mapTree(vtree, iteratee) {
-	var stack = [vtree];
-	var item = undefined;
-	var shouldMapChildren = undefined;
-	while (stack.length) {
-		item = stack.shift();
-		shouldMapChildren = iteratee(item);
-		if (shouldMapChildren === false) {
+		// if iteratee return false, ignore mapping children
+		if (iteratee(item) === false) {
 			continue;
 		}
 		if (item && item.props && !isUndefined(item.props.children)) {
-			if (isArr(item.props.children)) {
-				stack.push.apply(stack, item.props.children);
-			} else {
-				stack.push(item.props.children);
-			}
+			isArr(item.props.children) ? queue.push.apply(queue, item.props.children) : queue.push(item.props.children);
 		}
 	}
 };
@@ -888,13 +878,6 @@ var getVnode = function getVnode(vnode) {
 		vnode = new Vtext(vnode);
 	}
 	return vnode;
-};
-
-var checkVtree = function checkVtree(vtree) {
-	if (isUndefined(vtree)) {
-		throw new Error('component can not render undefined');
-	}
-	return getVnode(vtree);
 };
 
 var isValidComponent = function isValidComponent(obj) {
@@ -939,23 +922,20 @@ var triggerUpdate = function triggerUpdate(updater) {
 };
 
 function Updater(instance) {
-	var _this = this;
-
 	this.instance = instance;
 	this.pendingStates = [];
 	this.pendingCallbacks = [];
 	this.isPending = false;
 	this.nextProps = this.nextContext = null;
-	this.bindClear = function () {
-		_this.clearCallbacks();
-	};
+	this.clearCallbacks = this.clearCallbacks.bind(this);
 }
 
 Updater.prototype = {
 	emitUpdate: function emitUpdate(nextProps, nextContext) {
 		this.nextProps = nextProps;
 		this.nextContext = nextContext;
-		updateQueue.isPending ? updateQueue.add(this) : this.update();
+		// receive nextProps!! should update immediately
+		!nextProps && updateQueue.isPending ? updateQueue.add(this) : this.update();
 	},
 	update: function update() {
 		var instance = this.instance;
@@ -968,7 +948,7 @@ Updater.prototype = {
 			nextContext = nextContext || instance.context;
 			this.nextProps = this.nextContext = null;
 			// merge the nextProps and nextState and update by one time
-			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.bindClear);
+			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.clearCallbacks);
 		}
 	},
 	addState: function addState(nextState) {
@@ -983,7 +963,7 @@ Updater.prototype = {
 		var pendingStates = this.pendingStates;
 
 		pendingStates.pop();
-		// push special params to point out replacing state
+		// push special params to point out should replace state
 		pendingStates.push([nextState]);
 	},
 	getState: function getState() {
@@ -992,28 +972,19 @@ Updater.prototype = {
 		var state = instance.state;
 		var props = instance.props;
 
-		var merge = function merge(_x) {
-			var _again = true;
-
-			_function: while (_again) {
-				var nextState = _x;
-				_again = false;
-
+		if (pendingStates.length) {
+			state = extend({}, state);
+			eachItem(pendingStates, function (nextState) {
 				// replace state
 				if (isArr(nextState)) {
-					state = null;
-					_x = nextState[0];
-					_again = true;
-					continue _function;
+					state = extend({}, nextState[0]);
+					return;
 				}
 				if (isFn(nextState)) {
 					nextState = nextState.call(instance, state, props);
 				}
-				state = extend({}, state, nextState);
-			}
-		};
-		if (pendingStates.length) {
-			eachItem(pendingStates, merge);
+				extend(state, nextState);
+			});
 			pendingStates.length = 0;
 		}
 		return state;
@@ -1073,11 +1044,11 @@ Component.prototype = {
 		var nextState = $cache.state || state;
 		var nextContext = $cache.context || {};
 		$cache.props = $cache.state = $cache.context = null;
-		this.componentWillUpdate(nextProps, nextState, nextContext);
-		this.props = nextProps;
-		this.state = nextState;
-		this.context = nextContext;
 		$updater.isPending = true;
+		this.componentWillUpdate(nextProps, nextState, nextContext);
+		this.state = nextState;
+		this.props = nextProps;
+		this.context = nextContext;
 		var nextVtree = renderComponent(this, $cache.$context);
 		vtree.updateTree(nextVtree, node && node.parentNode);
 		clearDidMount();
@@ -1301,6 +1272,9 @@ var findDOMNode = function findDOMNode(node) {
 };
 
 var unstable_renderSubtreeIntoContainer = function unstable_renderSubtreeIntoContainer(parentComponent, nextElement, container, callback) {
+	var $cache = parentComponent.$cache;
+
+	setContext($cache.$context, nextElement);
 	return render(nextElement, container, callback);
 };
 
@@ -1416,7 +1390,7 @@ var PropTypes = {
 };
 
 var only = function only(children) {
-	if (children != null && !isArr(children)) {
+	if (isValidElement(children)) {
 		return children;
 	}
 	throw new Error('expect only one child');
@@ -1517,10 +1491,12 @@ var Children = Object.freeze({
 
 var eachMixin = function eachMixin(mixins, iteratee) {
 	eachItem(mixins, function (mixin) {
-		if (isArr(mixin.mixins)) {
-			eachMixin(mixin.mixins, iteratee);
+		if (mixin) {
+			if (isArr(mixin.mixins)) {
+				eachMixin(mixin.mixins, iteratee);
+			}
+			iteratee(mixin);
 		}
-		iteratee(mixin);
 	});
 };
 

@@ -34,16 +34,15 @@ function Updater(instance) {
 	this.pendingCallbacks = []
 	this.isPending = false
 	this.nextProps = this.nextContext = null
-	this.bindClear = () => {
-		this.clearCallbacks()
-	}
+	this.clearCallbacks = this.clearCallbacks.bind(this)
 }
 
 Updater.prototype = {
 	emitUpdate(nextProps, nextContext) {
 		this.nextProps = nextProps
 		this.nextContext = nextContext
-		updateQueue.isPending
+		// receive nextProps!! should update immediately
+		!nextProps && updateQueue.isPending
 		? updateQueue.add(this)
 		: this.update()
 	},
@@ -54,7 +53,7 @@ Updater.prototype = {
 			nextContext = nextContext || instance.context
 			this.nextProps = this.nextContext = null
 			// merge the nextProps and nextState and update by one time
-			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.bindClear)
+			shouldUpdate(instance, nextProps, this.getState(), nextContext, this.clearCallbacks)
 		}
 	},
 	addState(nextState) {
@@ -68,25 +67,25 @@ Updater.prototype = {
 	replaceState(nextState) {
 		let { pendingStates } = this
 		pendingStates.pop()
-		// push special params to point out replacing state
+		// push special params to point out should replace state
 		pendingStates.push([nextState])
 	},
 	getState() {
 		let { instance, pendingStates } = this
 		let { state, props } = instance
-		let merge = nextState => {
-			// replace state
-			if (_.isArr(nextState)) {
-				state = null
-				return merge(nextState[0])
-			}
-			if (_.isFn(nextState)) {
-				nextState = nextState.call(instance, state, props)
-			}
-			state = _.extend({}, state, nextState)
-		}
 		if (pendingStates.length) {
-			_.eachItem(pendingStates, merge)
+			state = _.extend({}, state)
+			_.eachItem(pendingStates, nextState => {
+				// replace state
+				if (_.isArr(nextState)) {
+					state = _.extend({}, nextState[0])
+					return
+				}
+				if (_.isFn(nextState)) {
+					nextState = nextState.call(instance, state, props)
+				}
+				_.extend(state, nextState)
+			})
 			pendingStates.length = 0
 		}
 		return state
@@ -134,11 +133,11 @@ Component.prototype = {
 		let nextState = $cache.state || state
 		let nextContext = $cache.context || {}
 		$cache.props = $cache.state = $cache.context = null
-		this.componentWillUpdate(nextProps, nextState, nextContext)
-		this.props = nextProps
-		this.state = nextState
-		this.context = nextContext
 		$updater.isPending = true
+		this.componentWillUpdate(nextProps, nextState, nextContext)
+		this.state = nextState
+		this.props = nextProps
+		this.context = nextContext
 		let nextVtree = renderComponent(this, $cache.$context)
 		vtree.updateTree(nextVtree, node && node.parentNode)
 		clearDidMount()

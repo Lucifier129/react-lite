@@ -2,7 +2,7 @@ import * as _ from './util'
 import { cloneElement, isValidElement } from './createElement'
 
 export let only = children => {
-	if (children != null && !_.isArr(children)) {
+	if (isValidElement(children)) {
 		return children
 	}
 	throw new Error('expect only one child')

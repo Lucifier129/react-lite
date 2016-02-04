@@ -124,6 +124,16 @@ export let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 export let isStyleKey = key => key === 'style'
 // Setting .type throws on non-<input> tags
 export let isTypeKey = key => key === 'type'
+
+
+/*
+  DOM Properties which are only getter
+*/
+let readOnlyProps = 'nodeName|nodeValue|nodeType|parentNode|childNodes|classList|firstChild|lastChild|previousSibling|previousElementSibling|nextSibling|nextElementSibling|attributes|ownerDocument|namespaceURI|localName|baseURI|prefix|length|specified|tagName|offsetTop|offsetLeft|offsetWidth|offsetHeight|offsetParent|scrollWidth|scrollHeight|clientTop|clientLeft|clientWidth|clientHeight|x|y'
+let readOnlys = {}
+eachItem(readOnlyProps.split('|'), key => {
+	readOnlys[key] = true
+})
 export let setProp = (elem, key, value) => {
 	switch (true) {
 		case isIgnoreKey(key) || (key === 'title' && value == null):
@@ -138,7 +148,7 @@ export let setProp = (elem, key, value) => {
 			value && isStr(value.__html) && ($(elem).html(value.__html))
 			break
 		case (key in elem) && !isTypeKey(key):
-			$.prop(elem, key, value)
+			readOnlys[key] === true || $.prop(elem, key, value)
 			break
 		default:
 			$.attr(elem, key, '' + value)
@@ -189,7 +199,8 @@ export let removeProp = (elem, key, oldValue) => {
 	}
 }
 
-let keyAboutUserInput = {
+// 用 dom 属性作为 oldValue
+let shouldUseDOMProp = {
 	value: true,
 	checked: true
 }
@@ -211,7 +222,7 @@ export let patchProps = (elem, props, newProps) => {
 			return
 		}
 		let value = newProps[key]
-		let oldValue = keyAboutUserInput[key] ? elem[key] : props[key]
+		let oldValue = shouldUseDOMProp[key] ? elem[key] : props[key]
 		if (value === oldValue) {
 			return
 		}

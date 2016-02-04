@@ -65,8 +65,30 @@ Vtree.prototype = {
 			newVtree.attachRef()
 		}
 	},
-	updateTree(nextVtree, parentNode) {
-		compareTwoTree(this, nextVtree, parentNode)
+	updateTree(newVtree, parentNode) {
+		let { node } = this
+		let $removeNode
+		switch (diff(this, newVtree)) {
+			case DIFF_TYPE.CREATE:
+				newVtree.initTree(parentNode)
+				break
+			case DIFF_TYPE.REMOVE:
+				this.destroyTree()
+				break
+			case DIFF_TYPE.REPLACE:
+				// don't remove the existNode for replacing
+				$removeNode = removeNode
+				removeNode = noop
+				this.destroyTree()
+				removeNode = $removeNode
+				newVtree.initTree(
+					newNode => parentNode.replaceChild(newNode, node)
+				)
+				break
+			case DIFF_TYPE.UPDATE:
+				this.update(newVtree, parentNode)
+				break
+		}
 	}
 }
 
@@ -90,7 +112,7 @@ Vtext.prototype = new Vtree({
 		return this
 	},
 	initTree(parentNode) {
-		this.node = createTextNode(this.text)
+		this.node = document.createTextNode(this.text)
 		appendNode(parentNode, this.node)
 	},
 	destroyTree() {
@@ -131,12 +153,13 @@ Velem.prototype = new Vtree({
 		}
 		// the default children often be nesting array, make it flat and cache
 		if (_.isArr(children)) {
-			this.props.children = newChildren = []
+			newChildren = []
 			_.forEach(children, (vchild, index) => {
 				vchild = getVnode(vchild)
 				iteratee(vchild, index)
 				newChildren.push(vchild)
 			})
+			this.props.children = newChildren
 			this.sorted = true
 		} else if (!_.isUndefined(children)) {
 			children = this.props.children = getVnode(children)
@@ -145,7 +168,9 @@ Velem.prototype = new Vtree({
 	},
 	initTree(parentNode) {
 		let { type, props } = this
-		let node = this.node = createElement(type, props)
+		let node = document.createElement(type)
+		_.setProps(node, props)
+		this.node = node
 		this.eachChildren(vchild => {
 			vchild.initTree(node)
 		})
@@ -245,32 +270,28 @@ let getContextByTypes = (curContext, contextTypes) => {
 	return context
 }
 
-let setContext = (context, vtree) => {
+export let setContext = (context, vtree) => {
 	mapTree(vtree, item => {
 		if (isValidComponent(item)) {
-			if (item.context) {
-				if (item.context !== context) {
-					item.context = _.extend(item.context, context)
-				}
-			} else {
-				item.context = context
-			}
+			item.context = context
 		}
 	})
 }
 let bindRefs = refs => vnode => {
-	if (!vnode.refs) {
-		vnode.refs = refs
-	}
+	vnode.refs = vnode.refs || refs
 }
 
-export let renderComponent = (component, context) => {
+export let renderComponent = (component, parentContext) => {
 	let curContext = component.getChildContext()
-	curContext = _.extend({}, context, curContext)
+	curContext = _.extend({}, parentContext, curContext)
 	setRefs = bindRefs(component.refs)
-	let vtree = checkVtree(component.render())
-	setRefs = noop
+	let vtree = component.render()
+	if (_.isUndefined(vtree)) {
+		throw new Error('component can not render undefined')
+	}
+	vtree = getVnode(vtree)
 	setContext(curContext, vtree)
+	setRefs = noop
 	return vtree
 }
 
@@ -310,6 +331,9 @@ Vcomponent.prototype = new Vtree({
 	},
 	didMount() {
 		let { component } = this
+		if (!component) {
+			return
+		}
 		let updater = component.$updater
 		component.componentDidMount()
 		updater.isPending = false
@@ -354,79 +378,38 @@ Vcomponent.prototype = new Vtree({
 	}
 })
 
-let compareTwoTree = (vtree, newVtree, parentNode) => {
-	let diffType = diff(vtree, newVtree)
-	let $removeNode
-	let node
-	switch (diffType) {
-		case DIFF_TYPE.CREATE:
-			newVtree.initTree(parentNode)
-			break
-		case DIFF_TYPE.REMOVE:
-			vtree.destroyTree()
-			break
-		case DIFF_TYPE.REPLACE:
-			node = vtree.node
-			// don't remove the existNode for replacing
-			$removeNode = removeNode
-			removeNode = noop
-			vtree.destroyTree()
-			removeNode = $removeNode
-			newVtree.initTree(newNode => {
-				replaceNode(parentNode, newNode, node)
-			})
-			break
-		case DIFF_TYPE.UPDATE:
-			vtree.update(newVtree, parentNode)
-			break
-	}
-}
-
 let removeNode = node => {
+	// if node.parentNode had set innerHTML, do nothing
 	if (node && node.parentNode) {
 		node.parentNode.removeChild(node)
 	}
 }
 let appendNode = (parentNode, node) => {
-	if (parentNode && node) {
-		// for replace node
-		if (_.isFn(parentNode)) {
-			parentNode(node)
-		} else {
-			parentNode.appendChild(node)
+	// for replacing node
+	if (_.isFn(parentNode)) {
+		parentNode(node)
+	} else {
+		parentNode.appendChild(node)
+	}
+}
+
+let mapTree = (tree, iteratee) => {
+	let queue = [tree]
+	while (queue.length) {
+		let item = queue.shift()
+		// as you know, vnode's children may be nested list
+		if (_.isArr(item)) {
+			queue.splice(0, 0, ...item)
+			continue
 		}
-	}
-}
-let replaceNode = (parentNode, newNode, existNode) => {
-	if (newNode && existNode) {
-		parentNode = parentNode || existNode.parentNode
-		parentNode.replaceChild(newNode, existNode)
-	}
-}
-
-let createTextNode = text => document.createTextNode(text)
-let createElement = (tagName, props) =>  {
-	let node = document.createElement(tagName)
-	_.setProps(node, props)
-	return node
-}
-
-let mapTree = (vtree, iteratee) => {
-	let stack = [vtree]
-	let item
-	let shouldMapChildren
-	while (stack.length) {
-		item = stack.shift()
-		shouldMapChildren = iteratee(item)
-		if (shouldMapChildren === false) {
+		// if iteratee return false, ignore mapping children
+		if (iteratee(item) === false) {
 			continue
 		}
 		if (item && item.props && !_.isUndefined(item.props.children)) {
-			if (_.isArr(item.props.children)) {
-				stack.push(...item.props.children)
-			} else {
-				stack.push(item.props.children)
-			}
+			_.isArr(item.props.children)
+			? queue.push(...item.props.children)
+			: queue.push(item.props.children)
 		}
 	}
 }
@@ -438,13 +421,6 @@ let getVnode = vnode => {
 		vnode = new Vtext(vnode)
 	}
 	return vnode
-}
-
-let checkVtree = vtree => {
-	if (_.isUndefined(vtree)) {
-		throw new Error('component can not render undefined')
-	}
-	return getVnode(vtree)
 }
 
 let isValidComponent = obj => {

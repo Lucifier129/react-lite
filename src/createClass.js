@@ -3,10 +3,12 @@ import Component from './Component'
 
 let eachMixin = (mixins, iteratee) => {
 	_.eachItem(mixins, mixin => {
-		if (_.isArr(mixin.mixins)) {
-			eachMixin(mixin.mixins, iteratee)
+		if (mixin) {
+			if (_.isArr(mixin.mixins)) {
+				eachMixin(mixin.mixins, iteratee)
+			}
+			iteratee(mixin)
 		}
-		iteratee(mixin)
 	})
 }
 
