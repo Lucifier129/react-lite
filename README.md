@@ -1,5 +1,7 @@
 # react-lite
 
+[![Join the chat at https://gitter.im/Lucifier129/react-lite](https://badges.gitter.im/Lucifier129/react-lite.svg)](https://gitter.im/Lucifier129/react-lite?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ## Introduction
 React under 20k.
 react-lite is an implementation of React that optimizes for small script size.
