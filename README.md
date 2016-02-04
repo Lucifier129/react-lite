@@ -1,6 +1,6 @@
 # react-lite
 
-[![npm](https://img.shields.io/npm/v/npm.svg?style=plastic)](https://www.npmjs.com/package/react-lite)
+[![npm](https://img.shields.io/npm/v/react-lite.svg)](https://www.npmjs.com/package/react-lite)
 [![Join the chat at https://gitter.im/Lucifier129/react-lite](https://badges.gitter.im/Lucifier129/react-lite.svg)](https://gitter.im/Lucifier129/react-lite?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## Introduction
