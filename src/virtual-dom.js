@@ -154,7 +154,7 @@ Velem.prototype = new Vtree({
 		// the default children often be nesting array, make it flat and cache
 		if (_.isArr(children)) {
 			newChildren = []
-			_.forEach(children, (vchild, index) => {
+			_.flattenChildren(children, (vchild, index) => {
 				vchild = getVnode(vchild)
 				iteratee(vchild, index)
 				newChildren.push(vchild)

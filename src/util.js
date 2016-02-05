@@ -22,12 +22,12 @@ export let pipe = (fn1, fn2) => {
 	}
 }
 
-export let forEach = (list, iteratee, record) => {
+export let flattenChildren = (list, iteratee, record) => {
 	record = record || { index: 0 }
 	for (let i = 0, len = list.length; i < len; i++) {
 		let item = list[i]
 		if (isArr(item)) {
-			forEach(item, iteratee, record)
+			flattenChildren(item, iteratee, record)
 		} else if (!isUndefined(item) && !isBln(item)) {
 			iteratee(item, record.index)
 			record.index += 1

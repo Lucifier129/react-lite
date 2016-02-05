@@ -89,12 +89,12 @@
     	};
     };
 
-    var forEach$1 = function forEach(list, iteratee, record) {
+    var flattenChildren = function flattenChildren(list, iteratee, record) {
     	record = record || { index: 0 };
     	for (var i = 0, len = list.length; i < len; i++) {
     		var item = list[i];
     		if (isArr(item)) {
-    			forEach(item, iteratee, record);
+    			flattenChildren(item, iteratee, record);
     		} else if (!isUndefined(item) && !isBln(item)) {
     			iteratee(item, record.index);
     			record.index += 1;
@@ -587,7 +587,7 @@
     		// the default children often be nesting array, make it flat and cache
     		if (isArr(children)) {
     			newChildren = [];
-    			forEach$1(children, function (vchild, index) {
+    			flattenChildren(children, function (vchild, index) {
     				vchild = getVnode(vchild);
     				iteratee(vchild, index);
     				newChildren.push(vchild);
@@ -1393,7 +1393,7 @@
     		return children;
     	}
     	if (isArr(children)) {
-    		forEach$1(children, function (child, index) {
+    		flattenChildren(children, function (child, index) {
     			iteratee.call(context, child, index);
     		});
     	} else {
