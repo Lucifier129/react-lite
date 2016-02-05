@@ -1105,8 +1105,8 @@
     	onload: isNotBubble,
     	onunload: isNotBubble,
     	onscroll: isNotBubble,
-    	// onfocus: isNotBubble,
-    	// onblur: isNotBubble,
+    	onfocus: isNotBubble,
+    	onblur: isNotBubble,
     	onrowexit: isNotBubble,
     	onbeforeunload: isNotBubble,
     	onstop: isNotBubble,
@@ -1125,7 +1125,10 @@
     	var isNotBubble = notBubbleEvents[eventType];
 
     	if (isNotBubble) {
-    		elem[eventType] = listener;
+    		elem[eventType] = function (event) {
+    			event = event || window.event;
+    			listener.call(this, event);
+    		};
     		return;
     	}
 
@@ -1173,10 +1176,8 @@
     };
 
     var dispatchEvent = function dispatchEvent(event) {
-    	event = event || window.event;
-    	var _event = event;
-    	var target = _event.target;
-    	var type = _event.type;
+    	var target = event.target;
+    	var type = event.type;
 
     	var eventType = 'on' + type;
     	var syntheticEvent = undefined;
@@ -1191,11 +1192,8 @@
     			continue;
     		}
     		if (!syntheticEvent) {
-    			syntheticEvent = {};
+    			syntheticEvent = event;
     			syntheticEvent.nativeEvent = event;
-    			for (var key in event) {
-    				syntheticEvent[key] = typeof event[key] === 'function' ? event[key].bind(event) : event[key];
-    			}
     		}
     		syntheticEvent.currentTarget = target;
     		listener.call(target, syntheticEvent);

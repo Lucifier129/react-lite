@@ -15,8 +15,8 @@ let notBubbleEvents = {
 	onload: isNotBubble,
 	onunload: isNotBubble,
 	onscroll: isNotBubble,
-	// onfocus: isNotBubble,
-	// onblur: isNotBubble,
+	onfocus: isNotBubble,
+	onblur: isNotBubble,
 	onrowexit: isNotBubble,
 	onbeforeunload: isNotBubble,
 	onstop: isNotBubble,
@@ -35,7 +35,10 @@ export let addEvent = (elem, eventType, listener) => {
 	let isNotBubble = notBubbleEvents[eventType]
 
 	if (isNotBubble) {
-		elem[eventType] = listener
+		elem[eventType] = function(event) {
+			event = event || window.event
+			listener.call(this, event)
+		}
 		return
 	}
 
@@ -83,7 +86,6 @@ export let removeEvent = (elem, eventType) => {
 }
 
 let dispatchEvent = event => {
-	event = event || window.event
 	let { target, type } = event
 	let eventType = 'on' + type
 	let syntheticEvent
@@ -96,13 +98,8 @@ let dispatchEvent = event => {
 			continue
 		}
 		if (!syntheticEvent) {
-			syntheticEvent = {}
+			syntheticEvent = event
 			syntheticEvent.nativeEvent = event
-			for (let key in event) {
-				syntheticEvent[key] = typeof event[key] === 'function'
-				? event[key].bind(event)
-				: event[key]
-			}
 		}
 		syntheticEvent.currentTarget = target
 		listener.call(target, syntheticEvent)
