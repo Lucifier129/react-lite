@@ -198,17 +198,17 @@
     	}
     };
 
-    var mapKey = function mapKey(sources, iteratee) {
+    var mapKey = function mapKey(oldObj, newObj, iteratee) {
     	var keyMap = {};
-    	var item = undefined;
-    	var key = undefined;
-    	for (var i = 0, len = sources.length; i < len; i++) {
-    		item = sources[i];
-    		for (key in item) {
-    			if (!item.hasOwnProperty(key) || keyMap[key]) {
-    				continue;
-    			}
+    	var key;
+    	for (key in oldObj) {
+    		if (oldObj.hasOwnProperty(key)) {
     			keyMap[key] = true;
+    			iteratee(key);
+    		}
+    	}
+    	for (key in newObj) {
+    		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
     			iteratee(key);
     		}
     	}
@@ -261,12 +261,6 @@
     	children: true
     };
     var EVENT_KEYS = /^on/i;
-    var isIgnoreKey = function isIgnoreKey(key) {
-    	return ignoreKeys[key];
-    };
-    var isEventKey = function isEventKey(key) {
-    	return EVENT_KEYS.test(key);
-    };
     var isInnerHTMLKey = function isInnerHTMLKey(key) {
     	return key === 'dangerouslySetInnerHTML';
     };
@@ -288,9 +282,9 @@
     });
     var setProp = function setProp(elem, key, value) {
     	switch (true) {
-    		case isIgnoreKey(key) || key === 'title' && value == null:
+    		case ignoreKeys[key] === true:
     			break;
-    		case isEventKey(key):
+    		case EVENT_KEYS.test(key):
     			addEvent(elem, key, value);
     			break;
     		case isStyleKey(key):
@@ -300,7 +294,9 @@
     			value && value.__html != null && (elem.innerHTML = value.__html);
     			break;
     		case key in elem && !isTypeKey(key):
-    			readOnlys[key] === true || (elem[key] = value);
+    			if (readOnlys[key] !== true && !(key === 'title' && value == null)) {
+    				elem[key] = value;
+    			}
     			break;
     		default:
     			elem.setAttribute(key, '' + value);
@@ -318,9 +314,9 @@
     };
     var removeProp = function removeProp(elem, key, oldValue) {
     	switch (true) {
-    		case isIgnoreKey(key):
+    		case ignoreKeys[key] === true:
     			break;
-    		case isEventKey(key):
+    		case EVENT_KEYS.test(key):
     			removeEvent(elem, key);
     			break;
     		case isStyleKey(key):
@@ -351,7 +347,7 @@
     	}
     };
 
-    // 用 dom 属性作为 oldValue
+    // use dom prop to compare new prop
     var shouldUseDOMProp = {
     	value: true,
     	checked: true
@@ -369,12 +365,12 @@
     		return;
     	}
 
-    	mapKey([props, newProps], function (key) {
-    		if (isIgnoreKey(key)) {
+    	mapKey(props, newProps, function (key) {
+    		if (ignoreKeys[key] === true) {
     			return;
     		}
     		var value = newProps[key];
-    		var oldValue = shouldUseDOMProp[key] ? elem[key] : props[key];
+    		var oldValue = shouldUseDOMProp[key] == true ? elem[key] : props[key];
     		if (value === oldValue) {
     			return;
     		}
@@ -424,7 +420,7 @@
     		setStyle(elem, newStyle);
     	} else {
     		var elemStyle = elem.style;
-    		mapKey([style, newStyle], function (key) {
+    		mapKey(style, newStyle, function (key) {
     			var value = newStyle[key];
     			var oldValue = style[key];
     			if (value !== oldValue) {
