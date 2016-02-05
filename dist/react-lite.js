@@ -1129,7 +1129,7 @@
 
     	if (!eventTypes[eventType]) {
     		// onclick -> click
-    		document.addEventListener(eventType.substr(2), matchHandler);
+    		document.addEventListener(eventType.substr(2), dispatchEvent);
     		eventTypes[eventType] = true;
     	}
 
@@ -1155,7 +1155,7 @@
     	}
     };
 
-    var matchHandler = function matchHandler(event) {
+    var dispatchEvent = function dispatchEvent(event) {
     	var target = event.target;
     	var type = event.type;
 

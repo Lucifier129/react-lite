@@ -42,7 +42,7 @@ export let addEvent = (elem, eventType, listener) => {
 
 	if (!eventTypes[eventType]) {
 		// onclick -> click
-		document.addEventListener(eventType.substr(2), matchHandler)
+		document.addEventListener(eventType.substr(2), dispatchEvent)
 		eventTypes[eventType] = true
 	}
 
@@ -68,7 +68,7 @@ export let removeEvent = (elem, eventType) => {
 	}
 }
 
-let matchHandler = event => {
+let dispatchEvent = event => {
 	let { target, type } = event
 	let eventType = 'on' + type
 	let syntheticEvent
