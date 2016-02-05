@@ -162,24 +162,13 @@ var getUid = function getUid() {
 	return ++uid;
 };
 
-var getChildren = function getChildren(_x) {
-	var _again = true;
-
-	_function: while (_again) {
-		var children = _x;
-		_again = false;
-
-		if (children && children.length > 0) {
-			if (children.length === 1) {
-				children = children[0];
-				if (isArr(children)) {
-					_x = children;
-					_again = true;
-					continue _function;
-				}
-			}
-			return children;
+var getChildren = function getChildren(children) {
+	var childrenLen = children.length;
+	if (childrenLen > 0) {
+		if (childrenLen === 1) {
+			children = children[0];
 		}
+		return children;
 	}
 };
 var mergeProps = function mergeProps(props, children, defaultProps) {

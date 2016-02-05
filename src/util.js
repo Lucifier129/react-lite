@@ -93,12 +93,10 @@ let uid = 0
 export let getUid = () => ++uid
 
 let getChildren = children => {
-	if (children && children.length > 0) {
-		if (children.length === 1) {
+	let childrenLen = children.length
+	if (childrenLen > 0) {
+		if (childrenLen === 1) {
 			children = children[0]
-			if (isArr(children)) {
-				return getChildren(children)
-			}
 		}
 		return children
 	}
