@@ -15,8 +15,8 @@ let notBubbleEvents = {
 	onload: isNotBubble,
 	onunload: isNotBubble,
 	onscroll: isNotBubble,
-	onfocus: isNotBubble,
-	onblur: isNotBubble,
+	// onfocus: isNotBubble,
+	// onblur: isNotBubble,
 	onrowexit: isNotBubble,
 	onbeforeunload: isNotBubble,
 	onstop: isNotBubble,
@@ -44,7 +44,7 @@ export let addEvent = (elem, eventType, listener) => {
 
 	if (!eventTypes[eventType]) {
 		// onclick -> click
-		$(document).on(eventType.substr(2), matchHandler)
+		$(document).on(eventType.substr(2), dispatchEvent)
 		eventTypes[eventType] = true
 	}
 
@@ -82,7 +82,8 @@ export let removeEvent = (elem, eventType) => {
 	}
 }
 
-let matchHandler = event => {
+let dispatchEvent = event => {
+	event = event || window.event
 	let { target, type } = event
 	let eventType = 'on' + type
 	let syntheticEvent

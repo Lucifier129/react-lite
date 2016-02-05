@@ -1105,8 +1105,8 @@
     	onload: isNotBubble,
     	onunload: isNotBubble,
     	onscroll: isNotBubble,
-    	onfocus: isNotBubble,
-    	onblur: isNotBubble,
+    	// onfocus: isNotBubble,
+    	// onblur: isNotBubble,
     	onrowexit: isNotBubble,
     	onbeforeunload: isNotBubble,
     	onstop: isNotBubble,
@@ -1134,7 +1134,7 @@
 
     	if (!eventTypes[eventType]) {
     		// onclick -> click
-    		$$1(document).on(eventType.substr(2), matchHandler);
+    		$$1(document).on(eventType.substr(2), dispatchEvent);
     		eventTypes[eventType] = true;
     	}
 
@@ -1172,9 +1172,11 @@
     	}
     };
 
-    var matchHandler = function matchHandler(event) {
-    	var target = event.target;
-    	var type = event.type;
+    var dispatchEvent = function dispatchEvent(event) {
+    	event = event || window.event;
+    	var _event = event;
+    	var target = _event.target;
+    	var type = _event.type;
 
     	var eventType = 'on' + type;
     	var syntheticEvent = undefined;
