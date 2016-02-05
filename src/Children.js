@@ -13,7 +13,7 @@ export let forEach = (children, iteratee, context) => {
 		return children
 	}
 	if (_.isArr(children)) {
-		_.forEach(children, (child, index) => {
+		_.flattenChildren(children, (child, index) => {
 			iteratee.call(context, child, index)
 		})
 	} else {
