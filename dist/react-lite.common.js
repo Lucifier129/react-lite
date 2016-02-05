@@ -20,6 +20,81 @@ var DIFF_TYPE = {
 
 var COMPONENT_ID = 'liteid';
 
+var isValidElement = function isValidElement(obj) {
+	return obj != null && !!obj.vtype;
+};
+
+var cloneElement = function cloneElement(originElem, props) {
+	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+		children[_key - 2] = arguments[_key];
+	}
+
+	var type = originElem.type;
+	var key = originElem.key;
+	var ref = originElem.ref;
+
+	props = extend({ key: key, ref: ref }, originElem.props, props);
+	var vnode = createElement.apply(undefined, [type, props].concat(children));
+	if (vnode.ref === originElem.ref) {
+		vnode.refs = originElem.refs;
+	}
+	return vnode;
+};
+
+var createFactory = function createFactory(type) {
+	var factory = function factory() {
+		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+			args[_key2] = arguments[_key2];
+		}
+
+		return createElement.apply(undefined, [type].concat(args));
+	};
+	factory.type = type;
+	return factory;
+};
+
+var createElement = function createElement(type, props) {
+	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+		children[_key3 - 2] = arguments[_key3];
+	}
+
+	var Vnode = undefined;
+	switch (true) {
+		case isStr(type):
+			Vnode = Velem;
+			break;
+		case isComponent(type):
+			Vnode = Vcomponent;
+			break;
+		case isStatelessComponent(type):
+			Vnode = VstatelessComponent;
+			break;
+		default:
+			throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
+	}
+	var key = null;
+	var ref = null;
+	var hasRef = false;
+	if (props != null) {
+		if (!isUndefined(props.key)) {
+			key = '' + props.key;
+			delete props.key;
+		}
+		if (!isUndefined(props.ref)) {
+			ref = props.ref;
+			delete props.ref;
+			hasRef = true;
+		}
+	}
+	var vnode = new Vnode(type, mergeProps(props, children, type.defaultProps));
+	vnode.key = key;
+	vnode.ref = ref;
+	if (hasRef && Vnode !== VstatelessComponent) {
+		handleVnodeWithRef(vnode);
+	}
+	return vnode;
+};
+
 var diff = function diff(vnode, newVnode) {
 	var type = undefined;
 	switch (true) {
@@ -859,7 +934,7 @@ var mapTree = function mapTree(tree, iteratee) {
 var getVnode = function getVnode(vnode) {
 	if (vnode === null) {
 		vnode = new Velem('noscript', {});
-	} else if (!isObj(vnode)) {
+	} else if (!isValidElement(vnode)) {
 		vnode = new Vtext(vnode);
 	}
 	return vnode;
@@ -1256,81 +1331,6 @@ var ReactDOM = Object.freeze({
 	findDOMNode: findDOMNode,
 	unstable_renderSubtreeIntoContainer: unstable_renderSubtreeIntoContainer
 });
-
-var isValidElement = function isValidElement(obj) {
-	return obj != null && !!obj.vtype;
-};
-
-var cloneElement = function cloneElement(originElem, props) {
-	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-		children[_key - 2] = arguments[_key];
-	}
-
-	var type = originElem.type;
-	var key = originElem.key;
-	var ref = originElem.ref;
-
-	props = extend({ key: key, ref: ref }, originElem.props, props);
-	var vnode = createElement.apply(undefined, [type, props].concat(children));
-	if (vnode.ref === originElem.ref) {
-		vnode.refs = originElem.refs;
-	}
-	return vnode;
-};
-
-var createFactory = function createFactory(type) {
-	var factory = function factory() {
-		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-			args[_key2] = arguments[_key2];
-		}
-
-		return createElement.apply(undefined, [type].concat(args));
-	};
-	factory.type = type;
-	return factory;
-};
-
-var createElement = function createElement(type, props) {
-	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-		children[_key3 - 2] = arguments[_key3];
-	}
-
-	var Vnode = undefined;
-	switch (true) {
-		case isStr(type):
-			Vnode = Velem;
-			break;
-		case isComponent(type):
-			Vnode = Vcomponent;
-			break;
-		case isStatelessComponent(type):
-			Vnode = VstatelessComponent;
-			break;
-		default:
-			throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
-	}
-	var key = null;
-	var ref = null;
-	var hasRef = false;
-	if (props != null) {
-		if (!isUndefined(props.key)) {
-			key = '' + props.key;
-			delete props.key;
-		}
-		if (!isUndefined(props.ref)) {
-			ref = props.ref;
-			delete props.ref;
-			hasRef = true;
-		}
-	}
-	var vnode = new Vnode(type, mergeProps(props, children, type.defaultProps));
-	vnode.key = key;
-	vnode.ref = ref;
-	if (hasRef && Vnode !== VstatelessComponent) {
-		handleVnodeWithRef(vnode);
-	}
-	return vnode;
-};
 
 var tagNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';
 var DOM = {};

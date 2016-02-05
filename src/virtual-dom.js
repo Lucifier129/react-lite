@@ -1,6 +1,7 @@
 import * as _ from './util'
 import { VNODE_TYPE, DIFF_TYPE } from './constant'
 import { updatePropsAndState } from './Component'
+import { isValidElement } from './createElement'
 import diff from './diff'
 
 function Vtree(properties) {
@@ -417,7 +418,7 @@ let mapTree = (tree, iteratee) => {
 let getVnode = vnode => {
 	if (vnode === null) {
 		vnode = new Velem('noscript', {})
-	} else if (!_.isObj(vnode)) {
+	} else if (!isValidElement(vnode)) {
 		vnode = new Vtext(vnode)
 	}
 	return vnode
