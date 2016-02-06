@@ -556,29 +556,34 @@ Vtree.prototype = {
 			newVtree.attachRef();
 		}
 	},
-	updateTree: function updateTree(newVtree, parentNode) {
+	replaceTree: function replaceTree(oldTree, parentNode, parentContext) {
+		var node = oldTree.node;
+
+		// don't remove the existNode for replacing
+		var $removeNode = removeNode;
+		removeNode = noop$2;
+		oldTree.destroyTree();
+		removeNode = $removeNode;
+		this.initTree(function (newNode) {
+			return parentNode.replaceChild(newNode, node);
+		}, parentContext);
+	},
+	updateTree: function updateTree(newVtree, parentNode, parentContext) {
 		var node = this.node;
 
 		var $removeNode = undefined;
 		switch (diff(this, newVtree)) {
 			case DIFF_TYPE.CREATE:
-				newVtree.initTree(parentNode);
+				newVtree.initTree(parentNode, parentContext);
 				break;
 			case DIFF_TYPE.REMOVE:
 				this.destroyTree();
 				break;
 			case DIFF_TYPE.REPLACE:
-				// don't remove the existNode for replacing
-				$removeNode = removeNode;
-				removeNode = noop$2;
-				this.destroyTree();
-				removeNode = $removeNode;
-				newVtree.initTree(function (newNode) {
-					return parentNode.replaceChild(newNode, node);
-				});
+				newVtree.replaceTree(this, parentNode, parentContext);
 				break;
 			case DIFF_TYPE.UPDATE:
-				this.update(newVtree, parentNode);
+				this.update(newVtree, parentNode, parentContext);
 				break;
 		}
 	}
@@ -603,7 +608,6 @@ Vtext.prototype = new Vtree({
 		// deliver node to the newTree for next updating
 		nextVtext.node = node;
 		this.node = null;
-		return this;
 	},
 	initTree: function initTree(parentNode) {
 		this.node = document.createTextNode(this.text);
@@ -663,7 +667,7 @@ Velem.prototype = new Vtree({
 			iteratee(children, 0);
 		}
 	},
-	initTree: function initTree(parentNode) {
+	initTree: function initTree(parentNode, parentContext) {
 		var type = this.type;
 		var props = this.props;
 
@@ -671,7 +675,7 @@ Velem.prototype = new Vtree({
 		setProps(node, props);
 		this.node = node;
 		this.eachChildren(function (vchild) {
-			vchild.initTree(node);
+			vchild.initTree(node, parentContext);
 		});
 		appendNode(parentNode, node);
 		this.attachRef();
@@ -681,37 +685,42 @@ Velem.prototype = new Vtree({
 		removeNode(this.node);
 		this.node = null;
 	},
-	update: function update(newVelem) {
+	update: function update(newVelem, parentNode, parentContext) {
 		var node = this.node;
 		var props = this.props;
 
 		var children = !isUndefined(props.children) ? props.children : [];
 		var count = 0;
-		var vindex = undefined;
 		if (!isArr(children)) {
 			children = [children];
 		}
 		patchProps(node, props, newVelem.props);
 		newVelem.node = node;
 		newVelem.eachChildren(function (newVchild, index) {
-			var vchild = children[index];
 			count += 1;
-			// if newVchild.node exist, destroy it and remove it when it's in children
-			if (vchild !== newVchild && newVchild.node) {
+			var vchild = children[index];
+			if (vchild === newVchild) {
+				return;
+			}
+			if (newVchild.node) {
 				newVchild.destroyTree();
-				vindex = findIndex(children, newVchild, index + 1);
+				// reorder vchild
+				var vindex = findIndex(children, newVchild, index + 1);
 				if (vindex !== -1) {
 					children.splice(vindex, 1);
 				}
 			}
-			if (vchild) {
-				vchild.updateTree(newVchild, node);
+			var childNode = vchild && vchild.node;
+			// vchild may be replaced, detect childNode.parentNode equal to node or not
+			if (!childNode || childNode.parentNode !== node) {
+				newVchild.initTree(node, parentContext);
 			} else {
-				newVchild.initTree(node);
+				vchild.updateTree(newVchild, node, parentContext);
 			}
 		});
+		var childrenLen = children.length;
 		// destroy old children not in the newChildren
-		while (children.length > count) {
+		while (childrenLen > count) {
 			children[count].destroyTree();
 			count += 1;
 		}
@@ -730,32 +739,30 @@ VstatelessComponent.prototype = new Vtree({
 	attachRef: noop$2,
 	detachRef: noop$2,
 	updateRef: noop$2,
-	renderTree: function renderTree() {
+	renderTree: function renderTree(parentContext) {
 		var factory = this.type;
 		var props = this.props;
-		var context = this.context;
 
-		var vtree = factory(props, getContextByTypes(context, factory.contextTypes));
+		var componentContext = getContextByTypes(parentContext, factory.contextTypes);
+		var vtree = factory(props, componentContext);
 		if (vtree && vtree.render) {
 			vtree = vtree.render();
 		}
 		this.vtree = getVnode(vtree);
-		setContext(context, this.vtree);
 	},
-	initTree: function initTree(parentNode) {
-		this.renderTree();
-		this.vtree.initTree(parentNode);
+	initTree: function initTree(parentNode, parentContext) {
+		this.renderTree(parentContext);
+		this.vtree.initTree(parentNode, parentContext);
 		this.node = this.vtree.node;
 	},
 	destroyTree: function destroyTree() {
 		this.vtree.destroyTree();
-		this.node = this.vtree = null;
+		this.vtree = this.node = null;
 	},
-	update: function update(newVtree, parentNode) {
-		newVtree.renderTree();
-		this.vtree.updateTree(newVtree.vtree, parentNode);
-		newVtree.node = newVtree.vtree.node;
-		this.node = this.vtree = null;
+	update: function update(newVtree, parentNode, parentContext) {
+		newVtree.renderTree(parentContext);
+		this.vtree.updateTree(newVtree.vtree, parentNode, parentContext);
+		this.vtree = this.node = null;
 	}
 });
 
@@ -768,19 +775,14 @@ var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
 	if (!contextTypes || !curContext) {
 		return context;
 	}
-	mapValue(contextTypes, function (_, key) {
-		context[key] = curContext[key];
-	});
+	for (var key in contextTypes) {
+		if (contextTypes.hasOwnProperty(key)) {
+			context[key] = curContext[key];
+		}
+	}
 	return context;
 };
 
-var setContext = function setContext(context, vtree) {
-	mapTree(vtree, function (item) {
-		if (isValidComponent(item)) {
-			item.context = context;
-		}
-	});
-};
 var bindRefs = function bindRefs(refs) {
 	return function (vnode) {
 		vnode.refs = vnode.refs || refs;
@@ -788,15 +790,19 @@ var bindRefs = function bindRefs(refs) {
 };
 
 var renderComponent = function renderComponent(component, parentContext) {
-	var curContext = component.getChildContext();
-	curContext = extend({}, parentContext, curContext);
 	setRefs = bindRefs(component.refs);
 	var vtree = component.render();
 	if (isUndefined(vtree)) {
 		throw new Error('component can not render undefined');
 	}
 	vtree = getVnode(vtree);
-	setContext(curContext, vtree);
+	var curContext = component.getChildContext();
+	if (curContext) {
+		curContext = extend({}, parentContext, curContext);
+	} else {
+		curContext = parentContext;
+	}
+	vtree.context = curContext;
 	setRefs = noop$2;
 	return vtree;
 };
@@ -810,8 +816,10 @@ var clearDidMount = function clearDidMount() {
 	if (components.length === 0) {
 		return;
 	}
+	updateQueue.isPending = true;
 	didMountComponents = [];
 	eachItem(components, callDidMount);
+	updateQueue.batchUpdate();
 };
 
 function Vcomponent(type, props) {
@@ -821,23 +829,23 @@ function Vcomponent(type, props) {
 
 Vcomponent.prototype = new Vtree({
 	vtype: VNODE_TYPE.COMPONENT,
-	initTree: function initTree(parentNode) {
+	initTree: function initTree(parentNode, parentContext) {
 		var Component = this.type;
 		var props = this.props;
-		var context = this.context;
 
-		var componentContext = getContextByTypes(context, Component.contextTypes);
-		var component = this.component = new Component(props, componentContext);
+		var componentContext = getContextByTypes(parentContext, Component.contextTypes);
+		var component = new Component(props, componentContext);
 		var updater = component.$updater;
 		var cache = component.$cache;
 
-		cache.$context = context;
+		cache.parentContext = parentContext;
+		this.component = component;
 		updater.isPending = true;
 		component.props = component.props || props;
 		component.componentWillMount();
 		updatePropsAndState(component, component.props, updater.getState(), component.context);
-		var vtree = component.vtree = renderComponent(component, context);
-		vtree.initTree(parentNode);
+		var vtree = component.vtree = renderComponent(component, parentContext);
+		vtree.initTree(parentNode, vtree.context);
 		cache.isMounted = true;
 		component.node = this.node = vtree.node;
 		didMountComponents.push(this);
@@ -868,7 +876,7 @@ Vcomponent.prototype = new Vtree({
 		component.$cache.isMounted = false;
 		this.component = this.node = component.vtree = component.node = component.refs = component.context = null;
 	},
-	update: function update(newVtree, parentNode) {
+	update: function update(newVtree, parentNode, parentContext) {
 		var component = this.component;
 
 		if (!component) {
@@ -876,16 +884,15 @@ Vcomponent.prototype = new Vtree({
 		}
 		var Component = newVtree.type;
 		var nextProps = newVtree.props;
-		var nextContext = newVtree.context;
 		var updater = component.$updater;
-		var $cache = component.$cache;
+		var cache = component.$cache;
 
-		var context = getContextByTypes(nextContext, Component.contextTypes);
-		$cache.$context = nextContext;
+		var componentContext = getContextByTypes(parentContext, Component.contextTypes);
+		cache.parentContext = parentContext;
 		updater.isPending = true;
-		component.componentWillReceiveProps(nextProps, context);
+		component.componentWillReceiveProps(nextProps, componentContext);
 		updater.isPending = false;
-		updater.emitUpdate(nextProps, context);
+		updater.emitUpdate(nextProps, componentContext);
 		newVtree.component = component;
 		newVtree.node = component.node;
 		this.updateRef(newVtree);
@@ -1093,20 +1100,21 @@ Component.prototype = {
 		var vtree = this.vtree;
 		var node = this.node;
 
-		if ($updater.isPending) {
+		if ($updater.isPending || !$cache.isMounted) {
 			return;
 		}
 		var nextProps = $cache.props || props;
 		var nextState = $cache.state || state;
 		var nextContext = $cache.context || {};
+		var parentContext = $cache.parentContext;
 		$cache.props = $cache.state = $cache.context = null;
 		$updater.isPending = true;
 		this.componentWillUpdate(nextProps, nextState, nextContext);
 		this.state = nextState;
 		this.props = nextProps;
 		this.context = nextContext;
-		var nextVtree = renderComponent(this, $cache.$context);
-		vtree.updateTree(nextVtree, node && node.parentNode);
+		var nextVtree = renderComponent(this, parentContext);
+		vtree.updateTree(nextVtree, node.parentNode, nextVtree.context);
 		clearDidMount();
 		$updater.isPending = false;
 		this.vtree = nextVtree;
@@ -1253,17 +1261,17 @@ var dispatchEvent = function dispatchEvent(event) {
 };
 
 var store = {};
-var render = function render(vtree, container, callback) {
+var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container, callback, parentContext) {
 	if (!vtree) {
 		throw new Error('cannot render ' + vtree + ' to container');
 	}
 	var id = container[COMPONENT_ID];
 	if (store.hasOwnProperty(id)) {
-		store[id].updateTree(vtree, container);
+		store[id].updateTree(vtree, container, parentContext);
 	} else {
 		container[COMPONENT_ID] = id = getUid();
 		container.innerHTML = '';
-		vtree.initTree(container);
+		vtree.initTree(container, parentContext);
 	}
 	store[id] = vtree;
 	clearDidMount();
@@ -1283,6 +1291,14 @@ var render = function render(vtree, container, callback) {
 	}
 
 	return result;
+};
+
+var render = function render(vtree, container, callback) {
+	return renderTreeIntoContainer(vtree, container, callback);
+};
+
+var unstable_renderSubtreeIntoContainer = function unstable_renderSubtreeIntoContainer(parentComponent, subVtree, container, callback) {
+	return renderTreeIntoContainer(subVtree, container, callback, parentComponent.$cache.parentContext);
 };
 
 var unmountComponentAtNode = function unmountComponentAtNode(container) {
@@ -1313,19 +1329,12 @@ var findDOMNode = function findDOMNode(node) {
 	throw new Error('findDOMNode can not find Node');
 };
 
-var unstable_renderSubtreeIntoContainer = function unstable_renderSubtreeIntoContainer(parentComponent, nextElement, container, callback) {
-	var $cache = parentComponent.$cache;
-
-	setContext($cache.$context, nextElement);
-	return render(nextElement, container, callback);
-};
-
 
 var ReactDOM = Object.freeze({
 	render: render,
+	unstable_renderSubtreeIntoContainer: unstable_renderSubtreeIntoContainer,
 	unmountComponentAtNode: unmountComponentAtNode,
-	findDOMNode: findDOMNode,
-	unstable_renderSubtreeIntoContainer: unstable_renderSubtreeIntoContainer
+	findDOMNode: findDOMNode
 });
 
 var tagNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';

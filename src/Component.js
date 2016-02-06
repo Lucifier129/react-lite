@@ -128,18 +128,21 @@ Component.prototype = {
 	},
 	forceUpdate(callback) {
 		let { $updater, $cache, props, state, context, vtree, node } = this
-		if ($updater.isPending) { return }
+		if ($updater.isPending || !$cache.isMounted) {
+			return
+		}
 		let nextProps = $cache.props || props
 		let nextState = $cache.state || state
 		let nextContext = $cache.context || {}
+		let parentContext = $cache.parentContext
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
 		this.componentWillUpdate(nextProps, nextState, nextContext)
 		this.state = nextState
 		this.props = nextProps
 		this.context = nextContext
-		let nextVtree = renderComponent(this, $cache.$context)
-		vtree.updateTree(nextVtree, node && node.parentNode)
+		let nextVtree = renderComponent(this, parentContext)
+		vtree.updateTree(nextVtree, node.parentNode, nextVtree.context)
 		clearDidMount()
 		$updater.isPending = false
 		this.vtree = nextVtree

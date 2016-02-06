@@ -2,7 +2,7 @@
   "name": "react-lite",
   "version": "0.0.22",
   "description": "an implementation of React that optimizes for small script size",
-  "main": "lib/index.js",
+  "main": "dist/react-lite.common.js",
   "jsnext:main": "src/index.js",
   "scripts": {
     "test": "jest",

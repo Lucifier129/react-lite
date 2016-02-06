@@ -3,17 +3,17 @@ import { COMPONENT_ID, VNODE_TYPE } from './constant'
 import { clearDidMount, setContext } from './virtual-dom'
 
 let store = {}
-export let render = (vtree, container, callback) => {
+let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	if (!vtree) {
 		throw new Error(`cannot render ${ vtree } to container`)
 	}
 	let id = container[COMPONENT_ID]
 	if (store.hasOwnProperty(id)) {
-		store[id].updateTree(vtree, container)
+		store[id].updateTree(vtree, container, parentContext)
 	} else {
 		container[COMPONENT_ID] = id = _.getUid()
 		container.innerHTML = ''
-		vtree.initTree(container)
+		vtree.initTree(container, parentContext)
 	}
 	store[id] = vtree
 	clearDidMount()
@@ -33,6 +33,14 @@ export let render = (vtree, container, callback) => {
 	}
 	
 	return result
+}
+
+export let render = (vtree, container, callback) => {
+	return renderTreeIntoContainer(vtree, container, callback)
+}
+
+export let unstable_renderSubtreeIntoContainer = (parentComponent, subVtree, container, callback) => {
+	return renderTreeIntoContainer(subVtree, container, callback, parentComponent.$cache.parentContext)
 }
 
 export let unmountComponentAtNode = container => {
@@ -61,10 +69,4 @@ export let findDOMNode = node => {
 		return component.getDOMNode()
 	}
 	throw new Error('findDOMNode can not find Node')
-}
-
-export let unstable_renderSubtreeIntoContainer = (parentComponent, nextElement, container, callback) => {
-	let { $cache } = parentComponent
-	setContext($cache.$context, nextElement)
-	return render(nextElement, container, callback)
 }
