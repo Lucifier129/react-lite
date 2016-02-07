@@ -1,30 +1,31 @@
 // util
+import { addEvent, removeEvent } from './event-system'
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 export let isObj = isType('Object')
 export let isStr = isType('String')
-export let isNum = isType('Number')
 export let isFn = isType('Function')
 export let isBln = isType('Boolean')
 export let isArr = Array.isArray || isType('Array')
 export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
-export let isStatelessComponent = obj => obj && (!obj.prototype || !('forceUpdate' in obj.prototype))
+export let isStatelessComponent = obj => isFn(obj) && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
 export let noop = () => {}
 export let identity = obj => obj
 
 export let pipe = (fn1, fn2) => {
-	return function(...args) {
-		fn1.apply(this, args)
-		return fn2.apply(this, args)
+	return function() {
+		fn1.apply(this, arguments)
+		return fn2.apply(this, arguments)
 	}
 }
 
-export let forEach = (list, iteratee, record = { index: 0 }) => {
+export let flattenChildren = (list, iteratee, record) => {
+	record = record || { index: 0 }
 	for (let i = 0, len = list.length; i < len; i++) {
 		let item = list[i]
 		if (isArr(item)) {
-			forEach(item, iteratee, record)
+			flattenChildren(item, iteratee, record)
 		} else if (!isUndefined(item) && !isBln(item)) {
 			iteratee(item, record.index)
 			record.index += 1
@@ -38,6 +39,16 @@ export let eachItem = (list, iteratee) => {
 	}
 }
 
+export let findIndex = (list, item, startIndex) => {
+	let i = startIndex > 0 ? startIndex : 0
+	for (let len = list.length; i < len; i++) {
+		if (list[i] === item) {
+			return i
+		}
+	}
+	return -1
+}
+
 export let mapValue = (obj, iteratee) => {
 	for (let key in obj) {
 		if (obj.hasOwnProperty(key)) {
@@ -46,29 +57,29 @@ export let mapValue = (obj, iteratee) => {
 	}
 }
 
-export let mapKey = (sources, iteratee) => {
-	let keyMap = {}
-	let item
-	let key
-	for (let i = 0, len = sources.length; i < len; i++) {
-		item = sources[i]
-		for (key in item) {
-			if (!item.hasOwnProperty(key) || keyMap[key]) {
-				continue
-			}
+export let mapKey = (oldObj, newObj, iteratee) => {
+	var keyMap = {}
+	var key
+	for (key in oldObj) {
+		if (oldObj.hasOwnProperty(key)) {
 			keyMap[key] = true
+			iteratee(key)
+		}
+	}
+	for (key in newObj) {
+		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
 			iteratee(key)
 		}
 	}
 }
 
-export let extend = (target, ...args) => {
+export let extend = (target, ...sources) => {
 	let setProp = (value, key) => {
 		if (!isUndefined(value)) {
 			target[key] = value
 		}
 	}
-	eachItem(args, source => {
+	eachItem(sources, source => {
 		if (source != null) {
 			mapValue(source, setProp)
 		}
@@ -80,17 +91,13 @@ let uid = 0
 export let getUid = () => ++uid
 
 let getChildren = children => {
-	if (children && children.length > 0) {
-		if (children.length === 1) {
+	let childrenLen = children.length
+	if (childrenLen > 0) {
+		if (childrenLen === 1) {
 			children = children[0]
-			if (isArr(children)) {
-				return getChildren(children)
-			}
 		}
-	} else {
-		children = undefined
+		return children
 	}
-	return children
 }
 export let mergeProps = (props, children, defaultProps) => {
 	let result = extend({}, defaultProps, props)
@@ -101,77 +108,45 @@ export let mergeProps = (props, children, defaultProps) => {
 	return result
 }
 
-export let setAttr = (elem, key, value) => {
-	elem.setAttribute(key, value)
-}
-export let getAttr = (elem, key) => {
-	return elem.getAttribute(key)
-}
-export let removeAttr = (elem, key) => {
-	elem.removeAttribute(key)
-}
-
-let eventNameAlias = {
-	onDoubleClick: 'ondblclick'
-}
-let getEventName = key => {
-	key = eventNameAlias[key] || key
-	return key.toLowerCase()
-}
-let getEventHandler = handleEvent => function(e) {
-	e.stopPropagation()
-	e.nativeEvent = e
-	return handleEvent.call(this, e)
-}
-export let setEvent = (elem, key, value) => {
-	if (!isFn(value)) {
-		return
-	}
-	key = getEventName(key)
-	value = getEventHandler(value)
-	elem[key] = value
-	if (key === 'onchange') {
-		elem.oninput = value
-	}
-}
-export let removeEvent = (elem, key) => {
-	key = getEventName(key)
-	elem[key] = null
-	if (key === 'onchange') {
-		elem.oninput = null
-	}
-}
-
 let ignoreKeys = {
 	key: true,
 	ref: true,
 	children: true
 }
 let EVENT_KEYS = /^on/i
-export let isIgnoreKey = key => ignoreKeys[key]
-export let isEventKey = key => EVENT_KEYS.test(key)
-export let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
-export let isStyleKey = key => key === 'style'
+let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
+let isStyleKey = key => key === 'style'
 // Setting .type throws on non-<input> tags
-export let isTypeKey = key => key === 'type'
+let isTypeKey = key => key === 'type'
+
+/*
+  DOM Properties which are only getter
+*/
+let readOnlyProps = 'nodeName|nodeValue|nodeType|parentNode|childNodes|classList|firstChild|lastChild|previousSibling|previousElementSibling|nextSibling|nextElementSibling|attributes|ownerDocument|namespaceURI|localName|baseURI|prefix|length|specified|tagName|offsetTop|offsetLeft|offsetWidth|offsetHeight|offsetParent|scrollWidth|scrollHeight|clientTop|clientLeft|clientWidth|clientHeight|x|y'
+let readOnlys = {}
+eachItem(readOnlyProps.split('|'), key => {
+	readOnlys[key] = true
+})
 export let setProp = (elem, key, value) => {
 	switch (true) {
-		case isIgnoreKey(key):
+		case ignoreKeys[key] === true:
 			break
-		case isEventKey(key):
-			setEvent(elem, key, value)
+		case EVENT_KEYS.test(key):
+			addEvent(elem, key, value)
 			break
 		case isStyleKey(key):
 			setStyle(elem, value)
 			break
 		case isInnerHTMLKey(key):
-			value && isStr(value.__html) && (elem.innerHTML = value.__html)
+			value && value.__html != null && (elem.innerHTML = value.__html)
 			break
 		case (key in elem) && !isTypeKey(key):
-			elem[key] = value
+			if (readOnlys[key] !== true && !(key === 'title' && value == null)) {
+				elem[key] = value
+			}
 			break
 		default:
-			elem.setAttribute(key, value)
+			elem.setAttribute(key, '' + value)
 	}
 }
 export let setProps = (elem, props) => {
@@ -186,9 +161,9 @@ export let removeProps = (elem, oldProps) => {
 }
 export let removeProp = (elem, key, oldValue) => {
 	switch (true) {
-		case isIgnoreKey(key):
+		case ignoreKeys[key] === true:
 			break
-		case isEventKey(key):
+		case EVENT_KEYS.test(key):
 			removeEvent(elem, key)
 			break
 		case isStyleKey(key):
@@ -197,8 +172,8 @@ export let removeProp = (elem, key, oldValue) => {
 		case isInnerHTMLKey(key):
 			elem.innerHTML = ''
 			break
-		case !(key in elem):
-			removeAttr(elem, key)
+		case !(key in elem) || isTypeKey(key):
+			elem.removeAttribute(key)
 			break
 		case isFn(oldValue):
 			elem[key] = null
@@ -211,12 +186,20 @@ export let removeProp = (elem, key, oldValue) => {
 			break
 		default:
 			try {
-				elem[key] = null
+				elem[key] = undefined
+				delete elem[key]
 			} catch(e) {
 				//pass
 			}
 	}
 }
+
+// use dom prop to compare new prop
+let shouldUseDOMProp = {
+	value: true,
+	checked: true
+}
+
 export let patchProps = (elem, props, newProps) => {
 	if (props === newProps) {
 		return
@@ -229,12 +212,12 @@ export let patchProps = (elem, props, newProps) => {
 		return
 	}
 
-	mapKey([props, newProps], key => {
-		if (isIgnoreKey(key)) {
+	mapKey(props, newProps, key => {
+		if (ignoreKeys[key] === true) {
 			return
 		}
 		let value = newProps[key]
-		let oldValue = key === 'value' ? elem.value : props[key]
+		let oldValue = shouldUseDOMProp[key] == true ? elem[key] : props[key]
 		if (value === oldValue) {
 			return
 		}
@@ -247,9 +230,7 @@ export let patchProps = (elem, props, newProps) => {
 		} else if (isInnerHTMLKey(key)) {
 			let oldHtml = oldValue && oldValue.__html
 			let html = value && value.__html
-			if (!isStr(html)) {
-				elem.innerHTML = ''
-			} else if (html !== oldHtml) {
+			if (html != null && html !== oldHtml) {
 				elem.innerHTML = html
 			}
 		} else {
@@ -286,7 +267,7 @@ export let patchStyle = (elem, style, newStyle) => {
 		setStyle(elem, newStyle)
 	} else {
 		var elemStyle = elem.style
-		mapKey([style, newStyle], key => {
+		mapKey(style, newStyle, key => {
 			let value = newStyle[key]
 			let oldValue = style[key]
 			if (value !== oldValue) {
@@ -341,7 +322,7 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
 export let setStyleValue = (style, key, value) => {
-	if (isBln(value) || value == null) {
+	if (value == null || isBln(value)) {
 		value = ''
 	}
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {

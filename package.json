@@ -1,12 +1,13 @@
 {
   "name": "react-lite",
-  "version": "0.0.8",
-  "description": "simple react",
+  "version": "0.0.22",
+  "description": "an implementation of React that optimizes for small script size",
   "main": "dist/react-lite.common.js",
   "jsnext:main": "src/index.js",
   "scripts": {
     "test": "jest",
-    "build": "node build.js",
+    "build:addons": "node_modules/.bin/babel ./addons --out-dir ./lib && babel ./src --out-dir ./lib",
+    "build": "node build.js && npm run build:addons",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -34,6 +35,7 @@
   },
   "homepage": "https://github.com/Lucifier129/react-lite",
   "devDependencies": {
+    "babel": "^5.8.35",
     "babel-core": "^5.8.25",
     "babel-jest": "^5.3.0",
     "babel-loader": "^5.3.2",
@@ -44,7 +46,7 @@
     "rollup-plugin-babel": "^1.0.0",
     "rollup-plugin-replace": "^1.1.0",
     "uglify-js": "^2.6.1",
-    "webpack": "^1.12.2" 
+    "webpack": "^1.12.2"
   },
   "npmName": "react-lite",
   "npmFileMap": [

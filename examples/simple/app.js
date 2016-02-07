@@ -99,17 +99,21 @@
 		componentWillUpdate: function componentWillUpdate() {
 			// debugger
 			console.log('willUpdate', 'Counter');
+			if (this.state.text === '123123123') {
+				this.setState({
+					text: '[text set by willUpdate]'
+				});
+			}
+			console.log(this.state.text, 'WillUpdate');
 		},
 		componentDidUpdate: function componentDidUpdate() {
+			console.log(this.state.text, 'DidUpdate');
 			this;
 			//debugger
 			console.log('DidUpdate', 'Counter');
 		},
 		componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
 			var state = this.state;
-			this.setState({
-				test: 100
-			});
 			console.log('Counter: receiveProps:setState', state === this.state);
 		},
 		shouldComponentUpdate: function shouldComponentUpdate(nextProps, nextState) {
@@ -133,9 +137,24 @@
 			this.setState({ text: text });
 		},
 		render: function render() {
+			var _this2 = this;
+
 			var props = this.props;
 			var COUNT = props.COUNT;
 
+			var img = React.createElement('img', {
+				src: 'http://ww3.sinaimg.cn/bmiddle/887790fagw1ezs0ci6qjxj20c10go0uf.jpg',
+				ref: 'img',
+				onLoad: function () {
+					if (_this2.refs == null) {
+						debugger;
+					}
+					console.log('onload this.refs', _this2.refs);
+				},
+				onError: function () {
+					console.log('onerror this.refs', _this2.refs);
+				}
+			});
 			return React.createElement(
 				'div',
 				{ id: 'abc' },
@@ -192,7 +211,8 @@
 					{ href: 'adbadfasdf' },
 					'test link'
 				),
-				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } })
+				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } }),
+				Math.random() > 0.5 && img
 			);
 		}
 	});
@@ -208,7 +228,7 @@
 		},
 
 		componentDidMount: function componentDidMount() {
-			var _this2 = this;
+			var _this3 = this;
 
 			this.setState({ val: this.state.val + 1, test1: 1 });
 			console.log('didMount', this.state); // log 1
@@ -216,10 +236,10 @@
 			console.log('didMount', this.state); // log 2
 
 			setTimeout(function () {
-				_this2.setState({ val: _this2.state.val + 1 });
-				console.log('setTimeout:', _this2.state); // log 3
-				_this2.setState({ val: _this2.state.val + 1 });
-				console.log('setTimeout:', _this2.state); // log 4
+				_this3.setState({ val: _this3.state.val + 1 });
+				console.log('setTimeout:', _this3.state); // log 3
+				_this3.setState({ val: _this3.state.val + 1 });
+				console.log('setTimeout:', _this3.state); // log 4
 			}, 4);
 		},
 

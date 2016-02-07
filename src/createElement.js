@@ -1,16 +1,7 @@
 import * as _ from './util'
-import { VNODE_TYPE } from './constant'
 import { Velem, Vcomponent, VstatelessComponent, handleVnodeWithRef } from './virtual-dom'
 
-export let isValidElement = obj => {
-	if (obj == null) {
-		return false
-	}
-	if (obj.vtype === VNODE_TYPE.ELEMENT || obj.vtype === VNODE_TYPE.COMPONENT) {
-		return true
-	}
-	return false
-}
+export let isValidElement = obj => obj != null && !!obj.vtype
 
 export let cloneElement = (originElem, props, ...children) => {
 	let { type, key, ref } = originElem

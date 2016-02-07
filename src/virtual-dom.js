@@ -1,6 +1,7 @@
 import * as _ from './util'
 import { VNODE_TYPE, DIFF_TYPE } from './constant'
-import { updatePropsAndState } from './Component'
+import { updatePropsAndState, updateQueue } from './Component'
+import { isValidElement } from './createElement'
 import diff from './diff'
 
 function Vtree(properties) {
@@ -10,31 +11,6 @@ function Vtree(properties) {
 let noop = _.noop
 let getDOMNode = function() { return this }
 Vtree.prototype = {
-	constructor: Vtree,
-	mapTree: noop,
-	eachChildren(iteratee) {
-		let { children } = this.props
-		let { sorted } = this
-		
-		if (sorted) {
-			_.eachItem(children, iteratee)
-			return
-		}
-		// the default children often be nesting array, so then here make it flat
-		if (_.isArr(children)) {
-			var newChildren = []
-			_.forEach(children, (vchild, index) => {
-				vchild = getVnode(vchild)
-				iteratee(vchild, index)
-				newChildren.push(vchild)
-			})
-			this.props.children = newChildren
-			this.sorted = true
-		} else if (!_.isUndefined(children)) {
-			children = this.props.children = getVnode(children)
-			iteratee(children, 0)
-		}
-	},
 	attachRef() {
 		let { ref: refKey, refs, vtype } = this
 		if (!refs || refKey == null) {
@@ -44,14 +20,14 @@ Vtree.prototype = {
 		if (vtype === VNODE_TYPE.ELEMENT) {
 			refValue = this.node
 			// support react v0.13 style: this.refs.myInput.getDOMNode()
-			refValue.getDOMNode = getDOMNode
+			this.node.getDOMNode = getDOMNode
 		} else if (vtype === VNODE_TYPE.COMPONENT) {
 			refValue = this.component
 		}
-		if (refValue) {
+		if (refValue != null) {
 			if (_.isFn(refKey)) {
 				refKey(refValue)
-			} else if (_.isStr(refKey)) {
+			} else {
 				refs[refKey] = refValue
 			}
 		}
@@ -63,7 +39,7 @@ Vtree.prototype = {
 		}
 		if (_.isFn(refKey)) {
 			refKey(null)
-			} else {
+		} else {
 			delete refs[refKey]
 		}
 	},
@@ -90,8 +66,35 @@ Vtree.prototype = {
 			newVtree.attachRef()
 		}
 	},
-	updateTree(nextVtree, parentNode) {
-		compareTwoTree(this, nextVtree, parentNode)
+	replaceTree(oldTree, parentNode, parentContext) {
+		let { node } = oldTree
+		// don't remove the existNode for replacing
+		let $removeNode = removeNode
+		removeNode = noop
+		oldTree.destroyTree()
+		removeNode = $removeNode
+		this.initTree(
+			newNode => parentNode.replaceChild(newNode, node),
+			parentContext
+		)
+	},
+	updateTree(newVtree, parentNode, parentContext) {
+		let { node } = this
+		let $removeNode
+		switch (diff(this, newVtree)) {
+			case DIFF_TYPE.CREATE:
+				newVtree.initTree(parentNode, parentContext)
+				break
+			case DIFF_TYPE.REMOVE:
+				this.destroyTree()
+				break
+			case DIFF_TYPE.REPLACE:
+				newVtree.replaceTree(this, parentNode, parentContext)
+				break
+			case DIFF_TYPE.UPDATE:
+				this.update(newVtree, parentNode, parentContext)
+				break
+		}
 	}
 }
 
@@ -100,23 +103,26 @@ export function Vtext(text) {
 }
 
 Vtext.prototype = new Vtree({
-	constructor: Vtext,
 	vtype: VNODE_TYPE.TEXT,
+	attachRef: noop,
+	detachRef: noop,
+	updateRef: noop,
 	update(nextVtext) {
 		let { node, text } = this
 		if (nextVtext.text !== text) {
 			node.replaceData(0, node.length, nextVtext.text)
 		}
 		// deliver node to the newTree for next updating
-		nextVtext.node = this.node
-		return this
+		nextVtext.node = node
+		this.node = null
 	},
 	initTree(parentNode) {
-		this.node = createTextNode(this.text)
+		this.node = document.createTextNode(this.text)
 		appendNode(parentNode, this.node)
 	},
 	destroyTree() {
 		removeNode(this.node)
+		this.node = null
 	}
 })
 
@@ -126,30 +132,62 @@ export function Velem(type, props) {
 }
 
 let unmountTree = vtree => {
-	let method = isValidComponent(vtree) ? 'destroyTree' : 'detachRef'
-	vtree[method]()
+	if (isValidComponent(vtree)) {
+		vtree.destroyTree()
+		return false //ignore mapping children
+	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
+		let { node, props } = vtree
+		// aviod triggered when node was removed
+		if (props.onLoad) {
+			node.onload = null
+		}
+		if (node.eventStore) {
+			node.eventStore = null
+		}
+		vtree.detachRef()
+	}
 }
 Velem.prototype = new Vtree({
-	constructor: Velem,
 	vtype: VNODE_TYPE.ELEMENT,
-	mapTree(iteratee) {
-		iteratee(this)
-		this.eachChildren(vchild => vchild.mapTree(iteratee))
+	eachChildren(iteratee) {
+		let { children } = this.props
+		let newChildren
+		if (this.sorted) {
+			_.eachItem(children, iteratee)
+			return
+		}
+		// the default children often be nesting array, make it flat and cache
+		if (_.isArr(children)) {
+			newChildren = []
+			_.flattenChildren(children, (vchild, index) => {
+				vchild = getVnode(vchild)
+				iteratee(vchild, index)
+				newChildren.push(vchild)
+			})
+			this.props.children = newChildren
+			this.sorted = true
+		} else if (!_.isUndefined(children)) {
+			children = this.props.children = getVnode(children)
+			iteratee(children, 0)
+		}
 	},
-	initTree(parentNode) {
+	initTree(parentNode, parentContext) {
 		let { type, props } = this
-		let node = this.node = createElement(type, props)
+		let node = document.createElement(type)
+		_.setProps(node, props)
+		this.node = node
 		this.eachChildren(vchild => {
-			vchild.initTree(node)
+			vchild.initTree(node, parentContext)
 		})
 		appendNode(parentNode, node)
 		this.attachRef()
 	},
 	destroyTree() {
-		this.mapTree(unmountTree)
+		mapTree(this, unmountTree)
 		removeNode(this.node)
+		this.node = null
 	},
-	update(newVelem) {
+	update(newVelem, parentNode, parentContext) {
 		let { node, props } = this
 		let children = !_.isUndefined(props.children) ? props.children : []
 		let count = 0
@@ -159,20 +197,35 @@ Velem.prototype = new Vtree({
 		_.patchProps(node, props, newVelem.props)
 		newVelem.node = node
 		newVelem.eachChildren((newVchild, index) => {
-			let vchild = children[index]
-			if (vchild) {
-				vchild.updateTree(newVchild, node)
-			} else {
-				newVchild.initTree(node)
-			}
 			count += 1
+			let vchild = children[index]
+			if (vchild === newVchild) {
+				return
+			}
+			if (newVchild.node) {
+				newVchild.destroyTree()
+				// reorder vchild
+				let vindex = _.findIndex(children, newVchild, index + 1)
+				if (vindex !== -1) {
+					children.splice(vindex, 1)
+				}
+			}
+			let childNode = vchild && vchild.node
+			// vchild may be replaced, detect childNode.parentNode equal to node or not
+			if (!childNode || childNode.parentNode !== node) {
+				newVchild.initTree(node, parentContext)
+			} else {
+				vchild.updateTree(newVchild, node, parentContext)
+			}
 		})
+		let childrenLen = children.length
 		// destroy old children not in the newChildren
-		while (children.length > count) {
+		while (childrenLen > count) {
 			children[count].destroyTree()
 			count += 1
 		}
 		this.updateRef(newVelem)
+		this.node = null
 	}
 })
 
@@ -182,33 +235,32 @@ export function VstatelessComponent(type, props) {
 }
 
 VstatelessComponent.prototype = new Vtree({
-	constructor: VstatelessComponent,
 	vtype: VNODE_TYPE.STATELESS_COMPONENT,
-	mapTree(iteratee) {
-		iteratee(this)
-	},
-	renderTree() {
-		let { type: factory, props, context } = this
-		let vtree = factory(props, getContextByTypes(context, factory.contextTypes))
-		if (vtree && _.isFn(vtree.render)) {
+	attachRef: noop,
+	detachRef: noop,
+	updateRef: noop,
+	renderTree(parentContext) {
+		let { type: factory, props } = this
+		let componentContext = getContextByTypes(parentContext, factory.contextTypes)
+		let vtree = factory(props, componentContext)
+		if (vtree && vtree.render) {
 			vtree = vtree.render()
 		}
 		this.vtree = getVnode(vtree)
-		setContext(context, this.vtree)
 	},
-	initTree(parentNode) {
-		this.renderTree()
-		this.vtree.initTree(parentNode)
+	initTree(parentNode, parentContext) {
+		this.renderTree(parentContext)
+		this.vtree.initTree(parentNode, parentContext)
 		this.node = this.vtree.node
 	},
 	destroyTree() {
 		this.vtree.destroyTree()
-		this.node = this.vtree = null
+		this.vtree = this.node = null
 	},
-	update(newVtree, parentNode) {
-		newVtree.renderTree()
-		this.vtree.updateTree(newVtree.vtree, parentNode)
-		newVtree.node = newVtree.vtree.node
+	update(newVtree, parentNode, parentContext) {
+		newVtree.renderTree(parentContext)
+		this.vtree.updateTree(newVtree.vtree, parentNode, parentContext)
+		this.vtree = this.node = null
 	}
 })
 
@@ -216,77 +268,83 @@ let setRefs = noop
 export let handleVnodeWithRef = vnode => {
 	setRefs(vnode)
 }
-let getContextByTypes = (curContext, contextTypes) => {
+export let getContextByTypes = (curContext, contextTypes) => {
 	let context = {}
-	if (!_.isObj(contextTypes) || !_.isObj(curContext)) {
+	if (!contextTypes || !curContext) {
 		return context
 	}
-	_.mapValue(contextTypes, (_, key) => {
-		context[key] = curContext[key]
-	})
+	for (let key in contextTypes) {
+		if (contextTypes.hasOwnProperty(key)) {
+			context[key] = curContext[key]
+		}
+	}
 	return context
 }
-let setContext = (context, vtree) => {
-	Velem.prototype.mapTree.call(vtree, item => {
-		if (isValidComponent(item)) {
-			if (item.context) {
-				item.context = _.extend(item.context, context)
-			} else {
-				item.context = context
-			}
-		}
-	})
-}
+
 let bindRefs = refs => vnode => {
-	if (!vnode.refs) {
-		vnode.refs = refs
-	}
+	vnode.refs = vnode.refs || refs
 }
 
-export let renderComponent = (component, context) => {
-	let curContext = component.getChildContext()
-	curContext = _.extend({}, context, curContext)
+export let renderComponent = (component, parentContext) => {
 	setRefs = bindRefs(component.refs)
-	let vtree = checkVtree(component.render())
+	let vtree = component.render()
+	if (_.isUndefined(vtree)) {
+		throw new Error('component can not render undefined')
+	}
+	vtree = getVnode(vtree)
+	let curContext = component.getChildContext()
+	if (curContext) {
+		curContext = _.extend({}, parentContext, curContext)
+	} else {
+		curContext = parentContext
+	}
+	vtree.context = curContext
 	setRefs = noop
-	setContext(curContext, vtree)
 	return vtree
 }
-let neverUpdate = () => false
+
 let didMountComponents = []
 let callDidMount = obj => obj.didMount()
 export let clearDidMount = () => {
 	let components = didMountComponents
+	if (components.length === 0) {
+		return
+	}
+	updateQueue.isPending = true
 	didMountComponents = []
 	_.eachItem(components, callDidMount)
+	updateQueue.batchUpdate()
 }
+
+let neverUpdate = () => false
 export function Vcomponent(type, props) {
 	this.type = type
 	this.props = props
 }
 Vcomponent.prototype = new Vtree({
-	constructor: Vcomponent,
 	vtype: VNODE_TYPE.COMPONENT,
-	mapTree(iteratee) {
-		iteratee(this)
-	},
-	initTree(parentNode) {
-		let { type: Component, props, context } = this
-		let component = this.component = new Component(props, getContextByTypes(context, Component.contextTypes))
+	initTree(parentNode, parentContext) {
+		let { type: Component, props } = this
+		let componentContext = getContextByTypes(parentContext, Component.contextTypes)
+		let component = new Component(props, componentContext)
 		let { $updater: updater, $cache: cache } = component
-		cache.$context = context
+		cache.parentContext = parentContext
+		this.component = component
 		updater.isPending = true
 		component.props = component.props || props
 		component.componentWillMount()
 		updatePropsAndState(component, component.props, updater.getState(), component.context)
-		let vtree = component.vtree = renderComponent(component, context)
-		vtree.initTree(parentNode)
+		let vtree = component.vtree = renderComponent(component, parentContext)
+		vtree.initTree(parentNode, vtree.context)
 		cache.isMounted = true
 		component.node = this.node = vtree.node
 		didMountComponents.push(this)
 	},
 	didMount() {
 		let { component } = this
+		if (!component) {
+			return
+		}
 		let updater = component.$updater
 		component.componentDidMount()
 		updater.isPending = false
@@ -298,104 +356,85 @@ Vcomponent.prototype = new Vtree({
 		if (!component) {
 			return
 		}
-		component.shouldComponentUpdate = neverUpdate
-		component.forceUpdate = component.setState = noop
 		this.detachRef()
+		component.setState = noop
 		component.componentWillUnmount()
 		component.vtree.destroyTree()
+		delete component.setState
 		component.$cache.isMounted = false
-		this.component = this.node = component.node = component.refs = component.context = null
+		this.component = this.node
+		= component.vtree
+		= component.node
+		= component.refs
+		= component.context
+		= null
 	},
-	update(newVtree, parentNode) {
+	update(newVtree, parentNode, parentContext) {
 		let { component } = this
 		if (!component) {
 			return
 		}
-		let { type: Component, props: nextProps, context: nextContext } = newVtree
-		let { $updater: updater, $cache } = component
-		let context = getContextByTypes(nextContext, Component.contextTypes)
-		$cache.$context = nextContext
+		let { 
+			type: Component, 
+			props: nextProps, 
+		} = newVtree
+		let { $updater: updater, $cache: cache } = component
+		let componentContext = getContextByTypes(parentContext, Component.contextTypes)
+		cache.parentContext = parentContext
 		updater.isPending = true
-		component.componentWillReceiveProps(nextProps, context)
+		component.componentWillReceiveProps(nextProps, componentContext)
 		updater.isPending = false
-		updater.emitUpdate(nextProps, context)
+		updater.emitUpdate(nextProps, componentContext)
 		newVtree.component = component
 		newVtree.node = component.node
 		this.updateRef(newVtree)
+		this.component = this.node = null
 	}
 })
 
-let compareTwoTree = (vtree, newVtree, parentNode) => {
-	let diffType = diff(vtree, newVtree)
-	let $removeNode
-	let node
-	switch (diffType) {
-		case DIFF_TYPE.CREATE:
-			newVtree.initTree(parentNode)
-			break
-		case DIFF_TYPE.REMOVE:
-			vtree.destroyTree()
-			break
-		case DIFF_TYPE.REPLACE:
-			node = vtree.node
-			// don't remove the existNode for replacing
-			$removeNode = removeNode
-			removeNode = noop
-			vtree.destroyTree()
-			removeNode = $removeNode
-			newVtree.initTree(newNode => {
-				replaceNode(parentNode, newNode, node)
-			})
-			break
-		case DIFF_TYPE.UPDATE:
-			vtree.update(newVtree, parentNode)
-			break
-	}
-}
-
-let removeNode = (node) => {
+let removeNode = node => {
+	// if node.parentNode had set innerHTML, do nothing
 	if (node && node.parentNode) {
 		node.parentNode.removeChild(node)
 	}
 }
 let appendNode = (parentNode, node) => {
-	if (parentNode && node) {
-		// for replace node
-		if (_.isFn(parentNode)) {
-			parentNode(node)
-		} else {
-			parentNode.appendChild(node)
-		}
-	}
-}
-let replaceNode = (parentNode, newNode, existNode) => {
-	if (newNode && existNode) {
-		parentNode = parentNode || existNode.parentNode
-		parentNode.replaceChild(newNode, existNode)
+	// for replacing node
+	if (_.isFn(parentNode)) {
+		parentNode(node)
+	} else {
+		parentNode.appendChild(node)
 	}
 }
 
-let createTextNode = text => document.createTextNode(text)
-let createElement = (tagName, props) =>  {
-	let node = document.createElement(tagName)
-	_.setProps(node, props)
-	return node
+let mapTree = (tree, iteratee) => {
+	let queue = [tree]
+	while (queue.length) {
+		let item = queue.shift()
+		// as you know, vnode's children may be nested list
+		if (_.isArr(item)) {
+			queue.splice(0, 0, ...item)
+			continue
+		}
+		// if iteratee return false, ignore mapping children
+		if (iteratee(item) === false) {
+			continue
+		}
+		if (item && item.props && !_.isUndefined(item.props.children)) {
+			_.isArr(item.props.children)
+			? queue.push(...item.props.children)
+			: queue.push(item.props.children)
+		}
+	}
 }
 
 let getVnode = vnode => {
 	if (vnode === null) {
 		vnode = new Velem('noscript', {})
-	} else if (!_.isObj(vnode)) {
+	} else if (!isValidElement(vnode)) {
 		vnode = new Vtext(vnode)
 	}
 	return vnode
-}
-
-let checkVtree = vtree => {
-	if (_.isUndefined(vtree)) {
-		throw new Error('component can not render undefined')
-	}
-	return getVnode(vtree)
 }
 
 let isValidComponent = obj => {
