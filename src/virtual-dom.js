@@ -136,12 +136,10 @@ let unmountTree = vtree => {
 		vtree.destroyTree()
 		return false //ignore mapping children
 	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
-		let { node, props } = vtree
-		// aviod triggered when node was removed
-		if (props.onLoad) {
+		let { node } = vtree
+		if (node) {
+			// aviod triggered when node was removed
 			node.onload = null
-		}
-		if (node.eventStore) {
 			node.eventStore = null
 		}
 		vtree.detachRef()
@@ -199,10 +197,7 @@ Velem.prototype = new Vtree({
 		newVelem.eachChildren((newVchild, index) => {
 			count += 1
 			let vchild = children[index]
-			if (vchild === newVchild) {
-				return
-			}
-			if (newVchild.node) {
+			if (vchild !== newVchild && newVchild.node) {
 				newVchild.destroyTree()
 				// reorder vchild
 				let vindex = _.findIndex(children, newVchild, index + 1)
@@ -210,9 +205,8 @@ Velem.prototype = new Vtree({
 					children.splice(vindex, 1)
 				}
 			}
-			let childNode = vchild && vchild.node
 			// vchild may be replaced, detect childNode.parentNode equal to node or not
-			if (!childNode || childNode.parentNode !== node) {
+			if (!vchild) {
 				newVchild.initTree(node, parentContext)
 			} else {
 				vchild.updateTree(newVchild, node, parentContext)
