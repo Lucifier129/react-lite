@@ -1,6 +1,6 @@
 import * as _ from './util'
 import { COMPONENT_ID, VNODE_TYPE } from './constant'
-import { clearDidMount, setContext } from './virtual-dom'
+import { clearDidMount } from './virtual-dom'
 
 let store = {}
 let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
@@ -40,7 +40,10 @@ export let render = (vtree, container, callback) => {
 }
 
 export let unstable_renderSubtreeIntoContainer = (parentComponent, subVtree, container, callback) => {
-	return renderTreeIntoContainer(subVtree, container, callback, parentComponent.$cache.parentContext)
+	let context = parentComponent.vtree
+	? parentComponent.vtree.context
+	: parentComponent.$cache.parentContext
+	return renderTreeIntoContainer(subVtree, container, callback, context)
 }
 
 export let unmountComponentAtNode = container => {
