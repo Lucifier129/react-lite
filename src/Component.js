@@ -42,9 +42,9 @@ Updater.prototype = {
 		this.nextProps = nextProps
 		this.nextContext = nextContext
 		// receive nextProps!! should update immediately
-		!nextProps && updateQueue.isPending
-		? updateQueue.add(this)
-		: this.update()
+		nextProps || !updateQueue.isPending
+		? this.update()
+		: updateQueue.add(this)
 	},
 	update() {
 		let { instance, pendingStates, nextProps, nextContext } = this

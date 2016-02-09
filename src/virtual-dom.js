@@ -310,10 +310,8 @@ export let clearDidMount = () => {
 	if (components.length === 0) {
 		return
 	}
-	updateQueue.isPending = true
 	didMountComponents = []
 	_.eachItem(components, callDidMount)
-	updateQueue.batchUpdate()
 }
 
 let neverUpdate = () => false
