@@ -1298,7 +1298,8 @@ var render = function render(vtree, container, callback) {
 };
 
 var unstable_renderSubtreeIntoContainer = function unstable_renderSubtreeIntoContainer(parentComponent, subVtree, container, callback) {
-	return renderTreeIntoContainer(subVtree, container, callback, parentComponent.$cache.parentContext);
+	var context = parentComponent.vtree ? parentComponent.vtree.context : parentComponent.$cache.parentContext;
+	return renderTreeIntoContainer(subVtree, container, callback, context);
 };
 
 var unmountComponentAtNode = function unmountComponentAtNode(container) {
