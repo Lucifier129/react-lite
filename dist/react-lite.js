@@ -634,13 +634,10 @@
     		return false; //ignore mapping children
     	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
     			var node = vtree.node;
-    			var props = vtree.props;
 
-    			// aviod triggered when node was removed
-    			if (props.onLoad) {
+    			if (node) {
+    				// aviod triggered when node was removed
     				node.onload = null;
-    			}
-    			if (node.eventStore) {
     				node.eventStore = null;
     			}
     			vtree.detachRef();
@@ -703,10 +700,7 @@
     		newVelem.eachChildren(function (newVchild, index) {
     			count += 1;
     			var vchild = children[index];
-    			if (vchild === newVchild) {
-    				return;
-    			}
-    			if (newVchild.node) {
+    			if (vchild !== newVchild && newVchild.node) {
     				newVchild.destroyTree();
     				// reorder vchild
     				var vindex = findIndex(children, newVchild, index + 1);
@@ -714,9 +708,8 @@
     					children.splice(vindex, 1);
     				}
     			}
-    			var childNode = vchild && vchild.node;
     			// vchild may be replaced, detect childNode.parentNode equal to node or not
-    			if (!childNode || childNode.parentNode !== node) {
+    			if (!vchild) {
     				newVchild.initTree(node, parentContext);
     			} else {
     				vchild.updateTree(newVchild, node, parentContext);
