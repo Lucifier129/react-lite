@@ -820,10 +820,8 @@
     	if (components.length === 0) {
     		return;
     	}
-    	updateQueue.isPending = true;
     	didMountComponents = [];
     	eachItem(components, callDidMount);
-    	updateQueue.batchUpdate();
     };
 
     function Vcomponent(type, props) {
@@ -1002,7 +1000,7 @@
     		this.nextProps = nextProps;
     		this.nextContext = nextContext;
     		// receive nextProps!! should update immediately
-    		!nextProps && updateQueue.isPending ? updateQueue.add(this) : this.update();
+    		nextProps || !updateQueue.isPending ? this.update() : updateQueue.add(this);
     	},
     	update: function update() {
     		var instance = this.instance;
