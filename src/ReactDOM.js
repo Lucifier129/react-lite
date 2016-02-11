@@ -9,7 +9,7 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	}
 	let id = container[COMPONENT_ID]
 	if (store.hasOwnProperty(id)) {
-		store[id].updateTree(vtree, container, parentContext)
+		store[id].updateTree(container.firstChild, vtree, container, parentContext)
 	} else {
 		container[COMPONENT_ID] = id = _.getUid()
 		container.innerHTML = ''
@@ -21,7 +21,7 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	let result = null
 	switch (vtree.vtype) {
 		case VNODE_TYPE.ELEMENT:
-			result = vtree.node
+			result = container.firstChild
 			break
 		case VNODE_TYPE.COMPONENT:
 			result = vtree.component
@@ -52,7 +52,7 @@ export let unmountComponentAtNode = container => {
 	}
 	let id = container[COMPONENT_ID]
 	if (store.hasOwnProperty(id)) {
-		store[id].destroyTree()
+		store[id].destroyTree(container.firstChild)
 		delete store[id]
 		return true
 	}
@@ -68,7 +68,7 @@ export let findDOMNode = node => {
 	}
 	let component = node
 	// if component.node equal to false, component must be unmounted
-	if (_.isFn(component.getDOMNode) && component.node) {
+	if (_.isFn(component.getDOMNode) && component.$cache.isMounted) {
 		return component.getDOMNode()
 	}
 	throw new Error('findDOMNode can not find Node')
