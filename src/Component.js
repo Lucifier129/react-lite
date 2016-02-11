@@ -127,7 +127,7 @@ Component.prototype = {
 		return true
 	},
 	forceUpdate(callback) {
-		let { $updater, $cache, props, state, context, vtree, node } = this
+		let { $updater, $cache, $node: node, props, state, context, vtree } = this
 		if ($updater.isPending || !$cache.isMounted) {
 			return
 		}
@@ -142,11 +142,11 @@ Component.prototype = {
 		this.props = nextProps
 		this.context = nextContext
 		let nextVtree = renderComponent(this, parentContext)
-		vtree.updateTree(nextVtree, node.parentNode, nextVtree.context)
+		let newNode = vtree.updateTree(node, nextVtree, node.parentNode, nextVtree.context)
 		clearDidMount()
 		$updater.isPending = false
 		this.vtree = nextVtree
-		this.node = nextVtree.node
+		this.$node = newNode
 		this.componentDidUpdate(props, state, context)
 		if (_.isFn(callback)) {
 			callback.call(this)
@@ -164,7 +164,7 @@ Component.prototype = {
 		$updater.replaceState(nextState)
 	},
 	getDOMNode() {
-		let node = this.vtree.node
+		let node = this.$node
 		return node && (node.tagName === 'NOSCRIPT') ? null : node
 	},
 	isMounted() {
