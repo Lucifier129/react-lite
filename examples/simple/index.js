@@ -146,7 +146,7 @@ var Example = React.createClass({
   },
 
   render() {
-    return <p>{this.state.val}</p>;
+    return <p ref="paragraph">{this.state.val}</p>;
   }
 });
 
@@ -188,6 +188,7 @@ const Wrap = React.createClass({
 			count: this.props.count * 2
 		})
 		console.log('componentDidMount:setState', state === this.state)
+		console.log(this)
 	},
 	componentWillUpdate() {
 		// debugger
@@ -211,31 +212,36 @@ const Wrap = React.createClass({
 		console.log('unmount', 'wrap')
 	},
 	render() {
+		let example = <Example ref="example" />
 		// let count = Math.random() > 0.5
 		// ? <Counter ref="counter" count={ this.state.count } COUNT={ this.COUNT } />
 		// : null
 		return <div>
 				<Counter ref="counter" count={ this.state.count } COUNT={ this.COUNT } />
-				<Example />
+				{example}
+				{example}
 			</div>
 	}
 })
 
-let Stateless = function() {
-	return <div>stateless</div>
-}
 
-React.render(<Stateless />, document.getElementById('container'))
+var wrap = <Wrap count={ 10 } />
 
 let update = count => {
 	return React.render(
-		<Wrap count={ count } />,
+		wrap,
 		document.getElementById('container')
 	)
 }
 
 let num = 10
-console.log(update(num))
+var reuslt1 = update(num)
+// var result2 = React.render(
+// 	wrap,
+// 	document.getElementById('root')
+// )
+
+// console.log(reuslt1, result2, reuslt1 === result2)
 // setInterval(() => {
 // 	update(num++)
 // }, 1000)

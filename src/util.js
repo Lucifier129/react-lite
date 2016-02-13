@@ -73,19 +73,54 @@ export let mapKey = (oldObj, newObj, iteratee) => {
 	}
 }
 
-export let extend = (target, ...sources) => {
-	let setProp = (value, key) => {
-		if (!isUndefined(value)) {
-			target[key] = value
+export let extend = function(target) {
+	for (let i = 1, len = arguments.length; i < len; i++) {
+		let source = arguments[i]
+		if (source != null) {
+			for (let key in source) {
+				if (source.hasOwnProperty(key) && !isUndefined(source[key])) {
+					target[key] = source[key]
+				}
+			}
 		}
 	}
-	eachItem(sources, source => {
-		if (source != null) {
-			mapValue(source, setProp)
-		}
-	})
 	return target
 }
+
+
+export function Map() {
+	this.store = []
+}
+
+extend(Map.prototype, {
+	get(key) {
+		let store = this.store
+		for (let i = 0, len = store.length; i < len; i++) {
+			let item = store[i]
+			if (item[0] === key) {
+				return item[1]
+			}
+		}
+	},
+	set(key, value) {
+		let target = this.get(key)
+		if (target) {
+			target[1] = value
+		} else {
+			this.store.push([key, value])
+		}
+	},
+	remove(key) {
+		let store = this.store
+		for (let i = 0, len = store.length; i < len; i++) {
+			let item = store[i]
+			if (item[0] === key) {
+				store.splice(i, 1)
+				return item[1]
+			}
+		}
+	}
+})
 
 let uid = 0
 export let getUid = () => ++uid

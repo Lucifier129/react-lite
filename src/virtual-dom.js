@@ -61,7 +61,7 @@ Vtree.prototype = {
 		}
 	},
 	updateTree(node, newVtree, parentNode, parentContext) {
-		let newNode
+		let newNode = node
 		switch (diff(this, newVtree)) {
 			case DIFF_TYPE.CREATE:
 				newNode = newVtree.initTree(parentNode, parentContext)
@@ -70,7 +70,10 @@ Vtree.prototype = {
 				this.destroyTree(node)
 				break
 			case DIFF_TYPE.REPLACE:
-				this.destroyTree()
+				let $removeNode = removeNode
+				removeNode = noop
+				this.destroyTree(node)
+				removeNode = $removeNode
 				newNode = newVtree.initTree(
 					newNode => parentNode.replaceChild(newNode, node),
 					parentContext
@@ -162,7 +165,15 @@ Velem.prototype = new Vtree({
 		return node
 	},
 	destroyTree(node) {
-		mapTree(this, unmountTree)
+		let childNodes = []
+		for (let i = 0, len = node.childNodes.length; i < len; i++) {
+			childNodes.push(node.childNodes[i])
+		}
+		this.eachChildren((vchild, index) => {
+			vchild.destroyTree(childNodes[index])
+		})
+		//mapTree(this, unmountTree)
+		this.detachRef()
 		removeNode(node)
 	},
 	update(node, newVelem, parentNode, parentContext) {
@@ -170,22 +181,22 @@ Velem.prototype = new Vtree({
 		let newProps = newVelem.props
 		let oldHtml = getInnerHTML(props)
 		if (oldHtml == null) {
-			let children = !_.isUndefined(props.children) ? props.children : []
+			var children = !_.isUndefined(props.children) ? props.children : []
 			if (!_.isArr(children)) {
 				children = [children]
 			}
-			let count = 0
-			let childNodes = Array.prototype.slice.call(node.childNodes)
+			var count = 0
+			var childNodes = node.childNodes
 			newVelem.eachChildren((newVchild, index) => {
 				count += 1
-				let vchild = children[index]
+				var vchild = children[index]
 				if (vchild) {
 					vchild.updateTree(childNodes[index], newVchild, node, parentContext)
 				} else {
 					newVchild.initTree(node, parentContext)
 				}
 			})
-			let childrenLen = children.length
+			var childrenLen = children.length
 			// destroy old children not in the newChildren
 			while (childrenLen > count) {
 				children[count].destroyTree(childNodes[count])
@@ -204,6 +215,7 @@ Velem.prototype = new Vtree({
 export function VstatelessComponent(type, props) {
 	this.type = type
 	this.props = props
+	this.map = new _.Map()
 }
 
 VstatelessComponent.prototype = new Vtree({
@@ -218,21 +230,23 @@ VstatelessComponent.prototype = new Vtree({
 		if (vtree && vtree.render) {
 			vtree = vtree.render()
 		}
-		this.vtree = getVnode(vtree)
+		return getVnode(vtree)
 	},
 	initTree(parentNode, parentContext) {
-		this.renderTree(parentContext)
-		let node = this.vtree.initTree(parentNode, parentContext)
+		let vtree = this.renderTree(parentContext)
+		let node = vtree.initTree(parentNode, parentContext)
+		this.map.set(node, vtree)
 		return node
 	},
 	destroyTree(node) {
-		this.vtree.destroyTree(node)
-		this.vtree = null
+		let vtree = this.map.remove(node)
+		vtree.destroyTree(node)
 	},
-	update(node, newVtree, parentNode, parentContext) {
-		newVtree.renderTree(parentContext)
-		let newNode = this.vtree.updateTree(node, newVtree.vtree, parentNode, parentContext)
-		this.vtree = null
+	update(node, newVstatelessComponent, parentNode, parentContext) {
+		let vtree = this.map.remove(node)
+		let newVtree = newVstatelessComponent.renderTree(parentContext)
+		let newNode = vtree.updateTree(node, newVtree, parentNode, parentContext)
+		newVstatelessComponent.map.set(newNode, newVtree)
 		return newNode
 	}
 })
@@ -277,7 +291,7 @@ export let renderComponent = (component, parentContext) => {
 }
 
 let didMountComponents = []
-let callDidMount = obj => obj.didMount()
+let callDidMount = store => store.vtree.didMount(store.node)
 export let clearDidMount = () => {
 	let components = didMountComponents
 	if (components.length === 0) {
@@ -291,6 +305,7 @@ let neverUpdate = () => false
 export function Vcomponent(type, props) {
 	this.type = type
 	this.props = props
+	this.map = new _.Map()
 }
 Vcomponent.prototype = new Vtree({
 	vtype: VNODE_TYPE.COMPONENT,
@@ -300,7 +315,6 @@ Vcomponent.prototype = new Vtree({
 		let component = new Component(props, componentContext)
 		let { $updater: updater, $cache: cache } = component
 		cache.parentContext = parentContext
-		this.component = component
 		updater.isPending = true
 		component.props = component.props || props
 		component.componentWillMount()
@@ -309,11 +323,13 @@ Vcomponent.prototype = new Vtree({
 		let node = vtree.initTree(parentNode, vtree.context)
 		component.$node = node
 		cache.isMounted = true
-		didMountComponents.push(this)
+		didMountComponents.push({ node, vtree: this })
+		this.map.set(node, component)
+		cache.map = this.map
 		return node
 	},
-	didMount() {
-		let { component } = this
+	didMount(node) {
+		let component = this.map.get(node)
 		if (!component) {
 			return
 		}
@@ -324,7 +340,7 @@ Vcomponent.prototype = new Vtree({
 		updater.emitUpdate()
 	},
 	destroyTree(node) {
-		let { component } = this
+		let component = this.map.remove(node)
 		if (!component) {
 			return
 		}
@@ -334,33 +350,33 @@ Vcomponent.prototype = new Vtree({
 		component.vtree.destroyTree(node)
 		delete component.setState
 		component.$cache.isMounted = false
-		this.component
-		= component.vtree
+		component.vtree
 		= component.$node
 		= component.refs
 		= component.context
 		= null
 	},
 	update(node, newVtree, parentNode, parentContext) {
-		let { component } = this
+		let component = this.map.remove(node)
 		if (!component) {
 			return
 		}
 		let { 
-			type: Component, 
-			props: nextProps, 
+			type: Component,
+			props: nextProps,
 		} = newVtree
 		let { $updater: updater, $cache: cache } = component
 		let componentContext = getContextByTypes(parentContext, Component.contextTypes)
 		cache.parentContext = parentContext
+		newVtree.map.set(node, component)
+		cache.map = newVtree.map
 		updater.isPending = true
 		component.componentWillReceiveProps(nextProps, componentContext)
 		updater.isPending = false
 		updater.emitUpdate(nextProps, componentContext)
-		newVtree.component = component
+		let newNode = component.$node
 		this.updateRef(newVtree, component)
-		this.component = null
-		return component.$node
+		return newNode
 	}
 })
 
