@@ -99,7 +99,7 @@ var diff = function diff(vnode, newVnode) {
 	var type = undefined;
 	switch (true) {
 		case vnode === newVnode:
-			return null;
+			return type;
 		case isUndefined(newVnode):
 			type = DIFF_TYPE.REMOVE;
 			break;
@@ -584,8 +584,8 @@ Vtree.prototype = {
 				removeNode = noop$2;
 				this.destroyTree(node);
 				removeNode = $removeNode;
-				newNode = newVtree.initTree(function (newNode) {
-					return parentNode.replaceChild(newNode, node);
+				newNode = newVtree.initTree(function (nextNode) {
+					return parentNode.replaceChild(nextNode, node);
 				}, parentContext);
 				break;
 			case DIFF_TYPE.UPDATE:
@@ -676,7 +676,6 @@ Velem.prototype = new Vtree({
 		this.eachChildren(function (vchild, index) {
 			vchild.destroyTree(childNodes[index]);
 		});
-		//mapTree(this, unmountTree)
 		this.detachRef();
 		removeNode(node);
 	},
@@ -704,8 +703,9 @@ Velem.prototype = new Vtree({
 			var childrenLen = children.length;
 			// destroy old children not in the newChildren
 			while (childrenLen > count) {
-				children[count].destroyTree(childNodes[count]);
-				count += 1;
+				childrenLen -= 1;
+				children[childrenLen].destroyTree(childNodes[childrenLen]);
+				// count += 1
 			}
 			patchProps(node, props, newProps);
 		} else {
@@ -722,7 +722,6 @@ Velem.prototype = new Vtree({
 function VstatelessComponent(type, props) {
 	this.type = type;
 	this.props = props;
-	this.map = new Map();
 }
 
 VstatelessComponent.prototype = new Vtree({
@@ -744,18 +743,26 @@ VstatelessComponent.prototype = new Vtree({
 	initTree: function initTree(parentNode, parentContext) {
 		var vtree = this.renderTree(parentContext);
 		var node = vtree.initTree(parentNode, parentContext);
-		this.map.set(node, vtree);
+		if (!node.map) {
+			node.map = new Map();
+		}
+		node.map.set(this, vtree);
+		// this.map.set(node, vtree)
 		return node;
 	},
 	destroyTree: function destroyTree(node) {
-		var vtree = this.map.remove(node);
+		var vtree = node.map.remove(this);
+		// let vtree = this.map.remove(node)
 		vtree.destroyTree(node);
 	},
 	update: function update(node, newVstatelessComponent, parentNode, parentContext) {
-		var vtree = this.map.remove(node);
+		// let vtree = this.map.remove(node)
+		var vtree = node.map.remove(this);
 		var newVtree = newVstatelessComponent.renderTree(parentContext);
 		var newNode = vtree.updateTree(node, newVtree, parentNode, parentContext);
-		newVstatelessComponent.map.set(newNode, newVtree);
+		newNode.map = newNode.map || new Map();
+		newNode.map.set(newVstatelessComponent, newVtree);
+		// newVstatelessComponent.map.set(newNode, newVtree)
 		return newNode;
 	}
 });
@@ -803,7 +810,7 @@ var renderComponent = function renderComponent(component, parentContext) {
 
 var didMountComponents = [];
 var callDidMount = function callDidMount(store) {
-	return store.vtree.didMount(store.node);
+	return store.vcomponent.didMount(store.node);
 };
 var clearDidMount = function clearDidMount() {
 	var components = didMountComponents;
@@ -817,7 +824,7 @@ var clearDidMount = function clearDidMount() {
 function Vcomponent(type, props) {
 	this.type = type;
 	this.props = props;
-	this.map = new Map();
+	// this.map = new _.Map()
 }
 
 Vcomponent.prototype = new Vtree({
@@ -836,20 +843,22 @@ Vcomponent.prototype = new Vtree({
 		component.props = component.props || props;
 		component.componentWillMount();
 		updatePropsAndState(component, component.props, updater.getState(), component.context);
-		var vtree = component.vtree = renderComponent(component, parentContext);
+		var vtree = renderComponent(component, parentContext);
 		var node = vtree.initTree(parentNode, vtree.context);
-		component.$node = node;
+		if (!node.map) {
+			node.map = new Map();
+		}
+		node.map.set(this, component);
+		cache.vtree = vtree;
+		cache.node = node;
 		cache.isMounted = true;
-		didMountComponents.push({ node: node, vtree: this });
-		this.map.set(node, component);
-		cache.map = this.map;
+		didMountComponents.push({ node: node, vcomponent: this });
+		// this.map.set(node, component)
 		return node;
 	},
 	didMount: function didMount(node) {
-		var component = this.map.get(node);
-		if (!component) {
-			return;
-		}
+		var component = node.map.get(this);
+		// let component = this.map.get(node)
 		var updater = component.$updater;
 		component.componentDidMount();
 		updater.isPending = false;
@@ -857,39 +866,35 @@ Vcomponent.prototype = new Vtree({
 		updater.emitUpdate();
 	},
 	destroyTree: function destroyTree(node) {
-		var component = this.map.remove(node);
-		if (!component) {
-			return;
-		}
+		var component = node.map.remove(this);
+		var cache = component.$cache;
+		// let component = this.map.remove(node)
 		this.detachRef();
 		component.setState = noop$2;
 		component.componentWillUnmount();
-		component.vtree.destroyTree(node);
+		cache.vtree.destroyTree(node);
 		delete component.setState;
-		component.$cache.isMounted = false;
-		component.vtree = component.$node = component.refs = component.context = null;
+		cache.isMounted = false;
+		cache.node = cache.vtree = component.refs = component.context = null;
 	},
 	update: function update(node, newVtree, parentNode, parentContext) {
-		var component = this.map.remove(node);
-		if (!component) {
-			return;
-		}
-		var Component = newVtree.type;
-		var nextProps = newVtree.props;
+		var component = node.map.remove(this);
+		// let component = this.map.remove(node)
 		var updater = component.$updater;
 		var cache = component.$cache;
+		var Component = newVtree.type;
+		var nextProps = newVtree.props;
 
 		var componentContext = getContextByTypes(parentContext, Component.contextTypes);
+		node.map.set(newVtree, component);
 		cache.parentContext = parentContext;
+		// newVtree.map.set(node, component)
 		updater.isPending = true;
 		component.componentWillReceiveProps(nextProps, componentContext);
 		updater.isPending = false;
-		newVtree.map.set(node, component);
-		cache.map = newVtree.map;
 		updater.emitUpdate(nextProps, componentContext);
-		var newNode = component.$node;
 		this.updateRef(newVtree, component);
-		return newNode;
+		return cache.node;
 	}
 });
 
@@ -1057,11 +1062,9 @@ Component.prototype = {
 	forceUpdate: function forceUpdate(callback) {
 		var $updater = this.$updater;
 		var $cache = this.$cache;
-		var node = this.$node;
 		var props = this.props;
 		var state = this.state;
 		var context = this.context;
-		var vtree = this.vtree;
 
 		if ($updater.isPending || !$cache.isMounted) {
 			return;
@@ -1070,7 +1073,9 @@ Component.prototype = {
 		var nextState = $cache.state || state;
 		var nextContext = $cache.context || {};
 		var parentContext = $cache.parentContext;
-		var map = $cache.map;
+		var node = $cache.node;
+		var vtree = $cache.vtree;
+		// let map = $cache.parentVtree.map
 		$cache.props = $cache.state = $cache.context = null;
 		$updater.isPending = true;
 		this.componentWillUpdate(nextProps, nextState, nextContext);
@@ -1079,18 +1084,24 @@ Component.prototype = {
 		this.context = nextContext;
 		var nextVtree = renderComponent(this, parentContext);
 		var newNode = vtree.updateTree(node, nextVtree, node.parentNode, nextVtree.context);
-		clearDidMount();
-		$updater.isPending = false;
 		if (newNode !== node) {
-			map.remove(node);
-			map.set(newNode, this);
+			newNode.map = newNode.map || new Map();
+			eachItem(node.map.store, function (item) {
+				return newNode.map.set(item[0], item[1]);
+			});
 		}
-		this.vtree = nextVtree;
-		this.$node = newNode;
+		// if (newNode !== node) {
+		// 	map.remove(node)
+		// 	map.set(newNode, this)
+		// }
+		$cache.vtree = nextVtree;
+		$cache.node = newNode;
+		clearDidMount();
 		this.componentDidUpdate(props, state, context);
-		if (isFn(callback)) {
+		if (callback) {
 			callback.call(this);
 		}
+		$updater.isPending = false;
 		$updater.emitUpdate();
 	},
 	setState: function setState(nextState, callback) {
@@ -1106,7 +1117,7 @@ Component.prototype = {
 		$updater.replaceState(nextState);
 	},
 	getDOMNode: function getDOMNode() {
-		var node = this.$node;
+		var node = this.$cache.node;
 		return node && node.tagName === 'NOSCRIPT' ? null : node;
 	},
 	isMounted: function isMounted() {
@@ -1250,7 +1261,8 @@ var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container,
 			result = container.firstChild;
 			break;
 		case VNODE_TYPE.COMPONENT:
-			result = vtree.map.get(container.firstChild);
+			result = container.firstChild.map.get(vtree);
+			// vtree.map.get(container.firstChild)
 			break;
 	}
 
@@ -1292,7 +1304,7 @@ var findDOMNode = function findDOMNode(node) {
 	}
 	var component = node;
 	// if component.node equal to false, component must be unmounted
-	if (isFn(component.getDOMNode) && component.$cache.isMounted) {
+	if (component.getDOMNode && component.$cache.isMounted) {
 		return component.getDOMNode();
 	}
 	throw new Error('findDOMNode can not find Node');

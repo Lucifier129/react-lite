@@ -5,7 +5,7 @@ let diff = (vnode, newVnode) => {
 	let type
 	switch (true) {
 		case vnode === newVnode:
-			return null
+			return type
 		case _.isUndefined(newVnode):
 			type = DIFF_TYPE.REMOVE
 			break

@@ -24,7 +24,8 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 			result = container.firstChild
 			break
 		case VNODE_TYPE.COMPONENT:
-			result = vtree.map.get(container.firstChild)
+			result = container.firstChild.map.get(vtree)
+			// vtree.map.get(container.firstChild)
 			break
 	}
 
@@ -68,7 +69,7 @@ export let findDOMNode = node => {
 	}
 	let component = node
 	// if component.node equal to false, component must be unmounted
-	if (_.isFn(component.getDOMNode) && component.$cache.isMounted) {
+	if (component.getDOMNode && component.$cache.isMounted) {
 		return component.getDOMNode()
 	}
 	throw new Error('findDOMNode can not find Node')
