@@ -127,7 +127,7 @@ Component.prototype = {
 		return true
 	},
 	forceUpdate(callback) {
-		let { $updater, $cache, $node: node, props, state, context, vtree } = this
+		let { $updater, $cache, props, state, context } = this
 		if ($updater.isPending || !$cache.isMounted) {
 			return
 		}
@@ -135,7 +135,9 @@ Component.prototype = {
 		let nextState = $cache.state || state
 		let nextContext = $cache.context || {}
 		let parentContext = $cache.parentContext
-		let map = $cache.map
+		let node = $cache.node
+		let vtree = $cache.vtree
+		// let map = $cache.parentVtree.map
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
 		this.componentWillUpdate(nextProps, nextState, nextContext)
@@ -144,18 +146,22 @@ Component.prototype = {
 		this.context = nextContext
 		let nextVtree = renderComponent(this, parentContext)
 		let newNode = vtree.updateTree(node, nextVtree, node.parentNode, nextVtree.context)
-		clearDidMount()
-		$updater.isPending = false
 		if (newNode !== node) {
-			map.remove(node)
-			map.set(newNode, this)
+			newNode.map = newNode.map || new _.Map()
+			_.eachItem(node.map.store, item => newNode.map.set(item[0], item[1]))
 		}
-		this.vtree = nextVtree
-		this.$node = newNode
+		// if (newNode !== node) {
+		// 	map.remove(node)
+		// 	map.set(newNode, this)
+		// }
+		$cache.vtree = nextVtree
+		$cache.node = newNode
+		clearDidMount()
 		this.componentDidUpdate(props, state, context)
-		if (_.isFn(callback)) {
+		if (callback) {
 			callback.call(this)
 		}
+		$updater.isPending = false
 		$updater.emitUpdate()
 	},
 	setState(nextState, callback) {
@@ -169,7 +175,7 @@ Component.prototype = {
 		$updater.replaceState(nextState)
 	},
 	getDOMNode() {
-		let node = this.$node
+		let node = this.$cache.node
 		return node && (node.tagName === 'NOSCRIPT') ? null : node
 	},
 	isMounted() {
