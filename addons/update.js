@@ -11,11 +11,9 @@
 
  /* global hasOwnProperty:true */
 
-'use strict';
-
-var assign = require('./util').extend;
-var keyOf = require('./utils/keyOf');
-var invariant = require('./util').noop;
+import { extend as assign } from '../src/util'
+import keyOf from './utils/keyOf'
+var invariant = function() {}
 var hasOwnProperty = {}.hasOwnProperty;
 
 function shallowCopy(x) {
@@ -164,4 +162,4 @@ function update(value, spec) {
   return nextValue;
 }
 
-module.exports = update;
+export default update;

@@ -101,4 +101,4 @@ ReactStateSetters.Mixin = {
   },
 };
 
-module.exports = ReactStateSetters;
+export default ReactStateSetters;

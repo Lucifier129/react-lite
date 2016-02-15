@@ -10,14 +10,10 @@
  * @providesModule ReactCSSTransitionGroup
  */
 
-'use strict';
-
-var React = require('./index');
-
-var assign = require('./util').extend;
-
-var ReactTransitionGroup = require('./ReactTransitionGroup');
-var ReactCSSTransitionGroupChild = require('./ReactCSSTransitionGroupChild');
+import React from '../src/index'
+import ReactTransitionGroup from './ReactTransitionGroup'
+import ReactCSSTransitionGroupChild from './ReactCSSTransitionGroupChild'
+import { extend as assign } from '../src/util'
 
 function createTransitionTimeoutPropValidator(transitionType) {
   var timeoutPropName = 'transition' + transitionType + 'Timeout';
@@ -93,4 +89,4 @@ var ReactCSSTransitionGroup = React.createClass({
   },
 });
 
-module.exports = ReactCSSTransitionGroup;
+export default ReactCSSTransitionGroup;

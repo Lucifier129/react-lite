@@ -15,21 +15,17 @@
  * functionality we've built and think might be useful but doesn't have a good
  * place to live inside React core.
  */
+import React from '../src/index'
+import LinkedStateMixin from './LinkedStateMixin'
+import ReactComponentWithPureRenderMixin from './ReactComponentWithPureRenderMixin'
+import ReactCSSTransitionGroup from './ReactCSSTransitionGroup'
+import ReactFragment from './ReactFragment'
+import ReactTransitionGroup from './ReactTransitionGroup'
+import ReactUpdates from '../src/Component'
+import shallowCompare from './shallowCompare'
+import update from './update'
 
-'use strict';
-
-var LinkedStateMixin = require('./LinkedStateMixin');
-var React = require('./index');
-var ReactComponentWithPureRenderMixin =
-  require('./ReactComponentWithPureRenderMixin');
-var ReactCSSTransitionGroup = require('./ReactCSSTransitionGroup');
-var ReactFragment = require('./ReactFragment');
-var ReactTransitionGroup = require('./ReactTransitionGroup');
-var ReactUpdates = require('./Component');
-
-var shallowCompare = require('./shallowCompare');
-var update = require('./update');
-var warning = require('./util').noop;
+let warning = function() {}
 
 var cloneWithProps = React.cloneElement
 
@@ -49,4 +45,4 @@ React.addons = {
   update: update,
 };
 
-module.exports = React;
+export default React;

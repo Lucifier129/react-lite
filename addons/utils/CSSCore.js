@@ -12,7 +12,7 @@
 
 'use strict';
 
-var invariant = require('../util').noop;
+var invariant = function() {}
 
 /**
  * The CSSCore module specifies the API (and implements most of the methods)
@@ -94,4 +94,4 @@ var CSSCore = {
 
 };
 
-module.exports = CSSCore;
+export default CSSCore;

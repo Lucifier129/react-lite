@@ -844,7 +844,7 @@
     		cache.vtree.destroyTree(node);
     		delete component.setState;
     		cache.isMounted = false;
-    		cache.node = cache.vtree = component.refs = component.context = null;
+    		cache.node = cache.parentContext = cache.vtree = component.refs = component.context = null;
     	},
     	update: function update(node, newVtree, parentNode, parentContext) {
     		var id = this.id;
