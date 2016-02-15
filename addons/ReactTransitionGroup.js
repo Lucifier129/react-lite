@@ -9,14 +9,10 @@
  * @providesModule ReactTransitionGroup
  */
 
-'use strict';
-
-var React = require('./index');
-var ReactTransitionChildMapping = require('./ReactTransitionChildMapping');
-
-var assign = require('./util').extend;
-var emptyFunction = require('./utils/emptyFunction');
-
+import React from '../src/index'
+import ReactTransitionChildMapping from './ReactTransitionChildMapping'
+import emptyFunction from './utils/emptyFunction'
+import { extend as assign } from '../src/util'
 var ReactTransitionGroup = React.createClass({
   displayName: 'ReactTransitionGroup',
 
@@ -226,4 +222,4 @@ var ReactTransitionGroup = React.createClass({
   },
 });
 
-module.exports = ReactTransitionGroup;
+export default ReactTransitionGroup;

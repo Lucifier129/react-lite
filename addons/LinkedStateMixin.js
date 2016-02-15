@@ -9,11 +9,8 @@
  * @providesModule LinkedStateMixin
  * @typechecks static-only
  */
-
-'use strict';
-
-var ReactLink = require('./ReactLink');
-var ReactStateSetters = require('./ReactStateSetters');
+import ReactLink from './ReactLink'
+import ReactStateSetters from './ReactStateSetters'
 
 /**
  * A simple mixin around ReactLink.forState().
@@ -36,4 +33,4 @@ var LinkedStateMixin = {
   },
 };
 
-module.exports = LinkedStateMixin;
+export default LinkedStateMixin;

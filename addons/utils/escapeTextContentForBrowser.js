@@ -35,4 +35,4 @@ function escapeTextContentForBrowser(text) {
   return ('' + text).replace(ESCAPE_REGEX, escaper);
 }
 
-module.exports = escapeTextContentForBrowser;
+export default escapeTextContentForBrowser;

@@ -9,14 +9,10 @@
  * @providesModule traverseAllChildren
  */
 
-'use strict';
+import { isValidElement } from '../../src/createElement'
+import getIteratorFn from './getIteratorFn'
 
-var ReactElement = require('../createElement');
-
-var getIteratorFn = require('./getIteratorFn');
-
-var invariant = require('../util').noop;
-
+var invariant = function() {}
 var SEPARATOR = '.';
 var SUBSEPARATOR = ':';
 
@@ -103,7 +99,7 @@ function traverseAllChildrenImpl(
   if (children === null ||
       type === 'string' ||
       type === 'number' ||
-      ReactElement.isValidElement(children)) {
+      isValidElement(children)) {
     callback(
       traverseContext,
       children,
@@ -208,4 +204,4 @@ function traverseAllChildren(children, callback, traverseContext) {
   return traverseAllChildrenImpl(children, '', callback, traverseContext);
 }
 
-module.exports = traverseAllChildren;
+export default traverseAllChildren;

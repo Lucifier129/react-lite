@@ -8,10 +8,7 @@
  *
 * @providesModule shallowCompare
 */
-
-'use strict';
-
-var shallowEqual = require('./utils/shallowEqual');
+import shallowEqual from './utils/shallowEqual'
 
 /**
  * Does a shallow comparison for props and state.
@@ -24,4 +21,4 @@ function shallowCompare(instance, nextProps, nextState) {
   );
 }
 
-module.exports = shallowCompare;
+export default shallowCompare;

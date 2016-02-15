@@ -9,16 +9,14 @@
  * @typechecks
  * @providesModule ReactCSSTransitionGroupChild
  */
+import React from '../src/index'
+import * as Children from '../src/Children'
+import * as ReactDOM from '../src/ReactDOM'
 
-'use strict';
+import CSSCore from './utils/CSSCore'
+import ReactTransitionEvents from './ReactTransitionEvents'
 
-var React = require('./index');
-var ReactDOM = require('./ReactDOM');
-
-var CSSCore = require('./utils/CSSCore');
-var ReactTransitionEvents = require('./ReactTransitionEvents');
-
-var onlyChild = require('./Children').only;
+let onlyChild = Children.only
 
 // We don't remove the element from the DOM until we receive an animationend or
 // transitionend event. If the user screws up and forgets to add an animation
@@ -168,4 +166,4 @@ var ReactCSSTransitionGroupChild = React.createClass({
   },
 });
 
-module.exports = ReactCSSTransitionGroupChild;
+export default ReactCSSTransitionGroupChild;
