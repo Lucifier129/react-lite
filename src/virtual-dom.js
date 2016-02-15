@@ -148,10 +148,10 @@ Velem.prototype = new Vtree({
 	initTree(parentNode, parentContext) {
 		let { type, props } = this
 		let node = document.createElement(type)
-		_.setProps(node, props)
 		this.eachChildren(vchild => {
 			vchild.initTree(node, parentContext)
 		})
+		_.setProps(node, props)
 		appendNode(parentNode, node)
 		this.attachRef(node)
 		return node
