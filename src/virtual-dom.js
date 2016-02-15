@@ -3,6 +3,7 @@ import { VNODE_TYPE, DIFF_TYPE } from './constant'
 import { updatePropsAndState } from './Component'
 import { isValidElement } from './createElement'
 import diff from './diff'
+import { DOMNamespaces } from './configs'
 
 function Vtree(properties) {
 	_.extend(this, properties)
@@ -147,7 +148,12 @@ Velem.prototype = new Vtree({
 	},
 	initTree(parentNode, parentContext) {
 		let { type, props } = this
-		let node = document.createElement(type)
+		let namespace = type === 'svg'
+		? DOMNamespaces.svg
+		: type === 'math' ? DOMNamespaces.mathml : null
+		let node = namespace
+		? document.createElementNS(namespace, type)
+		: document.createElement(type)
 		this.eachChildren(vchild => {
 			vchild.initTree(node, parentContext)
 		})

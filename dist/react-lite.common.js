@@ -5,6 +5,73 @@
  */
 'use strict';
 
+var NS = {
+  xlink: 'http://www.w3.org/1999/xlink',
+  xml: 'http://www.w3.org/XML/1998/namespace'
+};
+
+var DOMNamespaces = {
+  html: 'http://www.w3.org/1999/xhtml',
+  mathml: 'http://www.w3.org/1998/Math/MathML',
+  svg: 'http://www.w3.org/2000/svg'
+};
+
+var propAlias = {
+  // svg attributes alias
+  clipPath: 'clip-path',
+  fillOpacity: 'fill-opacity',
+  fontFamily: 'font-family',
+  fontSize: 'font-size',
+  markerEnd: 'marker-end',
+  markerMid: 'marker-mid',
+  markerStart: 'marker-start',
+  stopColor: 'stop-color',
+  stopOpacity: 'stop-opacity',
+  strokeDasharray: 'stroke-dasharray',
+  strokeLinecap: 'stroke-linecap',
+  strokeOpacity: 'stroke-opacity',
+  strokeWidth: 'stroke-width',
+  textAnchor: 'text-anchor',
+  xlinkActuate: 'xlink:actuate',
+  xlinkArcrole: 'xlink:arcrole',
+  xlinkHref: 'xlink:href',
+  xlinkRole: 'xlink:role',
+  xlinkShow: 'xlink:show',
+  xlinkTitle: 'xlink:title',
+  xlinkType: 'xlink:type',
+  xmlBase: 'xml:base',
+  xmlLang: 'xml:lang',
+  xmlSpace: 'xml:space',
+  // DOM attributes alias
+  acceptCharset: 'accept-charset',
+  className: 'class',
+  htmlFor: 'for',
+  httpEquiv: 'http-equiv',
+  // DOM property alias
+  autoComplete: 'autocomplete',
+  autoFocus: 'autofocus',
+  autoPlay: 'autoplay',
+  autoSave: 'autosave',
+  hrefLang: 'hreflang',
+  radioGroup: 'radiogroup',
+  spellCheck: 'spellcheck',
+  srcDoc: 'srcdoc',
+  srcSet: 'srcset'
+};
+
+var attributesNS = {
+  xlinkActuate: NS.xlink,
+  xlinkArcrole: NS.xlink,
+  xlinkHref: NS.xlink,
+  xlinkRole: NS.xlink,
+  xlinkShow: NS.xlink,
+  xlinkTitle: NS.xlink,
+  xlinkType: NS.xlink,
+  xmlBase: NS.xml,
+  xmlLang: NS.xml,
+  xmlSpace: NS.xml
+};
+
 var VNODE_TYPE = {
 	ELEMENT: 1,
 	COMPONENT: 2,
@@ -249,10 +316,6 @@ var isInnerHTMLKey = function isInnerHTMLKey(key) {
 var isStyleKey = function isStyleKey(key) {
 	return key === 'style';
 };
-// Setting .type throws on non-<input> tags
-var isTypeKey = function isTypeKey(key) {
-	return key === 'type';
-};
 
 /*
   DOM Properties which are only getter
@@ -262,7 +325,22 @@ var readOnlys = {};
 eachItem(readOnlyProps.split('|'), function (key) {
 	readOnlys[key] = true;
 });
+
+var attrbutesConfigs = {
+	width: true,
+	height: true,
+	type: true,
+	preserveAspectRatio: true,
+	viewBox: true,
+	viewport: true,
+	x: true,
+	y: true,
+	transform: true
+};
+
 var setProp = function setProp(elem, key, value) {
+	var namespace = attributesNS[key];
+	key = propAlias[key] || key;
 	switch (true) {
 		case ignoreKeys[key] === true:
 			break;
@@ -275,13 +353,20 @@ var setProp = function setProp(elem, key, value) {
 		case isInnerHTMLKey(key):
 			value && value.__html != null && (elem.innerHTML = value.__html);
 			break;
-		case key in elem && !isTypeKey(key):
-			if (readOnlys[key] !== true && !(key === 'title' && value == null)) {
+		case key in elem && !attrbutesConfigs[key]:
+			if (readOnlys[key] !== true) {
+				if (key === 'className' && elem.nodeName.toLowerCase() === 'svg') {
+					elem.setAttribute('class', value);
+					break;
+				}
+				if (key === 'title' && value == null) {
+					value = '';
+				}
 				elem[key] = value;
 			}
 			break;
 		default:
-			elem.setAttribute(key, '' + value);
+			!namespace ? elem.setAttribute(key, '' + value) : elem.setAttributeNS(key, '' + value);
 	}
 };
 var setProps = function setProps(elem, props) {
@@ -295,6 +380,7 @@ var removeProps = function removeProps(elem, oldProps) {
 	});
 };
 var removeProp = function removeProp(elem, key, oldValue) {
+	key = propAlias[key] || key;
 	switch (true) {
 		case ignoreKeys[key] === true:
 			break;
@@ -307,7 +393,7 @@ var removeProp = function removeProp(elem, key, oldValue) {
 		case isInnerHTMLKey(key):
 			elem.innerHTML = '';
 			break;
-		case !(key in elem) || isTypeKey(key):
+		case !(key in elem) || !attrbutesConfigs[key]:
 			elem.removeAttribute(key);
 			break;
 		case isFn(oldValue):
@@ -625,7 +711,8 @@ Velem.prototype = new Vtree({
 		var type = this.type;
 		var props = this.props;
 
-		var node = document.createElement(type);
+		var namespace = type === 'svg' ? DOMNamespaces.svg : type === 'math' ? DOMNamespaces.mathml : null;
+		var node = namespace ? document.createElementNS(namespace, type) : document.createElement(type);
 		this.eachChildren(function (vchild) {
 			vchild.initTree(node, parentContext);
 		});

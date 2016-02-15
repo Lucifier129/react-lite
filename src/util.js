@@ -1,4 +1,5 @@
 // util
+import { propAlias, attributesNS } from './configs'
 import { addEvent, removeEvent } from './event-system'
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 export let isObj = isType('Object')
@@ -116,8 +117,6 @@ let ignoreKeys = {
 let EVENT_KEYS = /^on/i
 let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
-// Setting .type throws on non-<input> tags
-let isTypeKey = key => key === 'type'
 
 /*
   DOM Properties which are only getter
@@ -127,7 +126,22 @@ let readOnlys = {}
 eachItem(readOnlyProps.split('|'), key => {
 	readOnlys[key] = true
 })
+
+let attrbutesConfigs = {
+	width: true,
+	height: true,
+	type: true,
+	preserveAspectRatio: true,
+	viewBox: true,
+	viewport: true,
+	x: true,
+	y: true,
+	transform: true
+}
+
 export let setProp = (elem, key, value) => {
+	let namespace = attributesNS[key]
+	key = propAlias[key] || key
 	switch (true) {
 		case ignoreKeys[key] === true:
 			break
@@ -140,13 +154,22 @@ export let setProp = (elem, key, value) => {
 		case isInnerHTMLKey(key):
 			value && value.__html != null && (elem.innerHTML = value.__html)
 			break
-		case (key in elem) && !isTypeKey(key):
-			if (readOnlys[key] !== true && !(key === 'title' && value == null)) {
+		case (key in elem) && !attrbutesConfigs[key]:
+			if (readOnlys[key] !== true) {
+				if (key === 'className' && elem.nodeName.toLowerCase() === 'svg') {
+					elem.setAttribute('class', value)
+					break
+				}
+				if (key === 'title' && value == null) {
+					value = ''
+				}
 				elem[key] = value
 			}
 			break
 		default:
-			elem.setAttribute(key, '' + value)
+			!namespace
+			? elem.setAttribute(key, '' + value)
+			: elem.setAttributeNS(key, '' + value)
 	}
 }
 export let setProps = (elem, props) => {
@@ -160,6 +183,7 @@ export let removeProps = (elem, oldProps) => {
 	})
 }
 export let removeProp = (elem, key, oldValue) => {
+	key = propAlias[key] || key
 	switch (true) {
 		case ignoreKeys[key] === true:
 			break
@@ -172,7 +196,7 @@ export let removeProp = (elem, key, oldValue) => {
 		case isInnerHTMLKey(key):
 			elem.innerHTML = ''
 			break
-		case !(key in elem) || isTypeKey(key):
+		case !(key in elem) || !attrbutesConfigs[key]:
 			elem.removeAttribute(key)
 			break
 		case isFn(oldValue):
