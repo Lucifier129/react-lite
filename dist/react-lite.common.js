@@ -1155,12 +1155,12 @@ var addEvent = function addEvent(elem, eventType, listener) {
 		eventTypes[eventType] = true;
 	}
 
-	if (eventType === 'onchange') {
+	if (eventType === 'onchange' && elem.nodeName === 'INPUT' || elem.nodeName === 'TEXTAREA') {
 		if ('oninput' in elem) {
 			addEvent(elem, 'oninput', listener);
-		} else {
+		} else if ('onpropertychange' in elem) {
 			addEvent(elem, 'onpropertychange', function (event) {
-				var nativeEvent = event.originEvent;
+				var nativeEvent = event.originalEvent;
 				var propertyName = nativeEvent.propertyName;
 				propertyName === 'value' && listener.call(this, event);
 			});
@@ -1180,10 +1180,10 @@ var removeEvent = function removeEvent(elem, eventType) {
 	var eventStore = elem.eventStore || (elem.eventStore = {});
 	delete eventStore[eventType];
 
-	if (eventType === 'onchange') {
+	if (eventType === 'onchange' && elem.nodeName === 'INPUT' || elem.nodeName === 'TEXTAREA') {
 		if ('oninput' in elem) {
 			delete eventStore['oninput'];
-		} else {
+		} else if ('onpropertychange' in elem) {
 			removeEvent(elem, 'onpropertychange');
 		}
 	}
