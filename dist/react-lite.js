@@ -636,10 +636,10 @@
     		var props = this.props;
 
     		var node = document.createElement(type);
-    		setProps(node, props);
     		this.eachChildren(function (vchild) {
     			vchild.initTree(node, parentContext);
     		});
+    		setProps(node, props);
     		appendNode(parentNode, node);
     		this.attachRef(node);
     		return node;
