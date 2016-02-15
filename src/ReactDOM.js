@@ -24,8 +24,7 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 			result = container.firstChild
 			break
 		case VNODE_TYPE.COMPONENT:
-			result = container.firstChild.map.get(vtree)
-			// vtree.map.get(container.firstChild)
+			result = container.firstChild.cache[vtree.id]
 			break
 	}
 

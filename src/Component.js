@@ -137,7 +137,6 @@ Component.prototype = {
 		let parentContext = $cache.parentContext
 		let node = $cache.node
 		let vtree = $cache.vtree
-		// let map = $cache.parentVtree.map
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
 		this.componentWillUpdate(nextProps, nextState, nextContext)
@@ -147,13 +146,9 @@ Component.prototype = {
 		let nextVtree = renderComponent(this, parentContext)
 		let newNode = vtree.updateTree(node, nextVtree, node.parentNode, nextVtree.context)
 		if (newNode !== node) {
-			newNode.map = newNode.map || new _.Map()
-			_.eachItem(node.map.store, item => newNode.map.set(item[0], item[1]))
+			newNode.cache = newNode.cache || {}
+			_.extend(newNode.cache, node.cache)
 		}
-		// if (newNode !== node) {
-		// 	map.remove(node)
-		// 	map.set(newNode, this)
-		// }
 		$cache.vtree = nextVtree
 		$cache.node = newNode
 		clearDidMount()
