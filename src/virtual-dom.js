@@ -192,7 +192,6 @@ Velem.prototype = new Vtree({
 			while (childrenLen > count) {
 				childrenLen -= 1
 				children[childrenLen].destroyTree(childNodes[childrenLen])
-				// count += 1
 			}
 			_.patchProps(node, props, newProps)
 		} else {
@@ -207,6 +206,7 @@ Velem.prototype = new Vtree({
 export function VstatelessComponent(type, props) {
 	this.type = type
 	this.props = props
+	this.id = _.getUid()
 }
 
 VstatelessComponent.prototype = new Vtree({
@@ -226,26 +226,27 @@ VstatelessComponent.prototype = new Vtree({
 	initTree(parentNode, parentContext) {
 		let vtree = this.renderTree(parentContext)
 		let node = vtree.initTree(parentNode, parentContext)
-		if (!node.map) {
-			node.map = new _.Map()
-		}
-		node.map.set(this, vtree)
-		// this.map.set(node, vtree)
+		node.cache = node.cache || {}
+		node.cache[this.id] = vtree
 		return node
 	},
 	destroyTree(node) {
-		let vtree = node.map.remove(this)
-		// let vtree = this.map.remove(node)
+		let id = this.id
+		let vtree = node.cache[id]
+		delete node.cache[id]
 		vtree.destroyTree(node)
 	},
 	update(node, newVstatelessComponent, parentNode, parentContext) {
-		// let vtree = this.map.remove(node)
-		let vtree = node.map.remove(this)
+		let id = this.id
+		let vtree = node.cache[id]
+		delete node.cache[id]
 		let newVtree = newVstatelessComponent.renderTree(parentContext)
 		let newNode = vtree.updateTree(node, newVtree, parentNode, parentContext)
-		newNode.map = newNode.map || new _.Map()
-		newNode.map.set(newVstatelessComponent, newVtree)
-		// newVstatelessComponent.map.set(newNode, newVtree)
+		newNode.cache = newNode.cache || {}
+		newNode.cache[newVstatelessComponent.id] = newVtree
+		if (newNode !== node) {
+			_.extend(newNode.cache, node.cache)
+		}
 		return newNode
 	}
 })
@@ -304,12 +305,12 @@ let neverUpdate = () => false
 export function Vcomponent(type, props) {
 	this.type = type
 	this.props = props
-	// this.map = new _.Map()
+	this.id = _.getUid()
 }
 Vcomponent.prototype = new Vtree({
 	vtype: VNODE_TYPE.COMPONENT,
 	initTree(parentNode, parentContext) {
-		let { type: Component, props } = this
+		let { type: Component, props, id } = this
 		let componentContext = getContextByTypes(parentContext, Component.contextTypes)
 		let component = new Component(props, componentContext)
 		let { $updater: updater, $cache: cache } = component
@@ -320,20 +321,16 @@ Vcomponent.prototype = new Vtree({
 		updatePropsAndState(component, component.props, updater.getState(), component.context)
 		let vtree = renderComponent(component, parentContext)
 		let node = vtree.initTree(parentNode, vtree.context)
-		if (!node.map) {
-			node.map = new _.Map()
-		}
-		node.map.set(this, component)
+		node.cache = node.cache || {}
+		node.cache[id] = component
 		cache.vtree = vtree
 		cache.node = node
 		cache.isMounted = true
 		didMountComponents.push({ node, vcomponent: this })
-		// this.map.set(node, component)
 		return node
 	},
 	didMount(node) {
-		let component = node.map.get(this)
-		// let component = this.map.get(node)
+		let component = node.cache[this.id]
 		let updater = component.$updater
 		component.componentDidMount()
 		updater.isPending = false
@@ -341,9 +338,10 @@ Vcomponent.prototype = new Vtree({
 		updater.emitUpdate()
 	},
 	destroyTree(node) {
-		let component = node.map.remove(this)
+		let id = this.id
+		let component = node.cache[id]
 		let cache = component.$cache
-		// let component = this.map.remove(node)
+		delete node.cache[id]
 		this.detachRef()
 		component.setState = noop
 		component.componentWillUnmount()
@@ -351,14 +349,15 @@ Vcomponent.prototype = new Vtree({
 		delete component.setState
 		cache.isMounted = false
 		cache.node
+		= cache.parentContext
 		= cache.vtree
 		= component.refs
 		= component.context
 		= null
 	},
 	update(node, newVtree, parentNode, parentContext) {
-		let component = node.map.remove(this)
-		// let component = this.map.remove(node)
+		let id = this.id
+		let component = node.cache[id]
 		let {
 			$updater: updater,
 			$cache: cache
@@ -368,9 +367,9 @@ Vcomponent.prototype = new Vtree({
 			props: nextProps,
 		} = newVtree
 		let componentContext = getContextByTypes(parentContext, Component.contextTypes)
-		node.map.set(newVtree, component)
+		delete node.cache[id]
+		node.cache[newVtree.id] = component
 		cache.parentContext = parentContext
-		// newVtree.map.set(node, component)
 		updater.isPending = true
 		component.componentWillReceiveProps(nextProps, componentContext)
 		updater.isPending = false

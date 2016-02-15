@@ -214,40 +214,6 @@ var extend = function extend(target) {
 	return target;
 };
 
-function Map() {
-	this.store = [];
-}
-
-extend(Map.prototype, {
-	get: function get(key) {
-		var store = this.store;
-		for (var i = 0, len = store.length; i < len; i++) {
-			var item = store[i];
-			if (item[0] === key) {
-				return item[1];
-			}
-		}
-	},
-	set: function set(key, value) {
-		var target = this.get(key);
-		if (target) {
-			target[1] = value;
-		} else {
-			this.store.push([key, value]);
-		}
-	},
-	remove: function remove(key) {
-		var store = this.store;
-		for (var i = 0, len = store.length; i < len; i++) {
-			var item = store[i];
-			if (item[0] === key) {
-				store.splice(i, 1);
-				return item[1];
-			}
-		}
-	}
-});
-
 var uid = 0;
 var getUid = function getUid() {
 	return ++uid;
@@ -705,7 +671,6 @@ Velem.prototype = new Vtree({
 			while (childrenLen > count) {
 				childrenLen -= 1;
 				children[childrenLen].destroyTree(childNodes[childrenLen]);
-				// count += 1
 			}
 			patchProps(node, props, newProps);
 		} else {
@@ -722,6 +687,7 @@ Velem.prototype = new Vtree({
 function VstatelessComponent(type, props) {
 	this.type = type;
 	this.props = props;
+	this.id = getUid();
 }
 
 VstatelessComponent.prototype = new Vtree({
@@ -743,26 +709,27 @@ VstatelessComponent.prototype = new Vtree({
 	initTree: function initTree(parentNode, parentContext) {
 		var vtree = this.renderTree(parentContext);
 		var node = vtree.initTree(parentNode, parentContext);
-		if (!node.map) {
-			node.map = new Map();
-		}
-		node.map.set(this, vtree);
-		// this.map.set(node, vtree)
+		node.cache = node.cache || {};
+		node.cache[this.id] = vtree;
 		return node;
 	},
 	destroyTree: function destroyTree(node) {
-		var vtree = node.map.remove(this);
-		// let vtree = this.map.remove(node)
+		var id = this.id;
+		var vtree = node.cache[id];
+		delete node.cache[id];
 		vtree.destroyTree(node);
 	},
 	update: function update(node, newVstatelessComponent, parentNode, parentContext) {
-		// let vtree = this.map.remove(node)
-		var vtree = node.map.remove(this);
+		var id = this.id;
+		var vtree = node.cache[id];
+		delete node.cache[id];
 		var newVtree = newVstatelessComponent.renderTree(parentContext);
 		var newNode = vtree.updateTree(node, newVtree, parentNode, parentContext);
-		newNode.map = newNode.map || new Map();
-		newNode.map.set(newVstatelessComponent, newVtree);
-		// newVstatelessComponent.map.set(newNode, newVtree)
+		newNode.cache = newNode.cache || {};
+		newNode.cache[newVstatelessComponent.id] = newVtree;
+		if (newNode !== node) {
+			extend(newNode.cache, node.cache);
+		}
 		return newNode;
 	}
 });
@@ -824,7 +791,7 @@ var clearDidMount = function clearDidMount() {
 function Vcomponent(type, props) {
 	this.type = type;
 	this.props = props;
-	// this.map = new _.Map()
+	this.id = getUid();
 }
 
 Vcomponent.prototype = new Vtree({
@@ -832,6 +799,7 @@ Vcomponent.prototype = new Vtree({
 	initTree: function initTree(parentNode, parentContext) {
 		var Component = this.type;
 		var props = this.props;
+		var id = this.id;
 
 		var componentContext = getContextByTypes(parentContext, Component.contextTypes);
 		var component = new Component(props, componentContext);
@@ -845,20 +813,16 @@ Vcomponent.prototype = new Vtree({
 		updatePropsAndState(component, component.props, updater.getState(), component.context);
 		var vtree = renderComponent(component, parentContext);
 		var node = vtree.initTree(parentNode, vtree.context);
-		if (!node.map) {
-			node.map = new Map();
-		}
-		node.map.set(this, component);
+		node.cache = node.cache || {};
+		node.cache[id] = component;
 		cache.vtree = vtree;
 		cache.node = node;
 		cache.isMounted = true;
 		didMountComponents.push({ node: node, vcomponent: this });
-		// this.map.set(node, component)
 		return node;
 	},
 	didMount: function didMount(node) {
-		var component = node.map.get(this);
-		// let component = this.map.get(node)
+		var component = node.cache[this.id];
 		var updater = component.$updater;
 		component.componentDidMount();
 		updater.isPending = false;
@@ -866,9 +830,10 @@ Vcomponent.prototype = new Vtree({
 		updater.emitUpdate();
 	},
 	destroyTree: function destroyTree(node) {
-		var component = node.map.remove(this);
+		var id = this.id;
+		var component = node.cache[id];
 		var cache = component.$cache;
-		// let component = this.map.remove(node)
+		delete node.cache[id];
 		this.detachRef();
 		component.setState = noop$2;
 		component.componentWillUnmount();
@@ -878,17 +843,17 @@ Vcomponent.prototype = new Vtree({
 		cache.node = cache.vtree = component.refs = component.context = null;
 	},
 	update: function update(node, newVtree, parentNode, parentContext) {
-		var component = node.map.remove(this);
-		// let component = this.map.remove(node)
+		var id = this.id;
+		var component = node.cache[id];
 		var updater = component.$updater;
 		var cache = component.$cache;
 		var Component = newVtree.type;
 		var nextProps = newVtree.props;
 
 		var componentContext = getContextByTypes(parentContext, Component.contextTypes);
-		node.map.set(newVtree, component);
+		delete node.cache[id];
+		node.cache[newVtree.id] = component;
 		cache.parentContext = parentContext;
-		// newVtree.map.set(node, component)
 		updater.isPending = true;
 		component.componentWillReceiveProps(nextProps, componentContext);
 		updater.isPending = false;
@@ -1075,7 +1040,6 @@ Component.prototype = {
 		var parentContext = $cache.parentContext;
 		var node = $cache.node;
 		var vtree = $cache.vtree;
-		// let map = $cache.parentVtree.map
 		$cache.props = $cache.state = $cache.context = null;
 		$updater.isPending = true;
 		this.componentWillUpdate(nextProps, nextState, nextContext);
@@ -1085,15 +1049,9 @@ Component.prototype = {
 		var nextVtree = renderComponent(this, parentContext);
 		var newNode = vtree.updateTree(node, nextVtree, node.parentNode, nextVtree.context);
 		if (newNode !== node) {
-			newNode.map = newNode.map || new Map();
-			eachItem(node.map.store, function (item) {
-				return newNode.map.set(item[0], item[1]);
-			});
+			newNode.cache = newNode.cache || {};
+			extend(newNode.cache, node.cache);
 		}
-		// if (newNode !== node) {
-		// 	map.remove(node)
-		// 	map.set(newNode, this)
-		// }
 		$cache.vtree = nextVtree;
 		$cache.node = newNode;
 		clearDidMount();
@@ -1261,8 +1219,7 @@ var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container,
 			result = container.firstChild;
 			break;
 		case VNODE_TYPE.COMPONENT:
-			result = container.firstChild.map.get(vtree);
-			// vtree.map.get(container.firstChild)
+			result = container.firstChild.cache[vtree.id];
 			break;
 	}
 

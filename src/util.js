@@ -87,41 +87,6 @@ export let extend = function(target) {
 	return target
 }
 
-
-export function Map() {
-	this.store = []
-}
-
-extend(Map.prototype, {
-	get(key) {
-		let store = this.store
-		for (let i = 0, len = store.length; i < len; i++) {
-			let item = store[i]
-			if (item[0] === key) {
-				return item[1]
-			}
-		}
-	},
-	set(key, value) {
-		let target = this.get(key)
-		if (target) {
-			target[1] = value
-		} else {
-			this.store.push([key, value])
-		}
-	},
-	remove(key) {
-		let store = this.store
-		for (let i = 0, len = store.length; i < len; i++) {
-			let item = store[i]
-			if (item[0] === key) {
-				store.splice(i, 1)
-				return item[1]
-			}
-		}
-	}
-})
-
 let uid = 0
 export let getUid = () => ++uid
 
