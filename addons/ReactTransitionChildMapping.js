@@ -12,7 +12,7 @@
 
 'use strict';
 
-var flattenChildren = require('./utils/flattenChildren');
+import flattenChildren from './utils/flattenChildren'
 
 var ReactTransitionChildMapping = {
   /**
@@ -97,4 +97,4 @@ var ReactTransitionChildMapping = {
   },
 };
 
-module.exports = ReactTransitionChildMapping;
+export default ReactTransitionChildMapping;

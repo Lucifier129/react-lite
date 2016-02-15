@@ -25,7 +25,8 @@ let notBubbleEvents = {
 	ondragexit: isNotBubble,
 	ondraggesture: isNotBubble,
 	ondragover: isNotBubble,
-	oncontextmenu: isNotBubble
+	oncontextmenu: isNotBubble,
+	onpropertychange: isNotBubble
 }
 
 let eventTypes = {}
@@ -35,10 +36,7 @@ export let addEvent = (elem, eventType, listener) => {
 	let isNotBubble = notBubbleEvents[eventType]
 
 	if (isNotBubble) {
-		elem[eventType] = function(event) {
-			event = event || window.event
-			listener.call(this, event)
-		}
+		$(elem).on(eventType.substr(2) + '.react', listener)
 		return
 	}
 
@@ -47,7 +45,7 @@ export let addEvent = (elem, eventType, listener) => {
 
 	if (!eventTypes[eventType]) {
 		// onclick -> click
-		$(document).on(eventType.substr(2), dispatchEvent)
+		$(document).on(eventType.substr(2) + '.react', dispatchEvent)
 		eventTypes[eventType] = true
 	}
 
@@ -69,7 +67,7 @@ export let removeEvent = (elem, eventType) => {
 	let isNotBubble = notBubbleEvents[eventType]
 
 	if (isNotBubble) {
-		elem[eventType] = null
+		$(elem).off(eventType.substr(2) + '.react')
 		return
 	}
 
@@ -80,7 +78,7 @@ export let removeEvent = (elem, eventType) => {
 		if ('oninput' in elem) {
 			delete eventStore['oninput']
 		} else {
-			delete eventStore['onpropertychange']
+			removeEvent(elem, 'onpropertychange')
 		}
 	}
 }

@@ -102,4 +102,4 @@ var ReactTransitionEvents = {
   },
 };
 
-module.exports = ReactTransitionEvents;
+export default ReactTransitionEvents;

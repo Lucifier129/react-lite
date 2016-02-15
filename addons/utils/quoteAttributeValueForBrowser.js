@@ -9,9 +9,7 @@
  * @providesModule quoteAttributeValueForBrowser
  */
 
-'use strict';
-
-var escapeTextContentForBrowser = require('escapeTextContentForBrowser');
+import escapeTextContentForBrowser from './escapeTextContentForBrowser'
 
 /**
  * Escapes attribute value to prevent scripting attacks.
@@ -23,4 +21,4 @@ function quoteAttributeValueForBrowser(value) {
   return '"' + escapeTextContentForBrowser(value) + '"';
 }
 
-module.exports = quoteAttributeValueForBrowser;
+export default quoteAttributeValueForBrowser;

@@ -10,8 +10,6 @@
  * @typechecks static-only
  */
 
-'use strict';
-
 /**
  * ReactLink encapsulates a common pattern in which a component wants to modify
  * a prop received from its parent. ReactLink allows the parent to pass down a
@@ -34,8 +32,7 @@
  * We have provided some sugary mixins to make the creation and
  * consumption of ReactLink easier; see LinkedValueUtils and LinkedStateMixin.
  */
-
-var React = require('./index');
+import React from '../src/index'
 
 /**
  * @param {*} value current value of the link
@@ -68,4 +65,4 @@ ReactLink.PropTypes = {
   link: createLinkTypeChecker,
 };
 
-module.exports = ReactLink;
+export default ReactLink;

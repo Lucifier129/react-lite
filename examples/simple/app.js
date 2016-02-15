@@ -246,7 +246,7 @@
 		render: function render() {
 			return React.createElement(
 				'p',
-				null,
+				{ ref: 'paragraph' },
 				this.state.val
 			);
 		}
@@ -292,6 +292,7 @@
 				count: this.props.count * 2
 			});
 			console.log('componentDidMount:setState', state === this.state);
+			console.log(this);
 		},
 		componentWillUpdate: function componentWillUpdate() {
 			// debugger
@@ -315,6 +316,7 @@
 			console.log('unmount', 'wrap');
 		},
 		render: function render() {
+			var example = React.createElement(Example, { ref: 'example' });
 			// let count = Math.random() > 0.5
 			// ? <Counter ref="counter" count={ this.state.count } COUNT={ this.COUNT } />
 			// : null
@@ -322,27 +324,26 @@
 				'div',
 				null,
 				React.createElement(Counter, { ref: 'counter', count: this.state.count, COUNT: this.COUNT }),
-				React.createElement(Example, null)
+				example,
+				example
 			);
 		}
 	});
 
-	var Stateless = function Stateless() {
-		return React.createElement(
-			'div',
-			null,
-			'stateless'
-		);
-	};
-
-	React.render(React.createElement(Stateless, null), document.getElementById('container'));
+	var wrap = React.createElement(Wrap, { count: 10 });
 
 	var update = function update(count) {
-		return React.render(React.createElement(Wrap, { count: count }), document.getElementById('container'));
+		return React.render(wrap, document.getElementById('container'));
 	};
 
 	var num = 10;
-	console.log(update(num));
+	var reuslt1 = update(num);
+	// var result2 = React.render(
+	// 	wrap,
+	// 	document.getElementById('root')
+	// )
+
+	// console.log(reuslt1, result2, reuslt1 === result2)
 	// setInterval(() => {
 	// 	update(num++)
 	// }, 1000)

@@ -35,4 +35,4 @@ emptyFunction.thatReturnsArgument = function (arg) {
   return arg;
 };
 
-module.exports = emptyFunction;
+export default emptyFunction;

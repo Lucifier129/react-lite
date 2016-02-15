@@ -59,33 +59,33 @@ export let mapValue = (obj, iteratee) => {
 	}
 }
 
-export let mapKey = (sources, iteratee) => {
-	let keyMap = {}
-	let item
-	let key
-	for (let i = 0, len = sources.length; i < len; i++) {
-		item = sources[i]
-		for (key in item) {
-			if (!item.hasOwnProperty(key) || keyMap[key]) {
-				continue
-			}
+export let mapKey = (oldObj, newObj, iteratee) => {
+	var keyMap = {}
+	var key
+	for (key in oldObj) {
+		if (oldObj.hasOwnProperty(key)) {
 			keyMap[key] = true
+			iteratee(key)
+		}
+	}
+	for (key in newObj) {
+		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
 			iteratee(key)
 		}
 	}
 }
 
-export let extend = (target, ...sources) => {
-	let setProp = (value, key) => {
-		if (!isUndefined(value)) {
-			target[key] = value
+export let extend = function(target) {
+	for (let i = 1, len = arguments.length; i < len; i++) {
+		let source = arguments[i]
+		if (source != null) {
+			for (let key in source) {
+				if (source.hasOwnProperty(key) && !isUndefined(source[key])) {
+					target[key] = source[key]
+				}
+			}
 		}
 	}
-	eachItem(sources, source => {
-		if (source != null) {
-			mapValue(source, setProp)
-		}
-	})
 	return target
 }
 
@@ -116,13 +116,10 @@ let ignoreKeys = {
 	children: true
 }
 let EVENT_KEYS = /^on/i
-export let isIgnoreKey = key => ignoreKeys[key]
-export let isEventKey = key => EVENT_KEYS.test(key)
-export let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
-export let isStyleKey = key => key === 'style'
+let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
+let isStyleKey = key => key === 'style'
 // Setting .type throws on non-<input> tags
-export let isTypeKey = key => key === 'type'
-
+let isTypeKey = key => key === 'type'
 
 /*
   DOM Properties which are only getter
@@ -134,9 +131,9 @@ eachItem(readOnlyProps.split('|'), key => {
 })
 export let setProp = (elem, key, value) => {
 	switch (true) {
-		case isIgnoreKey(key) || (key === 'title' && value == null):
+		case ignoreKeys[key] === true:
 			break
-		case isEventKey(key):
+		case EVENT_KEYS.test(key):
 			addEvent(elem, key, value)
 			break
 		case isStyleKey(key):
@@ -146,7 +143,12 @@ export let setProp = (elem, key, value) => {
 			value && isStr(value.__html) && ($(elem).html(value.__html))
 			break
 		case (key in elem) && !isTypeKey(key):
-			readOnlys[key] === true || $.prop(elem, key, value)
+			if (readOnlys[key] !== true) {
+				if (key === 'title' && value == null) {
+					value = ''
+				}
+				$.prop(elem, key, value)
+			}
 			break
 		default:
 			$.attr(elem, key, '' + value)
@@ -164,9 +166,9 @@ export let removeProps = (elem, oldProps) => {
 }
 export let removeProp = (elem, key, oldValue) => {
 	switch (true) {
-		case isIgnoreKey(key):
+		case ignoreKeys[key] === true:
 			break
-		case isEventKey(key):
+		case EVENT_KEYS.test(key):
 			removeEvent(elem, key)
 			break
 		case isStyleKey(key):
@@ -197,7 +199,7 @@ export let removeProp = (elem, key, oldValue) => {
 	}
 }
 
-// 用 dom 属性作为 oldValue
+// use dom prop to compare new prop
 let shouldUseDOMProp = {
 	value: true,
 	checked: true
@@ -215,12 +217,12 @@ export let patchProps = (elem, props, newProps) => {
 		return
 	}
 
-	mapKey([props, newProps], key => {
-		if (isIgnoreKey(key)) {
+	mapKey(props, newProps, key => {
+		if (ignoreKeys[key] === true) {
 			return
 		}
 		let value = newProps[key]
-		let oldValue = shouldUseDOMProp[key] ? elem[key] : props[key]
+		let oldValue = shouldUseDOMProp[key] == true ? elem[key] : props[key]
 		if (value === oldValue) {
 			return
 		}
@@ -270,7 +272,7 @@ export let patchStyle = (elem, style, newStyle) => {
 		setStyle(elem, newStyle)
 	} else {
 		var elemStyle = elem.style
-		mapKey([style, newStyle], key => {
+		mapKey(style, newStyle, key => {
 			let value = newStyle[key]
 			let oldValue = style[key]
 			if (value !== oldValue) {

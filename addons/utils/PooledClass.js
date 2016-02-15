@@ -11,7 +11,7 @@
 
 'use strict';
 
-var invariant = require('../util').noop;
+var invariant = function() {}
 
 /**
  * Static poolers. Several custom versions for each potential number of
@@ -119,4 +119,4 @@ var PooledClass = {
   fiveArgumentPooler: fiveArgumentPooler,
 };
 
-module.exports = PooledClass;
+export default PooledClass;

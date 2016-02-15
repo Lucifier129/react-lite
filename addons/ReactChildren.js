@@ -8,20 +8,16 @@
  *
  * @providesModule ReactChildren
  */
-
-'use strict';
-
-var PooledClass = require('./utils/PooledClass');
-var ReactElement = require('./createElement');
-
-var emptyFunction = require('./utils/emptyFunction');
-var traverseAllChildren = require('./utils/traverseAllChildren');
+import PooledClass from './utils/PooledClass'
+import { isValidElement, cloneElement } from '../src/createElement'
+import emptyFunction from './utils/emptyFunction'
+import traverseAllChildren from './utils/traverseAllChildren'
 
 var twoArgumentPooler = PooledClass.twoArgumentPooler;
 var fourArgumentPooler = PooledClass.fourArgumentPooler;
 
 var cloneAndReplaceKey = function(oldElement, newKey) {
-  var newElement = ReactElement.cloneElement(
+  var newElement = cloneElement(
     oldElement,
     { key, newKey }
   );
@@ -118,7 +114,7 @@ function mapSingleChildIntoContext(bookKeeping, child, childKey) {
       emptyFunction.thatReturnsArgument
     );
   } else if (mappedChild != null) {
-    if (ReactElement.isValidElement(mappedChild)) {
+    if (isValidElement(mappedChild)) {
       mappedChild = cloneAndReplaceKey(
         mappedChild,
         // Keep both the (mapped) and old keys if they differ, just as
@@ -213,4 +209,4 @@ var ReactChildren = {
   toArray: toArray,
 };
 
-module.exports = ReactChildren;
+export default ReactChildren;

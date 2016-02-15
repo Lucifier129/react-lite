@@ -10,7 +10,5 @@
 */
 
 'use strict';
-
-var ReactMount = require('./ReactDOM');
-
-module.exports = ReactMount.unstable_renderSubtreeIntoContainer;
+import { unstable_renderSubtreeIntoContainer } from '../src/ReactDOM'
+export default unstable_renderSubtreeIntoContainer

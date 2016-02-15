@@ -42,9 +42,9 @@ Updater.prototype = {
 		this.nextProps = nextProps
 		this.nextContext = nextContext
 		// receive nextProps!! should update immediately
-		!nextProps && updateQueue.isPending
-		? updateQueue.add(this)
-		: this.update()
+		nextProps || !updateQueue.isPending
+		? this.update()
+		: updateQueue.add(this)
 	},
 	update() {
 		let { instance, pendingStates, nextProps, nextContext } = this
@@ -127,27 +127,36 @@ Component.prototype = {
 		return true
 	},
 	forceUpdate(callback) {
-		let { $updater, $cache, props, state, context, vtree, node } = this
-		if ($updater.isPending) { return }
+		let { $updater, $cache, props, state, context } = this
+		if ($updater.isPending || !$cache.isMounted) {
+			return
+		}
 		let nextProps = $cache.props || props
 		let nextState = $cache.state || state
 		let nextContext = $cache.context || {}
+		let parentContext = $cache.parentContext
+		let node = $cache.node
+		let vtree = $cache.vtree
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
 		this.componentWillUpdate(nextProps, nextState, nextContext)
 		this.state = nextState
 		this.props = nextProps
 		this.context = nextContext
-		let nextVtree = renderComponent(this, $cache.$context)
-		vtree.updateTree(nextVtree, node && node.parentNode)
+		let nextVtree = renderComponent(this, parentContext)
+		let newNode = vtree.updateTree(node, nextVtree, node.parentNode, nextVtree.context)
+		if (newNode !== node) {
+			newNode.cache = newNode.cache || {}
+			_.extend(newNode.cache, node.cache)
+		}
+		$cache.vtree = nextVtree
+		$cache.node = newNode
 		clearDidMount()
-		$updater.isPending = false
-		this.vtree = nextVtree
-		this.node = nextVtree.node
 		this.componentDidUpdate(props, state, context)
-		if (_.isFn(callback)) {
+		if (callback) {
 			callback.call(this)
 		}
+		$updater.isPending = false
 		$updater.emitUpdate()
 	},
 	setState(nextState, callback) {
@@ -161,7 +170,7 @@ Component.prototype = {
 		$updater.replaceState(nextState)
 	},
 	getDOMNode() {
-		let node = this.vtree.node
+		let node = this.$cache.node
 		return node && (node.tagName === 'NOSCRIPT') ? null : node
 	},
 	isMounted() {

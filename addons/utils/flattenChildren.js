@@ -8,10 +8,7 @@
  *
  * @providesModule flattenChildren
  */
-
-'use strict';
-
-var traverseAllChildren = require('./traverseAllChildren');
+import traverseAllChildren from './traverseAllChildren'
 
 /**
  * @param {function} traverseContext Context passed through traversal.
@@ -41,4 +38,4 @@ function flattenChildren(children) {
   return result;
 }
 
-module.exports = flattenChildren;
+export default flattenChildren;

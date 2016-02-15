@@ -9,15 +9,11 @@
  * @providesModule ReactFragment
  */
 
-'use strict';
-
-var ReactChildren = require('./ReactChildren');
-var ReactElement = require('./createElement');
-
-var emptyFunction = require('./utils/emptyFunction');
-var invariant = require('./util').noop;
-var warning = require('./util').noop;
-
+import { isValidElement } from '../src/createElement'
+import ReactChildren from './ReactChildren'
+import emptyFunction from './utils/emptyFunction'
+let invariant = function() {}
+let warning = function() {}
 /**
  * We used to allow keyed objects to serve as a collection of ReactElements,
  * or nested sets. This allowed us a way to explicitly key a set a fragment of
@@ -42,7 +38,7 @@ var ReactFragment = {
       );
       return object;
     }
-    if (ReactElement.isValidElement(object)) {
+    if (isValidElement(object)) {
       warning(
         false,
         'React.addons.createFragment does not accept a ReactElement ' +
@@ -82,4 +78,4 @@ var ReactFragment = {
   },
 };
 
-module.exports = ReactFragment;
+export default ReactFragment;

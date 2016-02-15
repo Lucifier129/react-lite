@@ -32,4 +32,4 @@ var keyOf = function (oneKeyObj) {
   return null;
 };
 
-module.exports = keyOf;
+export default keyOf;
