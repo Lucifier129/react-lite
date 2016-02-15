@@ -720,8 +720,12 @@
     	destroyTree: function destroyTree(node) {
     		var id = this.id;
     		var vtree = node.cache[id];
+    		var $removeNode = removeNode;
+    		removeNode = noop$2;
     		delete node.cache[id];
     		vtree.destroyTree(node);
+    		removeNode = $removeNode;
+    		removeNode(node);
     	},
     	update: function update(node, newVstatelessComponent, parentNode, parentContext) {
     		var id = this.id;
@@ -837,11 +841,15 @@
     		var id = this.id;
     		var component = node.cache[id];
     		var cache = component.$cache;
+    		var $removeNode = removeNode;
+    		removeNode = noop$2;
     		delete node.cache[id];
     		this.detachRef();
     		component.setState = noop$2;
     		component.componentWillUnmount();
     		cache.vtree.destroyTree(node);
+    		removeNode = $removeNode;
+    		removeNode(node);
     		delete component.setState;
     		cache.isMounted = false;
     		cache.node = cache.parentContext = cache.vtree = component.refs = component.context = null;
