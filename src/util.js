@@ -1,6 +1,15 @@
 // util
 import jQuery from 'jquery'
 import { addEvent, removeEvent } from './event-system'
+import {
+	propAlias,
+	attributesNS,
+	attrbutesConfigs,
+	readOnlyProps,
+	isUnitlessNumber,
+	ignoreKeys,
+	shouldUseDOMProp
+} from './configs'
 let $ = jQuery
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 export let isObj = isType('Object')
@@ -39,16 +48,6 @@ export let eachItem = (list, iteratee) => {
 	for (let i = 0, len = list.length; i < len; i++) {
 		iteratee(list[i], i)
 	}
-}
-
-export let findIndex = (list, item, startIndex) => {
-	let i = startIndex > 0 ? startIndex : 0
-	for (let len = list.length; i < len; i++) {
-		if (list[i] === item) {
-			return i
-		}
-	}
-	return -1
 }
 
 export let mapValue = (obj, iteratee) => {
@@ -110,26 +109,12 @@ export let mergeProps = (props, children, defaultProps) => {
 	return result
 }
 
-let ignoreKeys = {
-	key: true,
-	ref: true,
-	children: true
-}
 let EVENT_KEYS = /^on/i
 let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
-// Setting .type throws on non-<input> tags
-let isTypeKey = key => key === 'type'
 
-/*
-  DOM Properties which are only getter
-*/
-let readOnlyProps = 'nodeName|nodeValue|nodeType|parentNode|childNodes|classList|firstChild|lastChild|previousSibling|previousElementSibling|nextSibling|nextElementSibling|attributes|ownerDocument|namespaceURI|localName|baseURI|prefix|length|specified|tagName|offsetTop|offsetLeft|offsetWidth|offsetHeight|offsetParent|scrollWidth|scrollHeight|clientTop|clientLeft|clientWidth|clientHeight|x|y'
-let readOnlys = {}
-eachItem(readOnlyProps.split('|'), key => {
-	readOnlys[key] = true
-})
 export let setProp = (elem, key, value) => {
+	key = propAlias[key] || key
 	switch (true) {
 		case ignoreKeys[key] === true:
 			break
@@ -142,8 +127,8 @@ export let setProp = (elem, key, value) => {
 		case isInnerHTMLKey(key):
 			value && isStr(value.__html) && ($(elem).html(value.__html))
 			break
-		case (key in elem) && !isTypeKey(key):
-			if (readOnlys[key] !== true) {
+		case (key in elem) && attrbutesConfigs[key] !== true:
+			if (readOnlyProps[key] !== true) {
 				if (key === 'title' && value == null) {
 					value = ''
 				}
@@ -151,7 +136,12 @@ export let setProp = (elem, key, value) => {
 			}
 			break
 		default:
-			$.attr(elem, key, '' + value)
+			value = value == null ? '' : ('' + value)
+			if (attributesNS[key] === true) {
+				elem.setAttributeNS(key, value)
+			} else {
+				$.attr(elem, key, value)
+			}
 	}
 }
 export let setProps = (elem, props) => {
@@ -165,6 +155,7 @@ export let removeProps = (elem, oldProps) => {
 	})
 }
 export let removeProp = (elem, key, oldValue) => {
+	key = propAlias[key] || key
 	switch (true) {
 		case ignoreKeys[key] === true:
 			break
@@ -177,7 +168,7 @@ export let removeProp = (elem, key, oldValue) => {
 		case isInnerHTMLKey(key):
 			$(elem).html('')
 			break
-		case !(key in elem) || isTypeKey(key):
+		case attrbutesConfigs[key] === true || !(key in elem):
 			$.removeAttr(elem, key)
 			break
 		case isFn(oldValue):
@@ -197,12 +188,6 @@ export let removeProp = (elem, key, oldValue) => {
 				//pass
 			}
 	}
-}
-
-// use dom prop to compare new prop
-let shouldUseDOMProp = {
-	value: true,
-	checked: true
 }
 
 export let patchProps = (elem, props, newProps) => {
@@ -282,37 +267,6 @@ export let patchStyle = (elem, style, newStyle) => {
 	}
 }
 
-const isUnitlessNumber = {
-	animationIterationCount: true,
-	boxFlex: true,
-	boxFlexGroup: true,
-	boxOrdinalGroup: true,
-	columnCount: true,
-	flex: true,
-	flexGrow: true,
-	flexPositive: true,
-	flexShrink: true,
-	flexNegative: true,
-	flexOrder: true,
-	fontWeight: true,
-	lineClamp: true,
-	lineHeight: true,
-	opacity: true,
-	order: true,
-	orphans: true,
-	tabSize: true,
-	widows: true,
-	zIndex: true,
-	zoom: true,
-
-	// SVG-related properties
-	fillOpacity: true,
-	stopOpacity: true,
-	strokeDashoffset: true,
-	strokeOpacity: true,
-	strokeWidth: true
-}
-
 let isUnitlessNumberWithPrefix = {}
 let prefixes = ['Webkit', 'ms', 'Moz', 'O'];
 let prefixKey = (prefix, key) => prefix + key.charAt(0).toUpperCase() + key.substring(1)
@@ -327,12 +281,11 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
 export let setStyleValue = (style, key, value) => {
-	if (value == null || isBln(value)) {
-		value = ''
-	}
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
 		style[key] = value + 'px'
 	} else {
+		key = key === 'float' ? 'cssFloat' : key
+		value = value == null || isBln(value) ? '' : value
 		style[key] = value
 	}
 }

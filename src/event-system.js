@@ -1,41 +1,18 @@
 import jQuery from 'jquery'
 import { updateQueue } from './Component'
 let $ = jQuery
+import { eventNameAlias, notBubbleEvents } from './configs'
 
-let eventNameAlias = {
-	onDoubleClick: 'ondblclick'
-}
 let getEventName = key => {
 	key = eventNameAlias[key] || key
 	return key.toLowerCase()
 }
 
-let isNotBubble = true
-let notBubbleEvents = {
-	onload: isNotBubble,
-	onunload: isNotBubble,
-	onscroll: isNotBubble,
-	onfocus: isNotBubble,
-	onblur: isNotBubble,
-	onrowexit: isNotBubble,
-	onbeforeunload: isNotBubble,
-	onstop: isNotBubble,
-	ondragdrop: isNotBubble,
-	ondragenter: isNotBubble,
-	ondragexit: isNotBubble,
-	ondraggesture: isNotBubble,
-	ondragover: isNotBubble,
-	oncontextmenu: isNotBubble,
-	onpropertychange: isNotBubble
-}
-
 let eventTypes = {}
-
 export let addEvent = (elem, eventType, listener) => {
 	eventType = getEventName(eventType)
-	let isNotBubble = notBubbleEvents[eventType]
 
-	if (isNotBubble) {
+	if (notBubbleEvents[eventType] === true) {
 		$(elem).on(eventType.substr(2) + '.react', listener)
 		return
 	}
@@ -64,9 +41,7 @@ export let addEvent = (elem, eventType, listener) => {
 
 export let removeEvent = (elem, eventType) => {
 	eventType = getEventName(eventType)
-	let isNotBubble = notBubbleEvents[eventType]
-
-	if (isNotBubble) {
+	if (notBubbleEvents[eventType] === true) {
 		$(elem).off(eventType.substr(2) + '.react')
 		return
 	}
