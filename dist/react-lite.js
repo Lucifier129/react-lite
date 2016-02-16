@@ -17,6 +17,21 @@
 
   var SVGNamespaceURI = 'http://www.w3.org/2000/svg';
 
+  var VNODE_TYPE = {
+      ELEMENT: 1,
+      COMPONENT: 2,
+      STATELESS_COMPONENT: 3,
+      TEXT: 4
+  };
+  var DIFF_TYPE = {
+      CREATE: 1,
+      REMOVE: 2,
+      REPLACE: 3,
+      UPDATE: 4
+  };
+
+  var COMPONENT_ID = 'liteid';
+
   var propAlias = {
       // svg attributes alias
       clipPath: 'clip-path',
@@ -49,7 +64,7 @@
       htmlFor: 'for',
       httpEquiv: 'http-equiv',
       // DOM property alias
-      autoComplete: 'autocomplete',
+      autoCompconste: 'autocompconste',
       autoFocus: 'autofocus',
       autoPlay: 'autoplay',
       autoSave: 'autosave',
@@ -61,20 +76,21 @@
   };
 
   var attributesNS = {
-      'xlink:actuate': xlink,
-      'xlink:arcrole': xlink,
-      'xlink:href': xlink,
-      'xlink:role': xlink,
-      'xlink:show': xlink,
-      'xlink:title': xlink,
-      'xlink:type': xlink,
-      'xml:base': xml,
-      'xml:lang': xml,
-      'xml:space': xml
+      xlinkActuate: xlink,
+      xlinkArcrole: xlink,
+      xlinkHref: xlink,
+      xlinkRole: xlink,
+      xlinkShow: xlink,
+      xlinkTitle: xlink,
+      xlinkType: xlink,
+      xmlBase: xml,
+      xmlLang: xml,
+      xmlSpace: xml
   };
 
   // those key must use be attributes
   var attrbutesConfigs = {
+      type: TRUE,
       clipPath: TRUE,
       cx: TRUE,
       cy: TRUE,
@@ -135,14 +151,14 @@
        */
       allowFullScreen: TRUE,
       allowTransparency: TRUE,
-      capture: TRUE,
+      // capture: TRUE,
       charSet: TRUE,
       challenge: TRUE,
       classID: TRUE,
       cols: TRUE,
       contextMenu: TRUE,
       dateTime: TRUE,
-      disabled: TRUE,
+      // disabled: TRUE,
       form: TRUE,
       formAction: TRUE,
       formEncType: TRUE,
@@ -150,7 +166,7 @@
       formTarget: TRUE,
       frameBorder: TRUE,
       height: TRUE,
-      hidden: TRUE,
+      // hidden: TRUE,
       inputMode: TRUE,
       is: TRUE,
       keyParams: TRUE,
@@ -163,7 +179,7 @@
       nonce: TRUE,
       role: TRUE,
       rows: TRUE,
-      seamless: TRUE,
+      // seamless: TRUE,
       size: TRUE,
       sizes: TRUE,
       srcSet: TRUE,
@@ -191,7 +207,7 @@
       // itemProp, itemScope, itemType are for
       // Microdata support. See http://schema.org/docs/gs.html
       itemProp: TRUE,
-      itemScope: TRUE,
+      // itemScope: TRUE,
       itemType: TRUE,
       // itemID and itemRef are for Microdata support as well but
       // only specified in the the WHATWG spec document. See
@@ -305,24 +321,8 @@
       ondragexit: TRUE,
       ondraggesture: TRUE,
       ondragover: TRUE,
-      oncontextmenu: TRUE,
-      onpropertychange: TRUE
+      oncontextmenu: TRUE
   };
-
-  var VNODE_TYPE = {
-  	ELEMENT: 1,
-  	COMPONENT: 2,
-  	STATELESS_COMPONENT: 3,
-  	TEXT: 4
-  };
-  var DIFF_TYPE = {
-  	CREATE: 1,
-  	REMOVE: 2,
-  	REPLACE: 3,
-  	UPDATE: 4
-  };
-
-  var COMPONENT_ID = 'liteid';
 
   var isValidElement = function isValidElement(obj) {
   	return obj != null && !!obj.vtype;
@@ -551,6 +551,7 @@
   };
 
   var setProp = function setProp(elem, key, value) {
+  	var originalKey = key;
   	key = propAlias[key] || key;
   	switch (true) {
   		case ignoreKeys[key] === true:
@@ -564,7 +565,7 @@
   		case isInnerHTMLKey(key):
   			value && isStr(value.__html) && $(elem).html(value.__html);
   			break;
-  		case key in elem && attrbutesConfigs[key] !== true:
+  		case key in elem && attrbutesConfigs[originalKey] !== true:
   			if (readOnlyProps[key] !== true) {
   				if (key === 'title' && value == null) {
   					value = '';
@@ -573,8 +574,9 @@
   			}
   			break;
   		default:
-  			value = value == null ? '' : '' + value;
-  			if (attributesNS[key] === true) {
+  			if (value == null) {
+  				elem.removeAttribute(key);
+  			} else if (attributesNS[originalKey] === true) {
   				elem.setAttributeNS(key, value);
   			} else {
   				$.attr(elem, key, value);
@@ -1372,7 +1374,8 @@
   	component.forceUpdate(callback);
   };
 
-  var $$1 = jQuery;var getEventName = function getEventName(key) {
+  var $$1 = jQuery;
+  var getEventName = function getEventName(key) {
   	key = eventNameAlias[key] || key;
   	return key.toLowerCase();
   };

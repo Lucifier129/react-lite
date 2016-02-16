@@ -9,7 +9,7 @@ import {
 	isUnitlessNumber,
 	ignoreKeys,
 	shouldUseDOMProp
-} from './configs'
+} from './constant'
 let $ = jQuery
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 export let isObj = isType('Object')
@@ -114,6 +114,7 @@ let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
 
 export let setProp = (elem, key, value) => {
+	let originalKey = key
 	key = propAlias[key] || key
 	switch (true) {
 		case ignoreKeys[key] === true:
@@ -127,7 +128,7 @@ export let setProp = (elem, key, value) => {
 		case isInnerHTMLKey(key):
 			value && isStr(value.__html) && ($(elem).html(value.__html))
 			break
-		case (key in elem) && attrbutesConfigs[key] !== true:
+		case (key in elem) && attrbutesConfigs[originalKey] !== true:
 			if (readOnlyProps[key] !== true) {
 				if (key === 'title' && value == null) {
 					value = ''
@@ -136,8 +137,9 @@ export let setProp = (elem, key, value) => {
 			}
 			break
 		default:
-			value = value == null ? '' : ('' + value)
-			if (attributesNS[key] === true) {
+			if (value == null) {
+				elem.removeAttribute(key)
+			} else if (attributesNS[originalKey] === true) {
 				elem.setAttributeNS(key, value)
 			} else {
 				$.attr(elem, key, value)
