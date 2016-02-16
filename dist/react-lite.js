@@ -9,71 +9,301 @@
   global.React = factory();
 }(this, function () { 'use strict';
 
-  var NS = {
-    xlink: 'http://www.w3.org/1999/xlink',
-    xml: 'http://www.w3.org/XML/1998/namespace'
-  };
+  var TRUE = true;
+  var xlink = 'http://www.w3.org/1999/xlink';
+  var xml = 'http://www.w3.org/XML/1998/namespace';
 
-  var DOMNamespaces = {
-    html: 'http://www.w3.org/1999/xhtml',
-    mathml: 'http://www.w3.org/1998/Math/MathML',
-    svg: 'http://www.w3.org/2000/svg'
-  };
+  var SVGNamespaceURI = 'http://www.w3.org/2000/svg';
 
   var propAlias = {
-    // svg attributes alias
-    clipPath: 'clip-path',
-    fillOpacity: 'fill-opacity',
-    fontFamily: 'font-family',
-    fontSize: 'font-size',
-    markerEnd: 'marker-end',
-    markerMid: 'marker-mid',
-    markerStart: 'marker-start',
-    stopColor: 'stop-color',
-    stopOpacity: 'stop-opacity',
-    strokeDasharray: 'stroke-dasharray',
-    strokeLinecap: 'stroke-linecap',
-    strokeOpacity: 'stroke-opacity',
-    strokeWidth: 'stroke-width',
-    textAnchor: 'text-anchor',
-    xlinkActuate: 'xlink:actuate',
-    xlinkArcrole: 'xlink:arcrole',
-    xlinkHref: 'xlink:href',
-    xlinkRole: 'xlink:role',
-    xlinkShow: 'xlink:show',
-    xlinkTitle: 'xlink:title',
-    xlinkType: 'xlink:type',
-    xmlBase: 'xml:base',
-    xmlLang: 'xml:lang',
-    xmlSpace: 'xml:space',
-    // DOM attributes alias
-    acceptCharset: 'accept-charset',
-    className: 'class',
-    htmlFor: 'for',
-    httpEquiv: 'http-equiv',
-    // DOM property alias
-    autoComplete: 'autocomplete',
-    autoFocus: 'autofocus',
-    autoPlay: 'autoplay',
-    autoSave: 'autosave',
-    hrefLang: 'hreflang',
-    radioGroup: 'radiogroup',
-    spellCheck: 'spellcheck',
-    srcDoc: 'srcdoc',
-    srcSet: 'srcset'
+      // svg attributes alias
+      clipPath: 'clip-path',
+      fillOpacity: 'fill-opacity',
+      fontFamily: 'font-family',
+      fontSize: 'font-size',
+      markerEnd: 'marker-end',
+      markerMid: 'marker-mid',
+      markerStart: 'marker-start',
+      stopColor: 'stop-color',
+      stopOpacity: 'stop-opacity',
+      strokeDasharray: 'stroke-dasharray',
+      strokeLinecap: 'stroke-linecap',
+      strokeOpacity: 'stroke-opacity',
+      strokeWidth: 'stroke-width',
+      textAnchor: 'text-anchor',
+      xlinkActuate: 'xlink:actuate',
+      xlinkArcrole: 'xlink:arcrole',
+      xlinkHref: 'xlink:href',
+      xlinkRole: 'xlink:role',
+      xlinkShow: 'xlink:show',
+      xlinkTitle: 'xlink:title',
+      xlinkType: 'xlink:type',
+      xmlBase: 'xml:base',
+      xmlLang: 'xml:lang',
+      xmlSpace: 'xml:space',
+      // DOM attributes alias
+      acceptCharset: 'accept-charset',
+      className: 'class',
+      htmlFor: 'for',
+      httpEquiv: 'http-equiv',
+      // DOM property alias
+      autoComplete: 'autocomplete',
+      autoFocus: 'autofocus',
+      autoPlay: 'autoplay',
+      autoSave: 'autosave',
+      hrefLang: 'hreflang',
+      radioGroup: 'radiogroup',
+      spellCheck: 'spellcheck',
+      srcDoc: 'srcdoc',
+      srcSet: 'srcset'
   };
 
   var attributesNS = {
-    xlinkActuate: NS.xlink,
-    xlinkArcrole: NS.xlink,
-    xlinkHref: NS.xlink,
-    xlinkRole: NS.xlink,
-    xlinkShow: NS.xlink,
-    xlinkTitle: NS.xlink,
-    xlinkType: NS.xlink,
-    xmlBase: NS.xml,
-    xmlLang: NS.xml,
-    xmlSpace: NS.xml
+      'xlink:actuate': xlink,
+      'xlink:arcrole': xlink,
+      'xlink:href': xlink,
+      'xlink:role': xlink,
+      'xlink:show': xlink,
+      'xlink:title': xlink,
+      'xlink:type': xlink,
+      'xml:base': xml,
+      'xml:lang': xml,
+      'xml:space': xml
+  };
+
+  // those key must use be attributes
+  var attrbutesConfigs = {
+      clipPath: TRUE,
+      cx: TRUE,
+      cy: TRUE,
+      d: TRUE,
+      dx: TRUE,
+      dy: TRUE,
+      fill: TRUE,
+      fillOpacity: TRUE,
+      fontFamily: TRUE,
+      fontSize: TRUE,
+      fx: TRUE,
+      fy: TRUE,
+      gradientTransform: TRUE,
+      gradientUnits: TRUE,
+      markerEnd: TRUE,
+      markerMid: TRUE,
+      markerStart: TRUE,
+      offset: TRUE,
+      opacity: TRUE,
+      patternContentUnits: TRUE,
+      patternUnits: TRUE,
+      points: TRUE,
+      preserveAspectRatio: TRUE,
+      r: TRUE,
+      rx: TRUE,
+      ry: TRUE,
+      spreadMethod: TRUE,
+      stopColor: TRUE,
+      stopOpacity: TRUE,
+      stroke: TRUE,
+      strokeDasharray: TRUE,
+      strokeLinecap: TRUE,
+      strokeOpacity: TRUE,
+      strokeWidth: TRUE,
+      textAnchor: TRUE,
+      transform: TRUE,
+      version: TRUE,
+      viewBox: TRUE,
+      x1: TRUE,
+      x2: TRUE,
+      x: TRUE,
+      xlinkActuate: TRUE,
+      xlinkArcrole: TRUE,
+      xlinkHref: TRUE,
+      xlinkRole: TRUE,
+      xlinkShow: TRUE,
+      xlinkTitle: TRUE,
+      xlinkType: TRUE,
+      xmlBase: TRUE,
+      xmlLang: TRUE,
+      xmlSpace: TRUE,
+      y1: TRUE,
+      y2: TRUE,
+      y: TRUE,
+
+      /**
+       * Standard Properties
+       */
+      allowFullScreen: TRUE,
+      allowTransparency: TRUE,
+      capture: TRUE,
+      charSet: TRUE,
+      challenge: TRUE,
+      classID: TRUE,
+      cols: TRUE,
+      contextMenu: TRUE,
+      dateTime: TRUE,
+      disabled: TRUE,
+      form: TRUE,
+      formAction: TRUE,
+      formEncType: TRUE,
+      formMethod: TRUE,
+      formTarget: TRUE,
+      frameBorder: TRUE,
+      height: TRUE,
+      hidden: TRUE,
+      inputMode: TRUE,
+      is: TRUE,
+      keyParams: TRUE,
+      keyType: TRUE,
+      list: TRUE,
+      manifest: TRUE,
+      maxLength: TRUE,
+      media: TRUE,
+      minLength: TRUE,
+      nonce: TRUE,
+      role: TRUE,
+      rows: TRUE,
+      seamless: TRUE,
+      size: TRUE,
+      sizes: TRUE,
+      srcSet: TRUE,
+      width: TRUE,
+      wmode: TRUE,
+      /**
+       * RDFa Properties
+       */
+      about: TRUE,
+      datatype: TRUE,
+      inlist: TRUE,
+      prefix: TRUE,
+      // property is also supported for OpenGraph in meta tags.
+      property: TRUE,
+      resource: TRUE,
+      'typeof': TRUE,
+      vocab: TRUE,
+      /**
+       * Non-standard Properties
+       */
+      // autoCapitalize and autoCorrect are supported in Mobile Safari for
+      // keyboard hints.
+      autoCapitalize: TRUE,
+      autoCorrect: TRUE,
+      // itemProp, itemScope, itemType are for
+      // Microdata support. See http://schema.org/docs/gs.html
+      itemProp: TRUE,
+      itemScope: TRUE,
+      itemType: TRUE,
+      // itemID and itemRef are for Microdata support as well but
+      // only specified in the the WHATWG spec document. See
+      // https://html.spec.whatwg.org/multipage/microdata.html#microdata-dom-api
+      itemID: TRUE,
+      itemRef: TRUE,
+      // IE-only attribute that specifies security restrictions on an iframe
+      // as an alternative to the sandbox attribute on IE<10
+      security: TRUE,
+      // IE-only attribute that controls focus behavior
+      unselectable: TRUE
+  };
+
+  var readOnlyProps = {
+      nodeName: TRUE,
+      nodeValue: TRUE,
+      nodeType: TRUE,
+      parentNode: TRUE,
+      childNodes: TRUE,
+      classList: TRUE,
+      firstChild: TRUE,
+      lastChild: TRUE,
+      previousSibling: TRUE,
+      previousElementSibling: TRUE,
+      nextSibling: TRUE,
+      nextElementSibling: TRUE,
+      attributes: TRUE,
+      ownerDocument: TRUE,
+      namespaceURI: TRUE,
+      localName: TRUE,
+      baseURI: TRUE,
+      prefix: TRUE,
+      length: TRUE,
+      specified: TRUE,
+      tagName: TRUE,
+      offsetTop: TRUE,
+      offsetLeft: TRUE,
+      offsetWidth: TRUE,
+      offsetHeight: TRUE,
+      offsetParent: TRUE,
+      scrollWidth: TRUE,
+      scrollHeight: TRUE,
+      clientTop: TRUE,
+      clientLeft: TRUE,
+      clientWidth: TRUE,
+      clientHeight: TRUE,
+      x: TRUE,
+      y: TRUE
+  };
+
+  var isUnitlessNumber = {
+      animationIterationCount: TRUE,
+      boxFlex: TRUE,
+      boxFlexGroup: TRUE,
+      boxOrdinalGroup: TRUE,
+      columnCount: TRUE,
+      flex: TRUE,
+      flexGrow: TRUE,
+      flexPositive: TRUE,
+      flexShrink: TRUE,
+      flexNegative: TRUE,
+      flexOrder: TRUE,
+      fontWeight: TRUE,
+      lineClamp: TRUE,
+      lineHeight: TRUE,
+      opacity: TRUE,
+      order: TRUE,
+      orphans: TRUE,
+      tabSize: TRUE,
+      widows: TRUE,
+      zIndex: TRUE,
+      zoom: TRUE,
+
+      // SVG-related properties
+      fillOpacity: TRUE,
+      stopOpacity: TRUE,
+      strokeDashoffset: TRUE,
+      strokeOpacity: TRUE,
+      strokeWidth: TRUE
+  };
+
+  var ignoreKeys = {
+      key: TRUE,
+      ref: TRUE,
+      children: TRUE
+  };
+
+  // use dom prop to compare new prop
+  var shouldUseDOMProp = {
+      value: TRUE,
+      checked: TRUE
+  };
+
+  var eventNameAlias = {
+      onDoubleClick: 'ondblclick'
+  };
+
+  var notBubbleEvents = {
+      onmouseleave: TRUE,
+      onmouseenter: TRUE,
+      onload: TRUE,
+      onunload: TRUE,
+      onscroll: TRUE,
+      onfocus: TRUE,
+      onblur: TRUE,
+      onrowexit: TRUE,
+      onbeforeunload: TRUE,
+      onstop: TRUE,
+      ondragdrop: TRUE,
+      ondragenter: TRUE,
+      ondragexit: TRUE,
+      ondraggesture: TRUE,
+      ondragover: TRUE,
+      oncontextmenu: TRUE
   };
 
   var VNODE_TYPE = {
@@ -308,11 +538,6 @@
   	return result;
   };
 
-  var ignoreKeys = {
-  	key: true,
-  	ref: true,
-  	children: true
-  };
   var EVENT_KEYS = /^on/i;
   var isInnerHTMLKey = function isInnerHTMLKey(key) {
   	return key === 'dangerouslySetInnerHTML';
@@ -321,29 +546,7 @@
   	return key === 'style';
   };
 
-  /*
-    DOM Properties which are only getter
-  */
-  var readOnlyProps = 'nodeName|nodeValue|nodeType|parentNode|childNodes|classList|firstChild|lastChild|previousSibling|previousElementSibling|nextSibling|nextElementSibling|attributes|ownerDocument|namespaceURI|localName|baseURI|prefix|length|specified|tagName|offsetTop|offsetLeft|offsetWidth|offsetHeight|offsetParent|scrollWidth|scrollHeight|clientTop|clientLeft|clientWidth|clientHeight|x|y';
-  var readOnlys = {};
-  eachItem(readOnlyProps.split('|'), function (key) {
-  	readOnlys[key] = true;
-  });
-
-  var attrbutesConfigs = {
-  	width: true,
-  	height: true,
-  	type: true,
-  	preserveAspectRatio: true,
-  	viewBox: true,
-  	viewport: true,
-  	x: true,
-  	y: true,
-  	transform: true
-  };
-
   var setProp = function setProp(elem, key, value) {
-  	var namespace = attributesNS[key];
   	key = propAlias[key] || key;
   	switch (true) {
   		case ignoreKeys[key] === true:
@@ -357,12 +560,8 @@
   		case isInnerHTMLKey(key):
   			value && value.__html != null && (elem.innerHTML = value.__html);
   			break;
-  		case key in elem && !attrbutesConfigs[key]:
-  			if (readOnlys[key] !== true) {
-  				if (key === 'className' && elem.nodeName.toLowerCase() === 'svg') {
-  					elem.setAttribute('class', value);
-  					break;
-  				}
+  		case key in elem && attrbutesConfigs[key] !== true:
+  			if (readOnlyProps[key] !== true) {
   				if (key === 'title' && value == null) {
   					value = '';
   				}
@@ -370,7 +569,12 @@
   			}
   			break;
   		default:
-  			!namespace ? elem.setAttribute(key, '' + value) : elem.setAttributeNS(key, '' + value);
+  			value = value == null ? '' : '' + value;
+  			if (attributesNS[key] === true) {
+  				elem.setAttributeNS(key, value);
+  			} else {
+  				elem.setAttribute(key, value);
+  			}
   	}
   };
   var setProps = function setProps(elem, props) {
@@ -397,7 +601,7 @@
   		case isInnerHTMLKey(key):
   			elem.innerHTML = '';
   			break;
-  		case !(key in elem) || !attrbutesConfigs[key]:
+  		case attrbutesConfigs[key] === true || !(key in elem):
   			elem.removeAttribute(key);
   			break;
   		case isFn(oldValue):
@@ -417,12 +621,6 @@
   				//pass
   			}
   	}
-  };
-
-  // use dom prop to compare new prop
-  var shouldUseDOMProp = {
-  	value: true,
-  	checked: true
   };
 
   var patchProps = function patchProps(elem, props, newProps) {
@@ -502,37 +700,6 @@
   	}
   };
 
-  var isUnitlessNumber = {
-  	animationIterationCount: true,
-  	boxFlex: true,
-  	boxFlexGroup: true,
-  	boxOrdinalGroup: true,
-  	columnCount: true,
-  	flex: true,
-  	flexGrow: true,
-  	flexPositive: true,
-  	flexShrink: true,
-  	flexNegative: true,
-  	flexOrder: true,
-  	fontWeight: true,
-  	lineClamp: true,
-  	lineHeight: true,
-  	opacity: true,
-  	order: true,
-  	orphans: true,
-  	tabSize: true,
-  	widows: true,
-  	zIndex: true,
-  	zoom: true,
-
-  	// SVG-related properties
-  	fillOpacity: true,
-  	stopOpacity: true,
-  	strokeDashoffset: true,
-  	strokeOpacity: true,
-  	strokeWidth: true
-  };
-
   var isUnitlessNumberWithPrefix = {};
   var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
   var prefixKey = function prefixKey(prefix, key) {
@@ -549,12 +716,11 @@
 
   var RE_NUMBER = /^-?\d+(\.\d+)?$/;
   var setStyleValue = function setStyleValue(style, key, value) {
-  	if (value == null || isBln(value)) {
-  		value = '';
-  	}
   	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
   		style[key] = value + 'px';
   	} else {
+  		key = key === 'float' ? 'cssFloat' : key;
+  		value = value == null || isBln(value) ? '' : value;
   		style[key] = value;
   	}
   };
@@ -715,8 +881,12 @@
   		var type = this.type;
   		var props = this.props;
 
-  		var namespace = type === 'svg' ? DOMNamespaces.svg : type === 'math' ? DOMNamespaces.mathml : null;
-  		var node = namespace ? document.createElementNS(namespace, type) : document.createElement(type);
+  		var node = undefined;
+  		if (type === 'svg' || parentNode.namespaceURI === SVGNamespaceURI) {
+  			node = document.createElementNS(SVGNamespaceURI, type);
+  		} else {
+  			node = document.createElement(type);
+  		}
   		this.eachChildren(function (vchild) {
   			vchild.initTree(node, parentContext);
   		});
@@ -1198,39 +1368,16 @@
   	component.forceUpdate(callback);
   };
 
-  var eventNameAlias = {
-  	onDoubleClick: 'ondblclick'
-  };
   var getEventName = function getEventName(key) {
   	key = eventNameAlias[key] || key;
   	return key.toLowerCase();
   };
 
-  var isNotBubble = true;
-  var notBubbleEvents = {
-  	onload: isNotBubble,
-  	onunload: isNotBubble,
-  	onscroll: isNotBubble,
-  	onfocus: isNotBubble,
-  	onblur: isNotBubble,
-  	onrowexit: isNotBubble,
-  	onbeforeunload: isNotBubble,
-  	onstop: isNotBubble,
-  	ondragdrop: isNotBubble,
-  	ondragenter: isNotBubble,
-  	ondragexit: isNotBubble,
-  	ondraggesture: isNotBubble,
-  	ondragover: isNotBubble,
-  	oncontextmenu: isNotBubble
-  };
-
   var eventTypes = {};
-
   var addEvent = function addEvent(elem, eventType, listener) {
   	eventType = getEventName(eventType);
-  	var isNotBubble = notBubbleEvents[eventType];
 
-  	if (isNotBubble) {
+  	if (notBubbleEvents[eventType] === true) {
   		elem[eventType] = listener;
   		return;
   	}
@@ -1251,9 +1398,7 @@
 
   var removeEvent = function removeEvent(elem, eventType) {
   	eventType = getEventName(eventType);
-  	var isNotBubble = notBubbleEvents[eventType];
-
-  	if (isNotBubble) {
+  	if (notBubbleEvents[eventType] === true) {
   		elem[eventType] = null;
   		return;
   	}

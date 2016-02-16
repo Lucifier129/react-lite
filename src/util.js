@@ -1,6 +1,14 @@
 // util
-import { propAlias, attributesNS } from './configs'
 import { addEvent, removeEvent } from './event-system'
+import {
+	propAlias,
+	attributesNS,
+	attrbutesConfigs,
+	readOnlyProps,
+	isUnitlessNumber,
+	ignoreKeys,
+	shouldUseDOMProp
+} from './configs'
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 export let isObj = isType('Object')
 export let isStr = isType('String')
@@ -38,16 +46,6 @@ export let eachItem = (list, iteratee) => {
 	for (let i = 0, len = list.length; i < len; i++) {
 		iteratee(list[i], i)
 	}
-}
-
-export let findIndex = (list, item, startIndex) => {
-	let i = startIndex > 0 ? startIndex : 0
-	for (let len = list.length; i < len; i++) {
-		if (list[i] === item) {
-			return i
-		}
-	}
-	return -1
 }
 
 export let mapValue = (obj, iteratee) => {
@@ -109,38 +107,11 @@ export let mergeProps = (props, children, defaultProps) => {
 	return result
 }
 
-let ignoreKeys = {
-	key: true,
-	ref: true,
-	children: true
-}
 let EVENT_KEYS = /^on/i
 let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
 
-/*
-  DOM Properties which are only getter
-*/
-let readOnlyProps = 'nodeName|nodeValue|nodeType|parentNode|childNodes|classList|firstChild|lastChild|previousSibling|previousElementSibling|nextSibling|nextElementSibling|attributes|ownerDocument|namespaceURI|localName|baseURI|prefix|length|specified|tagName|offsetTop|offsetLeft|offsetWidth|offsetHeight|offsetParent|scrollWidth|scrollHeight|clientTop|clientLeft|clientWidth|clientHeight|x|y'
-let readOnlys = {}
-eachItem(readOnlyProps.split('|'), key => {
-	readOnlys[key] = true
-})
-
-let attrbutesConfigs = {
-	width: true,
-	height: true,
-	type: true,
-	preserveAspectRatio: true,
-	viewBox: true,
-	viewport: true,
-	x: true,
-	y: true,
-	transform: true
-}
-
 export let setProp = (elem, key, value) => {
-	let namespace = attributesNS[key]
 	key = propAlias[key] || key
 	switch (true) {
 		case ignoreKeys[key] === true:
@@ -154,12 +125,8 @@ export let setProp = (elem, key, value) => {
 		case isInnerHTMLKey(key):
 			value && value.__html != null && (elem.innerHTML = value.__html)
 			break
-		case (key in elem) && !attrbutesConfigs[key]:
-			if (readOnlys[key] !== true) {
-				if (key === 'className' && elem.nodeName.toLowerCase() === 'svg') {
-					elem.setAttribute('class', value)
-					break
-				}
+		case (key in elem) && attrbutesConfigs[key] !== true:
+			if (readOnlyProps[key] !== true) {
 				if (key === 'title' && value == null) {
 					value = ''
 				}
@@ -167,9 +134,12 @@ export let setProp = (elem, key, value) => {
 			}
 			break
 		default:
-			!namespace
-			? elem.setAttribute(key, '' + value)
-			: elem.setAttributeNS(key, '' + value)
+			value = value == null ? '' : ('' + value)
+			if (attributesNS[key] === true) {
+				elem.setAttributeNS(key, value)
+			} else {
+				elem.setAttribute(key, value)
+			}
 	}
 }
 export let setProps = (elem, props) => {
@@ -196,7 +166,7 @@ export let removeProp = (elem, key, oldValue) => {
 		case isInnerHTMLKey(key):
 			elem.innerHTML = ''
 			break
-		case !(key in elem) || !attrbutesConfigs[key]:
+		case attrbutesConfigs[key] === true || !(key in elem):
 			elem.removeAttribute(key)
 			break
 		case isFn(oldValue):
@@ -216,12 +186,6 @@ export let removeProp = (elem, key, oldValue) => {
 				//pass
 			}
 	}
-}
-
-// use dom prop to compare new prop
-let shouldUseDOMProp = {
-	value: true,
-	checked: true
 }
 
 export let patchProps = (elem, props, newProps) => {
@@ -301,37 +265,6 @@ export let patchStyle = (elem, style, newStyle) => {
 	}
 }
 
-const isUnitlessNumber = {
-	animationIterationCount: true,
-	boxFlex: true,
-	boxFlexGroup: true,
-	boxOrdinalGroup: true,
-	columnCount: true,
-	flex: true,
-	flexGrow: true,
-	flexPositive: true,
-	flexShrink: true,
-	flexNegative: true,
-	flexOrder: true,
-	fontWeight: true,
-	lineClamp: true,
-	lineHeight: true,
-	opacity: true,
-	order: true,
-	orphans: true,
-	tabSize: true,
-	widows: true,
-	zIndex: true,
-	zoom: true,
-
-	// SVG-related properties
-	fillOpacity: true,
-	stopOpacity: true,
-	strokeDashoffset: true,
-	strokeOpacity: true,
-	strokeWidth: true
-}
-
 let isUnitlessNumberWithPrefix = {}
 let prefixes = ['Webkit', 'ms', 'Moz', 'O'];
 let prefixKey = (prefix, key) => prefix + key.charAt(0).toUpperCase() + key.substring(1)
@@ -346,12 +279,11 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
 export let setStyleValue = (style, key, value) => {
-	if (value == null || isBln(value)) {
-		value = ''
-	}
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
 		style[key] = value + 'px'
 	} else {
+		key = key === 'float' ? 'cssFloat' : key
+		value = value == null || isBln(value) ? '' : value
 		style[key] = value
 	}
 }
