@@ -1395,7 +1395,7 @@ var addEvent = function addEvent(elem, eventType, listener) {
 		eventTypes[eventType] = true;
 	}
 
-	if (eventType === 'onchange' && elem.nodeName === 'INPUT' || elem.nodeName === 'TEXTAREA') {
+	if (eventType === 'onchange' && (elem.nodeName === 'INPUT' || elem.nodeName === 'TEXTAREA')) {
 		if ('oninput' in elem) {
 			addEvent(elem, 'oninput', listener);
 		} else if ('onpropertychange' in elem) {
