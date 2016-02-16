@@ -17,10 +17,10 @@ react-lite is an implementation of React that optimizes for small script size.
 | React                  | 0.14.3     | 136.0kb       |
 | Web Components Polyfill| 0.7.19     | 118.0kb       |
 | Riot                   | 2.3.11     | 20kb          |
-| React-lite             | 0.0.18     | 17.5kb        |
+| React-lite             | 0.0.23     | 20kb        |
 
 It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
-replacement for React, when you don't need server-side rendering in browser(no React.renderToString/React.renderToStaticMarkup).
+replacement for React, when you don't need server-side rendering in browser(no `React.renderToString` & `React.renderToStaticMarkup`).
 
 If you are using webpack, it's so easy to use react-lite, just [config alias](http://webpack.github.io/docs/configuration.html#resolve-alias) in webpack.config.js:
 
@@ -47,7 +47,7 @@ npm install --save react-lite
 
 ## Browser compatibility
 
-supports IE9+ ／ ES5 enviroment
+supports IE9+ / ES5 enviroment
 
 
 ## Documentation
@@ -58,15 +58,17 @@ learn react-lite from [React official documentation](http://facebook.github.io/r
 
 just the same as what react does, see some demos below(I just add the alias to webpack.config.js, no need to do anything else):
 
-- react-lite works with react-bootstrap: [doc demo](http://react-lite-with-bootstrap.herokuapp.com/)
-- react-lite works with react-router: [examples](http://react-lite-with-react-router.coding.io/)
-- react-lite works with redux:
+- works with react-bootstrap: [doc demo](http://react-lite-with-bootstrap.herokuapp.com/)
+- works with react-router: [examples](http://react-lite-with-react-router.coding.io/)
+- works with redux:
 	* [async](http://lucifier129.github.io/redux-with-react-lite/async/index.html)
 	* [counter](http://lucifier129.github.io/redux-with-react-lite/counter/index.html)
 	* [shopping-cart](http://lucifier129.github.io/redux-with-react-lite/shopping-cart/index.html)
 	* [todomvc](http://lucifier129.github.io/redux-with-react-lite/todomvc/index.html)
 	* [todos-with-undo](http://lucifier129.github.io/redux-with-react-lite/todos-with-undo/index.html)
-- react-lite works with react-motion: [demos](http://lucifier129.github.io/react-motion-with-react-lite/index.html)
+- works with react-motion: [demos](http://lucifier129.github.io/react-motion-with-react-lite/index.html)
+- works with react-d3-components: [demos](http://lucifier129.github.io/react-d3-components-demos/)
+- works with react-d3: [demos](http://lucifier129.github.io/react-d3-demos/)
 - js-repaint-perf(which is faster?):
 	* [react](http://lucifier129.github.io/react-lite-repaint-perf/react/index.html)
 	* [react-lite](http://lucifier129.github.io/react-lite-repaint-perf/react/lite.html)
@@ -74,7 +76,7 @@ just the same as what react does, see some demos below(I just add the alias to w
 ## React-lite vs React
 
 via react-lite:
-- virtual-dom can not render to string(no React.renderToString and React.renderToStaticMarkup)
+- In browser, virtual-dom can not render to string(no `React.renderToString` and `React.renderToStaticMarkup`)
 - event system is base on delegation pattern(since v0.0.19)
 - all of React.PropTypes method is noop(empty function)
 - Do not support React-addons(for example ReactCSSTransitionGroup)

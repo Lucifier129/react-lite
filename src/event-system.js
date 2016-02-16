@@ -1,5 +1,5 @@
 import { updateQueue } from './Component'
-import { eventNameAlias, notBubbleEvents } from './configs'
+import { eventNameAlias, notBubbleEvents } from './constant'
 
 let getEventName = key => {
 	key = eventNameAlias[key] || key

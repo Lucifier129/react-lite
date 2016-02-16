@@ -1,9 +1,8 @@
 import * as _ from './util'
-import { VNODE_TYPE, DIFF_TYPE } from './constant'
+import { VNODE_TYPE, DIFF_TYPE, SVGNamespaceURI } from './constant'
 import { updatePropsAndState } from './Component'
 import { isValidElement } from './createElement'
 import diff from './diff'
-import { SVGNamespaceURI } from './configs'
 
 function Vtree(properties) {
 	_.extend(this, properties)
