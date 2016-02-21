@@ -57,17 +57,31 @@ let dispatchEvent = event => {
 			continue
 		}
 		if (!syntheticEvent) {
-			syntheticEvent = {}
-			syntheticEvent.nativeEvent = event
-			for (let key in event) {
-				syntheticEvent[key] = typeof event[key] === 'function'
-				? event[key].bind(event)
-				: event[key]
-			}
+			syntheticEvent = createSyntheticEvent(event)
 		}
 		syntheticEvent.currentTarget = target
 		listener.call(target, syntheticEvent)
+		if (syntheticEvent.$cancalBubble) {
+			break
+		}
 		target = target.parentNode
 	}
 	updateQueue.batchUpdate()
+}
+
+
+let createSyntheticEvent = nativeEvent => {
+    let syntheticEvent = {}
+    let cancalBubble = () => syntheticEvent.$cancalBubble = true
+    syntheticEvent.nativeEvent = nativeEvent
+    for (let key in nativeEvent) {
+    	if (typeof event[key] !== 'function') {
+    		syntheticEvent[key] = event[key]
+    	} else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
+    		syntheticEvent[key] = cancalBubble
+    	} else {
+    		syntheticEvent[key] = event[key].bind(event)
+    	}
+    }
+    return syntheticEvent
 }

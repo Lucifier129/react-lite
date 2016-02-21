@@ -285,7 +285,7 @@ export let setStyleValue = (style, key, value) => {
 		style[key] = value + 'px'
 	} else {
 		key = key === 'float' ? 'cssFloat' : key
-		value = value == null || isBln(value) ? '' : value
+		value = (value == null || isBln(value)) ? '' : value
 		style[key] = value
 	}
 }

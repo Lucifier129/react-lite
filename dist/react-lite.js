@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.23
+ * react-lite.js v0.0.24
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -1431,17 +1431,34 @@
   			continue;
   		}
   		if (!syntheticEvent) {
-  			syntheticEvent = {};
-  			syntheticEvent.nativeEvent = event;
-  			for (var key in event) {
-  				syntheticEvent[key] = typeof event[key] === 'function' ? event[key].bind(event) : event[key];
-  			}
+  			syntheticEvent = createSyntheticEvent(event);
   		}
   		syntheticEvent.currentTarget = target;
   		listener.call(target, syntheticEvent);
+  		if (syntheticEvent.$cancalBubble) {
+  			break;
+  		}
   		target = target.parentNode;
   	}
   	updateQueue.batchUpdate();
+  };
+
+  var createSyntheticEvent = function createSyntheticEvent(nativeEvent) {
+  	var syntheticEvent = {};
+  	var cancalBubble = function cancalBubble() {
+  		return syntheticEvent.$cancalBubble = true;
+  	};
+  	syntheticEvent.nativeEvent = nativeEvent;
+  	for (var key in nativeEvent) {
+  		if (typeof event[key] !== 'function') {
+  			syntheticEvent[key] = event[key];
+  		} else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
+  			syntheticEvent[key] = cancalBubble;
+  		} else {
+  			syntheticEvent[key] = event[key].bind(event);
+  		}
+  	}
+  	return syntheticEvent;
   };
 
   var store = {};

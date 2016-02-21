@@ -146,9 +146,6 @@
 				src: 'http://ww3.sinaimg.cn/bmiddle/887790fagw1ezs0ci6qjxj20c10go0uf.jpg',
 				ref: 'img',
 				onLoad: function () {
-					if (_this2.refs == null) {
-						debugger;
-					}
 					console.log('onload this.refs', _this2.refs);
 				},
 				onError: function () {
@@ -338,6 +335,19 @@
 
 	var num = 10;
 	var reuslt1 = update(num);
+	// var Example = props =>
+	//   <div onClick={event => console.log('outer')}>
+	//     <span onClick={event => {
+	//     	event.stopImmediatePropagation();
+	//     	console.log('inner');
+	//     }} >asdfasdf</span>
+	//   </div>;
+
+	// React.render(
+	//  <Example />,
+	//   document.getElementById('container')
+	// )
+
 	// var result2 = React.render(
 	// 	wrap,
 	// 	document.getElementById('root')

@@ -86,9 +86,6 @@ const Counter = React.createClass({
 					src="http://ww3.sinaimg.cn/bmiddle/887790fagw1ezs0ci6qjxj20c10go0uf.jpg"
 					ref="img"
 					onLoad={()=>{
-						if (this.refs == null) {
-							debugger
-						}
 			          console.log('onload this.refs', this.refs)
 			        }}
 			        onError={()=>{
@@ -236,6 +233,20 @@ let update = count => {
 
 let num = 10
 var reuslt1 = update(num)
+// var Example = props =>
+//   <div onClick={event => console.log('outer')}>
+//     <span onClick={event => {
+//     	event.stopImmediatePropagation();
+//     	console.log('inner');
+//     }} >asdfasdf</span>
+//   </div>;
+    
+// React.render(
+//  <Example />,
+//   document.getElementById('container')
+// )
+
+
 // var result2 = React.render(
 // 	wrap,
 // 	document.getElementById('root')
