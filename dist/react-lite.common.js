@@ -1446,12 +1446,12 @@ var createSyntheticEvent = function createSyntheticEvent(nativeEvent) {
 	};
 	syntheticEvent.nativeEvent = nativeEvent;
 	for (var key in nativeEvent) {
-		if (typeof event[key] !== 'function') {
-			syntheticEvent[key] = event[key];
+		if (typeof nativeEvent[key] !== 'function') {
+			syntheticEvent[key] = nativeEvent[key];
 		} else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
 			syntheticEvent[key] = cancalBubble;
 		} else {
-			syntheticEvent[key] = event[key].bind(event);
+			syntheticEvent[key] = nativeEvent[key].bind(nativeEvent);
 		}
 	}
 	return syntheticEvent;
