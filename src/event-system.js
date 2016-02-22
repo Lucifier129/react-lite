@@ -48,7 +48,7 @@ export let removeEvent = (elem, eventType) => {
 	let eventStore = elem.eventStore || (elem.eventStore = {})
 	delete eventStore[eventType]
 
-	if (eventType === 'onchange' && elem.nodeName === 'INPUT' || elem.nodeName === 'TEXTAREA') {
+	if (eventType === 'onchange' && (elem.nodeName === 'INPUT' || elem.nodeName === 'TEXTAREA')) {
 		if ('oninput' in elem) {
 			delete eventStore['oninput']
 		} else if ('onpropertychange' in elem) {
@@ -70,12 +70,31 @@ let dispatchEvent = event => {
 			continue
 		}
 		if (!syntheticEvent) {
-			syntheticEvent = event
-			syntheticEvent.nativeEvent = event
+			syntheticEvent = createSyntheticEvent(event)
 		}
 		syntheticEvent.currentTarget = target
 		listener.call(target, syntheticEvent)
+		if (syntheticEvent.$cancalBubble) {
+			break
+		}
 		target = target.parentNode
 	}
 	updateQueue.batchUpdate()
+}
+
+
+let createSyntheticEvent = nativeEvent => {
+    let syntheticEvent = {}
+    let cancalBubble = () => syntheticEvent.$cancalBubble = true
+    syntheticEvent.nativeEvent = nativeEvent
+    for (let key in nativeEvent) {
+    	if (typeof nativeEvent[key] !== 'function') {
+    		syntheticEvent[key] = nativeEvent[key]
+    	} else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
+    		syntheticEvent[key] = cancalBubble
+    	} else {
+    		syntheticEvent[key] = nativeEvent[key].bind(nativeEvent)
+    	}
+    }
+    return syntheticEvent
 }

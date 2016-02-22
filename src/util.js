@@ -75,18 +75,19 @@ export let mapKey = (oldObj, newObj, iteratee) => {
 }
 
 export let extend = function(target) {
-	for (let i = 1, len = arguments.length; i < len; i++) {
-		let source = arguments[i]
-		if (source != null) {
-			for (let key in source) {
-				if (source.hasOwnProperty(key) && !isUndefined(source[key])) {
-					target[key] = source[key]
-				}
-			}
-		}
-	}
-	return target
+    for (let i = 1, len = arguments.length; i < len; i++) {
+        let source = arguments[i]
+        if (source != null) {
+            for (let key in source) {
+            	if (source.hasOwnProperty(key) && source[key] !== undefined) {
+            		target[key] = source[key]
+            	}
+            }
+        }
+    }
+    return target
 }
+
 
 let uid = 0
 export let getUid = () => ++uid
@@ -287,7 +288,7 @@ export let setStyleValue = (style, key, value) => {
 		style[key] = value + 'px'
 	} else {
 		key = key === 'float' ? 'cssFloat' : key
-		value = value == null || isBln(value) ? '' : value
+		value = (value == null || isBln(value)) ? '' : value
 		style[key] = value
 	}
 }

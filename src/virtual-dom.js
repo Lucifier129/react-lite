@@ -162,14 +162,14 @@ Velem.prototype = new Vtree({
 		return node
 	},
 	destroyTree(node) {
-		let childNodes = []
-		for (let i = 0, len = node.childNodes.length; i < len; i++) {
-			childNodes.push(node.childNodes[i])
-		}
+		let childNodes = node.childNodes
+		let $removeNode = removeNode
+		removeNode = noop
 		this.eachChildren((vchild, index) => {
 			vchild.destroyTree(childNodes[index])
 		})
 		this.detachRef()
+		removeNode = $removeNode
 		removeNode(node)
 	},
 	update(node, newVelem, parentNode, parentContext) {
@@ -238,12 +238,8 @@ VstatelessComponent.prototype = new Vtree({
 	destroyTree(node) {
 		let id = this.id
 		let vtree = node.cache[id]
-		let $removeNode = removeNode
-		removeNode = noop
 		delete node.cache[id]
 		vtree.destroyTree(node)
-		removeNode = $removeNode
-		removeNode(node)
 	},
 	update(node, newVstatelessComponent, parentNode, parentContext) {
 		let id = this.id
@@ -350,15 +346,11 @@ Vcomponent.prototype = new Vtree({
 		let id = this.id
 		let component = node.cache[id]
 		let cache = component.$cache
-		let $removeNode = removeNode
-		removeNode = noop
 		delete node.cache[id]
 		this.detachRef()
 		component.setState = noop
 		component.componentWillUnmount()
 		cache.vtree.destroyTree(node)
-		removeNode = $removeNode
-		removeNode(node)
 		delete component.setState
 		cache.isMounted = false
 		cache.node

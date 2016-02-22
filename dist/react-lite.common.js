@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.23
+ * react-lite.js v0.0.26
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -507,7 +507,7 @@ var extend = function extend(target) {
 		var source = arguments[i];
 		if (source != null) {
 			for (var key in source) {
-				if (source.hasOwnProperty(key) && !isUndefined(source[key])) {
+				if (source.hasOwnProperty(key) && source[key] !== undefined) {
 					target[key] = source[key];
 				}
 			}
@@ -899,14 +899,14 @@ Velem.prototype = new Vtree({
 		return node;
 	},
 	destroyTree: function destroyTree(node) {
-		var childNodes = [];
-		for (var i = 0, len = node.childNodes.length; i < len; i++) {
-			childNodes.push(node.childNodes[i]);
-		}
+		var childNodes = node.childNodes;
+		var $removeNode = removeNode;
+		removeNode = noop$2;
 		this.eachChildren(function (vchild, index) {
 			vchild.destroyTree(childNodes[index]);
 		});
 		this.detachRef();
+		removeNode = $removeNode;
 		removeNode(node);
 	},
 	update: function update(node, newVelem, parentNode, parentContext) {
@@ -980,12 +980,8 @@ VstatelessComponent.prototype = new Vtree({
 	destroyTree: function destroyTree(node) {
 		var id = this.id;
 		var vtree = node.cache[id];
-		var $removeNode = removeNode;
-		removeNode = noop$2;
 		delete node.cache[id];
 		vtree.destroyTree(node);
-		removeNode = $removeNode;
-		removeNode(node);
 	},
 	update: function update(node, newVstatelessComponent, parentNode, parentContext) {
 		var id = this.id;
@@ -1101,15 +1097,11 @@ Vcomponent.prototype = new Vtree({
 		var id = this.id;
 		var component = node.cache[id];
 		var cache = component.$cache;
-		var $removeNode = removeNode;
-		removeNode = noop$2;
 		delete node.cache[id];
 		this.detachRef();
 		component.setState = noop$2;
 		component.componentWillUnmount();
 		cache.vtree.destroyTree(node);
-		removeNode = $removeNode;
-		removeNode(node);
 		delete component.setState;
 		cache.isMounted = false;
 		cache.node = cache.parentContext = cache.vtree = component.refs = component.context = null;
@@ -1418,7 +1410,7 @@ var removeEvent = function removeEvent(elem, eventType) {
 	var eventStore = elem.eventStore || (elem.eventStore = {});
 	delete eventStore[eventType];
 
-	if (eventType === 'onchange' && elem.nodeName === 'INPUT' || elem.nodeName === 'TEXTAREA') {
+	if (eventType === 'onchange' && (elem.nodeName === 'INPUT' || elem.nodeName === 'TEXTAREA')) {
 		if ('oninput' in elem) {
 			delete eventStore['oninput'];
 		} else if ('onpropertychange' in elem) {
@@ -1444,14 +1436,34 @@ var dispatchEvent = function dispatchEvent(event) {
 			continue;
 		}
 		if (!syntheticEvent) {
-			syntheticEvent = event;
-			syntheticEvent.nativeEvent = event;
+			syntheticEvent = createSyntheticEvent(event);
 		}
 		syntheticEvent.currentTarget = target;
 		listener.call(target, syntheticEvent);
+		if (syntheticEvent.$cancalBubble) {
+			break;
+		}
 		target = target.parentNode;
 	}
 	updateQueue.batchUpdate();
+};
+
+var createSyntheticEvent = function createSyntheticEvent(nativeEvent) {
+	var syntheticEvent = {};
+	var cancalBubble = function cancalBubble() {
+		return syntheticEvent.$cancalBubble = true;
+	};
+	syntheticEvent.nativeEvent = nativeEvent;
+	for (var key in nativeEvent) {
+		if (typeof nativeEvent[key] !== 'function') {
+			syntheticEvent[key] = nativeEvent[key];
+		} else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
+			syntheticEvent[key] = cancalBubble;
+		} else {
+			syntheticEvent[key] = nativeEvent[key].bind(nativeEvent);
+		}
+	}
+	return syntheticEvent;
 };
 
 var store = {};
