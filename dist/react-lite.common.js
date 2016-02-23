@@ -915,7 +915,7 @@ Velem.prototype = new Vtree({
 		var newProps = newVelem.props;
 		var oldHtml = getInnerHTML(props);
 		if (oldHtml == null) {
-			var children = !isUndefined(props.children) ? props.children : [];
+			var children = !isUndefined(props.children) && !isBln(props.children) ? props.children : [];
 			if (!isArr(children)) {
 				children = [children];
 			}
