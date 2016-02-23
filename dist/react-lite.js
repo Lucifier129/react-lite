@@ -878,7 +878,7 @@
   			});
   			this.props.children = newChildren;
   			this.sorted = true;
-  		} else if (!isUndefined(children)) {
+  		} else if (!isUndefined(children) && !isBln(children)) {
   			children = this.props.children = getVnode(children);
   			iteratee(children, 0);
   		}
@@ -1782,6 +1782,8 @@
       PropTypes: PropTypes,
       DOM: DOM
   }, ReactDOM);
+
+  React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactDOM;
 
   return React;
 

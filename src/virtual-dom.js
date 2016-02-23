@@ -140,7 +140,7 @@ Velem.prototype = new Vtree({
 			})
 			this.props.children = newChildren
 			this.sorted = true
-		} else if (!_.isUndefined(children)) {
+		} else if (!_.isUndefined(children) && !_.isBln(children)) {
 			children = this.props.children = getVnode(children)
 			iteratee(children, 0)
 		}
