@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.25
+ * react-lite.js v0.0.26
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -875,7 +875,7 @@
   			});
   			this.props.children = newChildren;
   			this.sorted = true;
-  		} else if (!isUndefined(children)) {
+  		} else if (!isUndefined(children) && !isBln(children)) {
   			children = this.props.children = getVnode(children);
   			iteratee(children, 0);
   		}
@@ -899,14 +899,14 @@
   		return node;
   	},
   	destroyTree: function destroyTree(node) {
-  		var childNodes = [];
-  		for (var i = 0, len = node.childNodes.length; i < len; i++) {
-  			childNodes.push(node.childNodes[i]);
-  		}
+  		var childNodes = node.childNodes;
+  		var $removeNode = removeNode;
+  		removeNode = noop$2;
   		this.eachChildren(function (vchild, index) {
   			vchild.destroyTree(childNodes[index]);
   		});
   		this.detachRef();
+  		removeNode = $removeNode;
   		removeNode(node);
   	},
   	update: function update(node, newVelem, parentNode, parentContext) {
@@ -980,12 +980,8 @@
   	destroyTree: function destroyTree(node) {
   		var id = this.id;
   		var vtree = node.cache[id];
-  		var $removeNode = removeNode;
-  		removeNode = noop$2;
   		delete node.cache[id];
   		vtree.destroyTree(node);
-  		removeNode = $removeNode;
-  		removeNode(node);
   	},
   	update: function update(node, newVstatelessComponent, parentNode, parentContext) {
   		var id = this.id;
@@ -1101,15 +1097,11 @@
   		var id = this.id;
   		var component = node.cache[id];
   		var cache = component.$cache;
-  		var $removeNode = removeNode;
-  		removeNode = noop$2;
   		delete node.cache[id];
   		this.detachRef();
   		component.setState = noop$2;
   		component.componentWillUnmount();
   		cache.vtree.destroyTree(node);
-  		removeNode = $removeNode;
-  		removeNode(node);
   		delete component.setState;
   		cache.isMounted = false;
   		cache.node = cache.parentContext = cache.vtree = component.refs = component.context = null;
@@ -1774,6 +1766,8 @@
       PropTypes: PropTypes,
       DOM: DOM
   }, ReactDOM);
+
+  React.__SECRET_DOM_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactDOM;
 
   return React;
 
