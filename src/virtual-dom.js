@@ -177,7 +177,7 @@ Velem.prototype = new Vtree({
 		let newProps = newVelem.props
 		let oldHtml = getInnerHTML(props)
 		if (oldHtml == null) {
-			var children = !_.isUndefined(props.children) ? props.children : []
+			var children = !_.isUndefined(props.children) && !_.isBln(props.children) ? props.children : []
 			if (!_.isArr(children)) {
 				children = [children]
 			}
