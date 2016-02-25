@@ -280,12 +280,6 @@ export const isUnitlessNumber = {
     strokeWidth: TRUE
 }
 
-export const ignoreKeys = {
-    key: TRUE,
-    ref: TRUE,
-    children: TRUE
-}
-
 // use dom prop to compare new prop
 export const shouldUseDOMProp = {
     value: TRUE,

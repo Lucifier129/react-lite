@@ -16,7 +16,7 @@ Vtree.prototype = {
 		if (!refs || refKey == null || !refValue) {
 			return
 		}
-		if (refValue.nodeName) {
+		if (refValue.nodeName && !refValue.getDOMNode) {
 	    	// support react v0.13 style: this.refs.myInput.getDOMNode()
 	    	refValue.getDOMNode = getDOMNode
 	    }
@@ -63,8 +63,8 @@ Vtree.prototype = {
 	updateTree(node, newVtree, parentNode, parentContext) {
 		let newNode = node
 		switch (diff(this, newVtree)) {
-			case DIFF_TYPE.CREATE:
-				newNode = newVtree.initTree(parentNode, parentContext)
+			case DIFF_TYPE.UPDATE:
+				newNode = this.update(node, newVtree, parentNode, parentContext)
 				break
 			case DIFF_TYPE.REMOVE:
 				this.destroyTree(node)
@@ -79,8 +79,8 @@ Vtree.prototype = {
 					parentContext
 				)
 				break
-			case DIFF_TYPE.UPDATE:
-				newNode = this.update(node, newVtree, parentNode, parentContext)
+			case DIFF_TYPE.CREATE:
+				newNode = newVtree.initTree(parentNode, parentContext)
 				break
 		}
 		return newNode
@@ -117,34 +117,8 @@ export function Velem(type, props) {
 	this.props = props
 }
 
-let getInnerHTML = props => {
-	let innerHTMLObj = props.dangerouslySetInnerHTML
-	return innerHTMLObj && innerHTMLObj.__html
-}
 Velem.prototype = new Vtree({
 	vtype: VNODE_TYPE.ELEMENT,
-	eachChildren(iteratee) {
-		let { children } = this.props
-		let newChildren
-		if (this.sorted) {
-			_.eachItem(children, iteratee)
-			return
-		}
-		// the default children often be nesting array, make it flat and cache
-		if (_.isArr(children)) {
-			newChildren = []
-			_.flattenChildren(children, (vchild, index) => {
-				vchild = getVnode(vchild)
-				iteratee(vchild, index)
-				newChildren.push(vchild)
-			})
-			this.props.children = newChildren
-			this.sorted = true
-		} else if (!_.isUndefined(children) && !_.isBln(children)) {
-			children = this.props.children = getVnode(children)
-			iteratee(children, 0)
-		}
-	},
 	initTree(parentNode, parentContext) {
 		let { type, props } = this
 		let node
@@ -153,55 +127,86 @@ Velem.prototype = new Vtree({
 		} else {
 			node = document.createElement(type)
 		}
-		this.eachChildren(vchild => {
-			vchild.initTree(node, parentContext)
-		})
+		let { children } = props
+		let initChildren = vchild => {
+		    vchild = getVnode(vchild)
+		    vchild.initTree(node, parentContext)
+		    return vchild
+		}
+		if (_.isArr(children)) {
+			props.children = _.flattenChildren(children, initChildren)
+		} else if (!_.isUndefined(children) && !_.isBln(children)) {
+			props.children = [initChildren(children)]
+		} else {
+			props.children = undefined
+		}
 		_.setProps(node, props)
 		appendNode(parentNode, node)
 		this.attachRef(node)
 		return node
 	},
 	destroyTree(node) {
-		let childNodes = node.childNodes
-		let $removeNode = removeNode
-		removeNode = noop
-		this.eachChildren((vchild, index) => {
-			vchild.destroyTree(childNodes[index])
-		})
+		let { children } = this.props
+		if (children) {
+			var childNodes = node.childNodes
+			var $removeNode = removeNode
+			removeNode = noop
+			var destroyChildren = (vchild, index) => {
+				vchild.destroyTree(childNodes[index])
+			}
+			_.eachItem(children, destroyChildren)
+			removeNode = $removeNode
+		}
 		this.detachRef()
-		removeNode = $removeNode
 		removeNode(node)
 	},
 	update(node, newVelem, parentNode, parentContext) {
 		let { props } = this
 		let newProps = newVelem.props
-		let oldHtml = getInnerHTML(props)
-		if (oldHtml == null) {
-			var children = !_.isUndefined(props.children) && !_.isBln(props.children) ? props.children : []
-			if (!_.isArr(children)) {
-				children = [children]
-			}
-			var count = 0
+		let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
+		let children = props.children
+		var newChildren = newProps.children
+		if (oldHtml == null && children) {
 			var childNodes = node.childNodes
-			newVelem.eachChildren((newVchild, index) => {
-				count += 1
+			var initNewChildren = (newVchild, index) => {
+				newVchild = getVnode(newVchild)
 				var vchild = children[index]
 				if (vchild) {
 					vchild.updateTree(childNodes[index], newVchild, node, parentContext)
 				} else {
 					newVchild.initTree(node, parentContext)
 				}
-			})
+				return newVchild
+			}
+			if (_.isArr(newChildren)) {
+				newProps.children = _.flattenChildren(newChildren, initNewChildren)
+			} else if (!_.isUndefined(newChildren) && !_.isBln(newChildren)) {
+				newProps.children = [initNewChildren(newChildren, 0)]
+			} else {
+				newProps.children = undefined
+			}
 			var childrenLen = children.length
+			var newChildrenLen = newProps.children && newProps.children.length || 0
 			// destroy old children not in the newChildren
-			while (childrenLen > count) {
+			while (childrenLen > newChildrenLen) {
 				childrenLen -= 1
 				children[childrenLen].destroyTree(childNodes[childrenLen])
 			}
 			_.patchProps(node, props, newProps)
 		} else {
 			_.patchProps(node, props, newProps)
-			newVelem.eachChildren(newVchild => newVchild.initTree(node, parentContext))
+			let initNewChildren = newVchild => {
+				newVchild = getVnode(newVchild)
+				newVchild.initTree(node, parentContext)
+				return newVchild
+			}
+			if (_.isArr(newChildren)) {
+				newProps.children = _.flattenChildren(newChildren, initNewChildren)
+			} else if (!_.isUndefined(newChildren) && !_.isBln(newChildren)) {
+				newProps.children = [initNewChildren(newChildren)]
+			} else {
+				newProps.children = undefined
+			}
 		}
 		this.updateRef(newVelem, node)
 		return node
@@ -286,7 +291,7 @@ export let renderComponent = (component, parentContext) => {
 	vtree = getVnode(vtree)
 	let curContext = component.getChildContext()
 	if (curContext) {
-		curContext = _.extend({}, parentContext, curContext)
+		curContext = _.extend(_.extend({}, parentContext), curContext)
 	} else {
 		curContext = parentContext
 	}
@@ -402,19 +407,8 @@ let appendNode = (parentNode, node) => {
 let getVnode = vnode => {
 	if (vnode === null) {
 		vnode = new Velem('noscript', {})
-	} else if (!isValidElement(vnode)) {
+	} else if (!vnode || !vnode.vtype) {
 		vnode = new Vtext(vnode)
 	}
 	return vnode
-}
-
-let isValidComponent = obj => {
-	if (obj == null) {
-		return false
-	}
-	let vtype = obj.vtype
-	if (vtype === VNODE_TYPE.COMPONENT || vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-		return true
-	}
-	return false
 }

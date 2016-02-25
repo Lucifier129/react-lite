@@ -5,8 +5,8 @@ export let isValidElement = obj => obj != null && !!obj.vtype
 
 export let cloneElement = (originElem, props, ...children) => {
 	let { type, key, ref } = originElem
-	props = _.extend({ key, ref }, originElem.props, props)
-	let vnode = createElement(type, props, ...children)
+	let newProps = _.extend(_.extend({ key, ref }, originElem.props), props)
+	let vnode = createElement(type, newProps, ...children)
 	if (vnode.ref === originElem.ref) {
 		vnode.refs = originElem.refs
 	}

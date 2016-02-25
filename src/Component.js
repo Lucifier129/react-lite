@@ -5,28 +5,28 @@ export let updateQueue = {
 	updaters: [],
 	isPending: false,
 	add(updater) {
-		/*
-		 event bubbles from bottom-level to top-level
-		 reverse the updater order can merge some props and state and reduce the refresh times
-		 see Updater.update method below to know why
-		*/
-		this.updaters.splice(0, 0, updater)
+		this.updaters.push(updater)
 	},
 	batchUpdate() {
 		this.isPending = true
 		/*
 		  each updater.update may add new updater to updateQueue
 		  clear them with a loop
+
+		 event bubbles from bottom-level to top-level
+		 reverse the updater order can merge some props and state and reduce the refresh times
+		 see Updater.update method below to know why
 		*/
-		while (this.updaters.length) {
-			let { updaters } = this
-			this.updaters = []
-			_.eachItem(updaters, triggerUpdate)
+		let { updaters } = this
+		while (updaters.length) {
+			let updater = updaters.pop()
+			if (updater) {
+				updater.update()
+			}
 		}
 		this.isPending = false
 	}
 }
-let triggerUpdate = updater => updater.update()
 
 function Updater(instance) {
 	this.instance = instance

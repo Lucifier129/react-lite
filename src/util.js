@@ -6,7 +6,6 @@ import {
 	attrbutesConfigs,
 	readOnlyProps,
 	isUnitlessNumber,
-	ignoreKeys,
 	shouldUseDOMProp
 } from './constant'
 export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
@@ -29,18 +28,36 @@ export let pipe = (fn1, fn2) => {
 	}
 }
 
-export let flattenChildren = (list, iteratee, record) => {
-	record = record || { index: 0 }
-	for (let i = 0, len = list.length; i < len; i++) {
-		let item = list[i]
-		if (isArr(item)) {
-			flattenChildren(item, iteratee, record)
-		} else if (!isUndefined(item) && !isBln(item)) {
-			iteratee(item, record.index)
-			record.index += 1
-		}
-	}
+// export let flattenChildren = (list, iteratee, record) => {
+// 	record = record || { index: 0 }
+// 	for (let i = 0, len = list.length; i < len; i++) {
+// 		let item = list[i]
+// 		if (isArr(item)) {
+// 			flattenChildren(item, iteratee, record)
+// 		} else if (!isUndefined(item) && !isBln(item)) {
+// 			iteratee(item, record.index)
+// 			record.index += 1
+// 		}
+// 	}
+// }
+
+export let flattenChildren = (list, iteratee) => flat(list, iteratee, [])
+
+let flat = (list, iteratee, res) => {
+    let len = list.length
+    let i = -1
+
+    while (len--) {
+        var cur = list[++i]
+        if (isArr(cur)) {
+            flat(cur, iteratee, res)
+        } else if (!isUndefined(cur) && !isBln(cur)) {
+            res.push(iteratee(cur, res.length) || cur)
+        }
+    }
+    return res
 }
+
 
 export let eachItem = (list, iteratee) => {
 	for (let i = 0, len = list.length; i < len; i++) {
@@ -57,8 +74,8 @@ export let mapValue = (obj, iteratee) => {
 }
 
 export let mapKey = (oldObj, newObj, iteratee) => {
-	var keyMap = {}
-	var key
+	let keyMap = {}
+	let key
 	for (key in oldObj) {
 		if (oldObj.hasOwnProperty(key)) {
 			keyMap[key] = true
@@ -72,36 +89,44 @@ export let mapKey = (oldObj, newObj, iteratee) => {
 	}
 }
 
-export let extend = function(target) {
-	for (let i = 1, len = arguments.length; i < len; i++) {
-		let source = arguments[i]
-		if (source != null) {
-			for (let key in source) {
-				if (source.hasOwnProperty(key) && !isUndefined(source[key])) {
-					target[key] = source[key]
-				}
-			}
-		}
-	}
-	return target
+// export let extend = function(target) {
+// 	for (let i = 1, len = arguments.length; i < len; i++) {
+// 		let source = arguments[i]
+// 		if (source != null) {
+// 			for (let key in source) {
+// 				if (source.hasOwnProperty(key) && !isUndefined(source[key])) {
+// 					target[key] = source[key]
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return target
+// }
+
+export function extend(to, from) {
+    if (!from) {
+        return to
+    }
+    var keys = Object.keys(from)
+    var i = keys.length
+    while (i--) {
+        if (from[keys[i]] !== undefined) {
+            to[keys[i]] = from[keys[i]]
+        }
+    }
+    return to
 }
+
 
 let uid = 0
 export let getUid = () => ++uid
 
-let getChildren = children => {
-	let childrenLen = children.length
-	if (childrenLen > 0) {
-		if (childrenLen === 1) {
-			children = children[0]
-		}
-		return children
-	}
-}
 export let mergeProps = (props, children, defaultProps) => {
-	let result = extend({}, defaultProps, props)
-	children = getChildren(children)
-	if (!isUndefined(children)) {
+	let result = extend(extend({}, defaultProps), props)
+	let childrenLen = children.length
+	if (childrenLen === 1) {
+		result.children = children[0]
+	} else if (childrenLen > 1) {
 		result.children = children
 	}
 	return result
@@ -115,7 +140,7 @@ export let setProp = (elem, key, value) => {
 	let originalKey = key
 	key = propAlias[key] || key
 	switch (true) {
-		case ignoreKeys[key] === true:
+		case key === 'children':
 			break
 		case EVENT_KEYS.test(key):
 			addEvent(elem, key, value)
@@ -157,7 +182,7 @@ export let removeProps = (elem, oldProps) => {
 export let removeProp = (elem, key, oldValue) => {
 	key = propAlias[key] || key
 	switch (true) {
-		case ignoreKeys[key] === true:
+		case key === 'children':
 			break
 		case EVENT_KEYS.test(key):
 			removeEvent(elem, key)
@@ -203,7 +228,7 @@ export let patchProps = (elem, props, newProps) => {
 	}
 
 	mapKey(props, newProps, key => {
-		if (ignoreKeys[key] === true) {
+		if (key === 'children') {
 			return
 		}
 		let value = newProps[key]
