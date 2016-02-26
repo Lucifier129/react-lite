@@ -453,19 +453,6 @@
   	};
   };
 
-  // export let flattenChildren = (list, iteratee, record) => {
-  // 	record = record || { index: 0 }
-  // 	for (let i = 0, len = list.length; i < len; i++) {
-  // 		let item = list[i]
-  // 		if (isArr(item)) {
-  // 			flattenChildren(item, iteratee, record)
-  // 		} else if (!isUndefined(item) && !isBln(item)) {
-  // 			iteratee(item, record.index)
-  // 			record.index += 1
-  // 		}
-  // 	}
-  // }
-
   var flattenChildren = function flattenChildren(list, iteratee) {
   	return flat(list, iteratee, []);
   };
@@ -501,33 +488,18 @@
 
   var mapKey = function mapKey(oldObj, newObj, iteratee) {
   	var keyMap = {};
-  	var key = undefined;
-  	for (key in oldObj) {
+  	for (var key in oldObj) {
   		if (oldObj.hasOwnProperty(key)) {
   			keyMap[key] = true;
   			iteratee(key);
   		}
   	}
-  	for (key in newObj) {
+  	for (var key in newObj) {
   		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
   			iteratee(key);
   		}
   	}
   };
-
-  // export let extend = function(target) {
-  // 	for (let i = 1, len = arguments.length; i < len; i++) {
-  // 		let source = arguments[i]
-  // 		if (source != null) {
-  // 			for (let key in source) {
-  // 				if (source.hasOwnProperty(key) && !isUndefined(source[key])) {
-  // 					target[key] = source[key]
-  // 				}
-  // 			}
-  // 		}
-  // 	}
-  // 	return target
-  // }
 
   function extend(to, from) {
   	if (!from) {
@@ -871,6 +843,14 @@
   	this.props = props;
   }
 
+  var getFlattenChildren = function getFlattenChildren(children, iteratee) {
+  	if (isArr(children)) {
+  		return flattenChildren(children, iteratee);
+  	} else if (!isUndefined(children) && !isBln(children)) {
+  		return [iteratee(children, 0)];
+  	}
+  };
+
   Velem.prototype = new Vtree({
   	vtype: VNODE_TYPE.ELEMENT,
   	initTree: function initTree(parentNode, parentContext) {
@@ -883,20 +863,12 @@
   		} else {
   			node = document.createElement(type);
   		}
-  		var children = props.children;
-
   		var initChildren = function initChildren(vchild) {
   			vchild = getVnode(vchild);
   			vchild.initTree(node, parentContext);
   			return vchild;
   		};
-  		if (isArr(children)) {
-  			props.children = flattenChildren(children, initChildren);
-  		} else if (!isUndefined(children) && !isBln(children)) {
-  			props.children = [initChildren(children)];
-  		} else {
-  			props.children = undefined;
-  		}
+  		props.children = getFlattenChildren(props.children, initChildren);
   		setProps(node, props);
   		appendNode(parentNode, node);
   		this.attachRef(node);
@@ -924,7 +896,6 @@
   		var newProps = newVelem.props;
   		var oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html;
   		var children = props.children;
-  		var newChildren = newProps.children;
   		if (oldHtml == null && children) {
   			var childNodes = node.childNodes;
   			var initNewChildren = function initNewChildren(newVchild, index) {
@@ -937,13 +908,7 @@
   				}
   				return newVchild;
   			};
-  			if (isArr(newChildren)) {
-  				newProps.children = flattenChildren(newChildren, initNewChildren);
-  			} else if (!isUndefined(newChildren) && !isBln(newChildren)) {
-  				newProps.children = [initNewChildren(newChildren, 0)];
-  			} else {
-  				newProps.children = undefined;
-  			}
+  			newProps.children = getFlattenChildren(newProps.children, initNewChildren);
   			var childrenLen = children.length;
   			var newChildrenLen = newProps.children && newProps.children.length || 0;
   			// destroy old children not in the newChildren
@@ -959,13 +924,7 @@
   				newVchild.initTree(node, parentContext);
   				return newVchild;
   			};
-  			if (isArr(newChildren)) {
-  				newProps.children = flattenChildren(newChildren, _initNewChildren);
-  			} else if (!isUndefined(newChildren) && !isBln(newChildren)) {
-  				newProps.children = [_initNewChildren(newChildren)];
-  			} else {
-  				newProps.children = undefined;
-  			}
+  			newProps.children = getFlattenChildren(newProps.children, _initNewChildren);
   		}
   		this.updateRef(newVelem, node);
   		return node;
@@ -1272,10 +1231,10 @@
   		var instance = this.instance;
 
   		if (pendingCallbacks.length > 0) {
+  			this.pendingCallbacks = [];
   			eachItem(pendingCallbacks, function (callback) {
   				return callback.call(instance);
   			});
-  			pendingCallbacks.length = 0;
   		}
   	},
   	addCallback: function addCallback(callback) {
@@ -1480,7 +1439,8 @@
   	var id = container[COMPONENT_ID] || (container[COMPONENT_ID] = getUid());
   	var argsCache = pendingRendering[id];
 
-  	// component lify cycle method maybe call root rendering, should bundle them and render by only one time
+  	// component lify cycle method maybe call root rendering
+  	// should bundle them and render by only one time
   	if (argsCache) {
   		if (argsCache === TRUE) {
   			pendingRendering[id] = argsCache = [vtree, callback, parentContext];
@@ -1518,7 +1478,7 @@
 
   	updateQueue.batchUpdate();
 
-  	if (isFn(callback)) {
+  	if (callback) {
   		callback.call(result);
   	}
 
@@ -1630,7 +1590,7 @@
   		data.isEqual = data.child === child;
   		var key = data.key = getKey(child, index);
   		if (keyMap.hasOwnProperty(key)) {
-  			keyMap[key] = keyMap[key] + 1;
+  			keyMap[key] += 1;
   		} else {
   			keyMap[key] = 0;
   		}

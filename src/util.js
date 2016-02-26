@@ -28,19 +28,6 @@ export let pipe = (fn1, fn2) => {
 	}
 }
 
-// export let flattenChildren = (list, iteratee, record) => {
-// 	record = record || { index: 0 }
-// 	for (let i = 0, len = list.length; i < len; i++) {
-// 		let item = list[i]
-// 		if (isArr(item)) {
-// 			flattenChildren(item, iteratee, record)
-// 		} else if (!isUndefined(item) && !isBln(item)) {
-// 			iteratee(item, record.index)
-// 			record.index += 1
-// 		}
-// 	}
-// }
-
 export let flattenChildren = (list, iteratee) => flat(list, iteratee, [])
 
 let flat = (list, iteratee, res) => {
@@ -48,7 +35,7 @@ let flat = (list, iteratee, res) => {
     let i = -1
 
     while (len--) {
-        var cur = list[++i]
+        let cur = list[++i]
         if (isArr(cur)) {
             flat(cur, iteratee, res)
         } else if (!isUndefined(cur) && !isBln(cur)) {
@@ -75,33 +62,18 @@ export let mapValue = (obj, iteratee) => {
 
 export let mapKey = (oldObj, newObj, iteratee) => {
 	let keyMap = {}
-	let key
-	for (key in oldObj) {
+	for (let key in oldObj) {
 		if (oldObj.hasOwnProperty(key)) {
 			keyMap[key] = true
 			iteratee(key)
 		}
 	}
-	for (key in newObj) {
+	for (let key in newObj) {
 		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
 			iteratee(key)
 		}
 	}
 }
-
-// export let extend = function(target) {
-// 	for (let i = 1, len = arguments.length; i < len; i++) {
-// 		let source = arguments[i]
-// 		if (source != null) {
-// 			for (let key in source) {
-// 				if (source.hasOwnProperty(key) && !isUndefined(source[key])) {
-// 					target[key] = source[key]
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return target
-// }
 
 export function extend(to, from) {
     if (!from) {

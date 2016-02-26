@@ -116,6 +116,15 @@ export function Velem(type, props) {
 	this.props = props
 }
 
+
+let getFlattenChildren = (children, iteratee) => {
+    if (_.isArr(children)) {
+        return _.flattenChildren(children, iteratee)
+    } else if (!_.isUndefined(children) && !_.isBln(children)) {
+        return [iteratee(children, 0)]
+    }
+}
+
 Velem.prototype = new Vtree({
 	vtype: VNODE_TYPE.ELEMENT,
 	initTree(parentNode, parentContext) {
@@ -126,19 +135,12 @@ Velem.prototype = new Vtree({
 		} else {
 			node = document.createElement(type)
 		}
-		let { children } = props
 		let initChildren = vchild => {
 		    vchild = getVnode(vchild)
 		    vchild.initTree(node, parentContext)
 		    return vchild
 		}
-		if (_.isArr(children)) {
-			props.children = _.flattenChildren(children, initChildren)
-		} else if (!_.isUndefined(children) && !_.isBln(children)) {
-			props.children = [initChildren(children)]
-		} else {
-			props.children = undefined
-		}
+		props.children = getFlattenChildren(props.children, initChildren)
 		_.setProps(node, props)
 		appendNode(parentNode, node)
 		this.attachRef(node)
@@ -164,7 +166,6 @@ Velem.prototype = new Vtree({
 		let newProps = newVelem.props
 		let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
 		let children = props.children
-		var newChildren = newProps.children
 		if (oldHtml == null && children) {
 			var childNodes = node.childNodes
 			var initNewChildren = (newVchild, index) => {
@@ -177,13 +178,7 @@ Velem.prototype = new Vtree({
 				}
 				return newVchild
 			}
-			if (_.isArr(newChildren)) {
-				newProps.children = _.flattenChildren(newChildren, initNewChildren)
-			} else if (!_.isUndefined(newChildren) && !_.isBln(newChildren)) {
-				newProps.children = [initNewChildren(newChildren, 0)]
-			} else {
-				newProps.children = undefined
-			}
+			newProps.children = getFlattenChildren(newProps.children, initNewChildren)
 			var childrenLen = children.length
 			var newChildrenLen = newProps.children && newProps.children.length || 0
 			// destroy old children not in the newChildren
@@ -199,13 +194,7 @@ Velem.prototype = new Vtree({
 				newVchild.initTree(node, parentContext)
 				return newVchild
 			}
-			if (_.isArr(newChildren)) {
-				newProps.children = _.flattenChildren(newChildren, initNewChildren)
-			} else if (!_.isUndefined(newChildren) && !_.isBln(newChildren)) {
-				newProps.children = [initNewChildren(newChildren)]
-			} else {
-				newProps.children = undefined
-			}
+			newProps.children = getFlattenChildren(newProps.children, initNewChildren)
 		}
 		this.updateRef(newVelem, node)
 		return node

@@ -33,7 +33,7 @@ export let map = (children, iteratee, context) => {
 		data.isEqual = data.child === child
 		let key = data.key = getKey(child, index)
 		if (keyMap.hasOwnProperty(key)) {
-			keyMap[key] = keyMap[key] + 1
+			keyMap[key] += 1
 		} else {
 			keyMap[key] = 0
 		}

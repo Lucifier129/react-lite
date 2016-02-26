@@ -12,7 +12,8 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	let id = container[COMPONENT_ID] || (container[COMPONENT_ID] = _.getUid())
 	let argsCache = pendingRendering[id]
 
-	// component lify cycle method maybe call root rendering, should bundle them and render by only one time
+	// component lify cycle method maybe call root rendering
+	// should bundle them and render by only one time
 	if (argsCache) {
 		if (argsCache === TRUE) {
 			pendingRendering[id] = argsCache = [vtree, callback, parentContext]
@@ -50,7 +51,7 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 
 	updateQueue.batchUpdate()
 
-	if (_.isFn(callback)) {
+	if (callback) {
 		callback.call(result)
 	}
 	

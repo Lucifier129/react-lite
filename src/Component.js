@@ -90,8 +90,8 @@ Updater.prototype = {
 	clearCallbacks() {
 		let { pendingCallbacks, instance } = this
 		if (pendingCallbacks.length > 0) {
+			this.pendingCallbacks = []
 			_.eachItem(pendingCallbacks, callback => callback.call(instance))
-			pendingCallbacks.length = 0
 		}
 	},
 	addCallback(callback) {

@@ -46,16 +46,6 @@
 
 	'use strict';
 
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 	if (typeof requestAnimationFrame === 'undefined') {
 		window.requestAnimationFrame = function (fn) {
 			return setTimeout(fn, 100 / 6);
@@ -344,125 +334,76 @@
 	};
 
 	var num = 10;
+	update();
 
-	var TestRootUpdateAtDidMount = (function (_React$Component) {
-		_inherits(TestRootUpdateAtDidMount, _React$Component);
+	// class TestRootUpdateAtDidMount extends React.Component {
+	// 	componentDidMount() {
+	// 		console.log('TestRootUpdateAtDidMount didMount')
+	// 		updateName('TestRootUpdateAtDidMount1', () => console.log('TestRootUpdateAtDidMount1 done'))
+	// 		updateName('TestRootUpdateAtDidMount2', () => console.log('TestRootUpdateAtDidMount2 done'))
+	// 		updateName('TestRootUpdateAtDidMount3', () => console.log('TestRootUpdateAtDidMount3 done'))
+	// 	}
+	// 	render() {
+	// 		let { props } = this
+	// 		console.log('render count', props.name)
+	// 		return <div>{props.name} asdfsdf</div>
+	// 	}
+	// }
 
-		function TestRootUpdateAtDidMount() {
-			_classCallCheck(this, TestRootUpdateAtDidMount);
+	// class TestRootUpdateAtDidMountWrapper extends React.Component {
+	// 	state = {
+	// 		text: 'TestRootUpdateAtDidMountWrapper text'
+	// 	};
+	// 	componentDidMount() {
+	// 		console.log('TestRootUpdateAtDidMountWrapper didMount')
+	// 		this.setState({
+	// 			text: 'change at didMount'
+	// 		})
+	// 		this.setState({
+	// 			text: 'change at didMount1'
+	// 		})
+	// 		updateName('TestRootUpdateAtDidMountWrapper')
+	// 	}
+	// 	render() {
+	// 		let { props } = this
+	// 		let children = testCount++ > 0 ? <TestRootUpdateAtDidMount name={props.name} /> : 'init'
+	// 		return (<div>
+	// 					{this.state.text + ' ' + (this.props.name || 'default name')}
+	// 					{children}
+	// 				</div>)
+	// 	}
+	// }
 
-			_get(Object.getPrototypeOf(TestRootUpdateAtDidMount.prototype), 'constructor', this).apply(this, arguments);
-		}
+	// let testCount = 0
 
-		_createClass(TestRootUpdateAtDidMount, [{
-			key: 'componentDidMount',
-			value: function componentDidMount() {
-				console.log('TestRootUpdateAtDidMount didMount');
-				updateName('TestRootUpdateAtDidMount1', function () {
-					return console.log('TestRootUpdateAtDidMount1 done');
-				});
-				updateName('TestRootUpdateAtDidMount2', function () {
-					return console.log('TestRootUpdateAtDidMount2 done');
-				});
-				updateName('TestRootUpdateAtDidMount3', function () {
-					return console.log('TestRootUpdateAtDidMount3 done');
-				});
-			}
-		}, {
-			key: 'render',
-			value: function render() {
-				var props = this.props;
+	// let Root = props => {
 
-				console.log('render count', props.name);
-				return React.createElement(
-					'div',
-					null,
-					props.name,
-					' asdfsdf'
-				);
-			}
-		}]);
+	// 	return <div className="root"><p>placeholder</p><TestRootUpdateAtDidMountWrapper {...props} /></div>
+	// }
 
-		return TestRootUpdateAtDidMount;
-	})(React.Component);
+	// var globalState = {
+	// 	name: 'init'
+	// }
 
-	var TestRootUpdateAtDidMountWrapper = (function (_React$Component2) {
-		_inherits(TestRootUpdateAtDidMountWrapper, _React$Component2);
+	// var updateName = (name, callback) => {
+	// 	console.log('updateName', name)
+	// 	globalState = {
+	// 		...globalState,
+	// 		name
+	// 	}
+	// 	renderTest(callback)
+	// }
 
-		function TestRootUpdateAtDidMountWrapper() {
-			_classCallCheck(this, TestRootUpdateAtDidMountWrapper);
+	// let renderTest = (callback) => {
+	// 	React.render(
+	// 		<Root {...globalState} />,
+	// 		document.getElementById('container'),
+	// 		callback
+	// 	)
+	// }
 
-			_get(Object.getPrototypeOf(TestRootUpdateAtDidMountWrapper.prototype), 'constructor', this).apply(this, arguments);
-
-			this.state = {
-				text: 'TestRootUpdateAtDidMountWrapper text'
-			};
-		}
-
-		_createClass(TestRootUpdateAtDidMountWrapper, [{
-			key: 'componentDidMount',
-			value: function componentDidMount() {
-				console.log('TestRootUpdateAtDidMountWrapper didMount');
-				this.setState({
-					text: 'change at didMount'
-				});
-				this.setState({
-					text: 'change at didMount1'
-				});
-				updateName('TestRootUpdateAtDidMountWrapper');
-			}
-		}, {
-			key: 'render',
-			value: function render() {
-				var props = this.props;
-
-				var children = testCount++ > 0 ? React.createElement(TestRootUpdateAtDidMount, { name: props.name }) : 'init';
-				return React.createElement(
-					'div',
-					null,
-					this.state.text + ' ' + (this.props.name || 'default name'),
-					children
-				);
-			}
-		}]);
-
-		return TestRootUpdateAtDidMountWrapper;
-	})(React.Component);
-
-	var testCount = 0;
-
-	var Root = function Root(props) {
-
-		return React.createElement(
-			'div',
-			{ className: 'root' },
-			React.createElement(
-				'p',
-				null,
-				'placeholder'
-			),
-			React.createElement(TestRootUpdateAtDidMountWrapper, props)
-		);
-	};
-
-	var globalState = {
-		name: 'init'
-	};
-
-	var updateName = function updateName(name, callback) {
-		console.log('updateName', name);
-		globalState = _extends({}, globalState, {
-			name: name
-		});
-		renderTest(callback);
-	};
-
-	var renderTest = function renderTest(callback) {
-		React.render(React.createElement(Root, globalState), document.getElementById('container'), callback);
-	};
-
-	updateName('init');
-	updateName('update');
+	// updateName('init')
+	// updateName('update')
 
 /***/ }
 /******/ ]);
