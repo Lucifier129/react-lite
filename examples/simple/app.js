@@ -395,7 +395,7 @@
 			_get(Object.getPrototypeOf(TestRootUpdateAtDidMountWrapper.prototype), 'constructor', this).apply(this, arguments);
 
 			this.state = {
-				text: 'TestRootUpdateAtDidMount'
+				text: 'TestRootUpdateAtDidMountWrapper text'
 			};
 		}
 
@@ -403,10 +403,13 @@
 			key: 'componentDidMount',
 			value: function componentDidMount() {
 				console.log('TestRootUpdateAtDidMountWrapper didMount');
-				updateName('TestRootUpdateAtDidMountWrapper');
 				this.setState({
 					text: 'change at didMount'
 				});
+				this.setState({
+					text: 'change at didMount1'
+				});
+				updateName('TestRootUpdateAtDidMountWrapper');
 			}
 		}, {
 			key: 'render',
@@ -447,6 +450,7 @@
 	};
 
 	var updateName = function updateName(name, callback) {
+		console.log('updateName', name);
 		globalState = _extends({}, globalState, {
 			name: name
 		});

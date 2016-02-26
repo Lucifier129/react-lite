@@ -1020,7 +1020,9 @@ VstatelessComponent.prototype = new Vtree({
 
 var setRefs = noop$2;
 var handleVnodeWithRef = function handleVnodeWithRef(vnode) {
-	setRefs(vnode);
+	if (setRefs !== noop$2) {
+		setRefs(vnode);
+	}
 };
 var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
 	var context = {};
@@ -1059,17 +1061,21 @@ var renderComponent = function renderComponent(component, parentContext) {
 	return vtree;
 };
 
-var didMountComponents = [];
-var callDidMount = function callDidMount(store) {
-	return store.vcomponent.didMount(store.node);
-};
-var clearDidMount = function clearDidMount() {
-	var components = didMountComponents;
-	if (components.length === 0) {
+var pendingComponents = [];
+var clearPendingComponents = function clearPendingComponents() {
+	var components = pendingComponents;
+	var len = components.length;
+	if (!len) {
 		return;
 	}
-	didMountComponents = [];
-	eachItem(components, callDidMount);
+	pendingComponents = [];
+	for (var i = 0; i < len; i += 1) {
+		var component = components[i];
+		var updater = component.$updater;
+		component.componentDidMount();
+		updater.isPending = false;
+		updater.emitUpdate();
+	}
 };
 
 function Vcomponent(type, props) {
@@ -1094,7 +1100,7 @@ Vcomponent.prototype = new Vtree({
 		updater.isPending = true;
 		component.props = component.props || props;
 		component.componentWillMount();
-		updatePropsAndState(component, component.props, updater.getState(), component.context);
+		component.state = updater.getState();
 		var vtree = renderComponent(component, parentContext);
 		var node = vtree.initTree(parentNode, vtree.context);
 		node.cache = node.cache || {};
@@ -1102,16 +1108,9 @@ Vcomponent.prototype = new Vtree({
 		cache.vtree = vtree;
 		cache.node = node;
 		cache.isMounted = true;
-		didMountComponents.push({ node: node, vcomponent: this });
-		return node;
-	},
-	didMount: function didMount(node) {
-		var component = node.cache[this.id];
-		var updater = component.$updater;
-		component.componentDidMount();
-		updater.isPending = false;
+		pendingComponents.push(component);
 		this.attachRef(component);
-		updater.emitUpdate();
+		return node;
 	},
 	destroyTree: function destroyTree(node) {
 		var id = this.id;
@@ -1180,19 +1179,17 @@ var updateQueue = {
 	batchUpdate: function batchUpdate() {
 		this.isPending = true;
 		/*
-    each updater.update may add new updater to updateQueue
-    clear them with a loop
-  		 event bubbles from bottom-level to top-level
+   each updater.update may add new updater to updateQueue
+   clear them with a loop
+   event bubbles from bottom-level to top-level
    reverse the updater order can merge some props and state and reduce the refresh times
    see Updater.update method below to know why
   */
 		var updaters = this.updaters;
 
-		while (updaters.length) {
-			var updater = updaters.pop();
-			if (updater) {
-				updater.update();
-			}
+		var updater = undefined;
+		while (updater = updaters.pop()) {
+			updater.update();
 		}
 		this.isPending = false;
 	}
@@ -1335,7 +1332,7 @@ Component.prototype = {
 		}
 		$cache.vtree = nextVtree;
 		$cache.node = newNode;
-		clearDidMount();
+		clearPendingComponents();
 		this.componentDidUpdate(props, state, context);
 		if (callback) {
 			callback.call(this);
@@ -1470,17 +1467,19 @@ var createSyntheticEvent = function createSyntheticEvent(nativeEvent) {
 	return syntheticEvent;
 };
 
-var cache = {};
-var store = {};
+var pendingRendering = {};
+var vtreeStore = {};
 var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container, callback, parentContext) {
 	if (!vtree) {
 		throw new Error('cannot render ' + vtree + ' to container');
 	}
 	var id = container[COMPONENT_ID] || (container[COMPONENT_ID] = getUid());
-	var argsCache = cache[id];
+	var argsCache = pendingRendering[id];
+
+	// component lify cycle method maybe call root rendering, should bundle them and render by only one time
 	if (argsCache) {
 		if (argsCache === TRUE) {
-			cache[id] = argsCache = [vtree, callback, parentContext];
+			pendingRendering[id] = argsCache = [vtree, callback, parentContext];
 		} else {
 			argsCache[0] = vtree;
 			argsCache[2] = parentContext;
@@ -1490,19 +1489,21 @@ var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container,
 		}
 		return;
 	}
-	cache[id] = TRUE;
-	if (store[id]) {
-		store[id].updateTree(container.firstChild, vtree, container, parentContext);
+
+	pendingRendering[id] = TRUE;
+	if (vtreeStore[id]) {
+		vtreeStore[id].updateTree(container.firstChild, vtree, container, parentContext);
 	} else {
 		container.innerHTML = '';
 		vtree.initTree(container, parentContext);
 	}
-	store[id] = vtree;
-	clearDidMount();
+	vtreeStore[id] = vtree;
+	updateQueue.isPending = true;
+	clearPendingComponents();
+	argsCache = pendingRendering[id];
+	delete pendingRendering[id];
 
 	var result = null;
-	argsCache = cache[id];
-	delete cache[id];
 	if (isArr(argsCache)) {
 		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2]);
 	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
@@ -1510,6 +1511,8 @@ var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container,
 	} else if (vtree.vtype === VNODE_TYPE.COMPONENT) {
 		result = container.firstChild.cache[vtree.id];
 	}
+
+	updateQueue.batchUpdate();
 
 	if (isFn(callback)) {
 		callback.call(result);
@@ -1532,9 +1535,9 @@ var unmountComponentAtNode = function unmountComponentAtNode(container) {
 		throw new Error('expect node');
 	}
 	var id = container[COMPONENT_ID];
-	if (store.hasOwnProperty(id)) {
-		store[id].destroyTree(container.firstChild);
-		delete store[id];
+	if (vtreeStore[id]) {
+		vtreeStore[id].destroyTree(container.firstChild);
+		delete vtreeStore[id];
 		return true;
 	}
 	return false;

@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { renderComponent, clearDidMount } from './virtual-dom'
+import { renderComponent, clearPendingComponents } from './virtual-dom'
 
 export let updateQueue = {
 	updaters: [],
@@ -10,19 +10,16 @@ export let updateQueue = {
 	batchUpdate() {
 		this.isPending = true
 		/*
-		  each updater.update may add new updater to updateQueue
-		  clear them with a loop
-
+		 each updater.update may add new updater to updateQueue
+		 clear them with a loop
 		 event bubbles from bottom-level to top-level
 		 reverse the updater order can merge some props and state and reduce the refresh times
 		 see Updater.update method below to know why
 		*/
 		let { updaters } = this
-		while (updaters.length) {
-			let updater = updaters.pop()
-			if (updater) {
-				updater.update()
-			}
+		let updater
+		while (updater = updaters.pop()) {
+			updater.update()
 		}
 		this.isPending = false
 	}
@@ -151,7 +148,7 @@ Component.prototype = {
 		}
 		$cache.vtree = nextVtree
 		$cache.node = newNode
-		clearDidMount()
+		clearPendingComponents()
 		this.componentDidUpdate(props, state, context)
 		if (callback) {
 			callback.call(this)

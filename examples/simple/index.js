@@ -251,14 +251,17 @@ class TestRootUpdateAtDidMount extends React.Component {
 
 class TestRootUpdateAtDidMountWrapper extends React.Component {
 	state = {
-		text: 'TestRootUpdateAtDidMount'
+		text: 'TestRootUpdateAtDidMountWrapper text'
 	};
 	componentDidMount() {
 		console.log('TestRootUpdateAtDidMountWrapper didMount')
-		updateName('TestRootUpdateAtDidMountWrapper')
 		this.setState({
 			text: 'change at didMount'
 		})
+		this.setState({
+			text: 'change at didMount1'
+		})
+		updateName('TestRootUpdateAtDidMountWrapper')
 	}
 	render() {
 		let { props } = this
@@ -283,6 +286,7 @@ var globalState = {
 }
 
 var updateName = (name, callback) => {
+	console.log('updateName', name)
 	globalState = {
 		...globalState,
 		name

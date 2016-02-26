@@ -1,19 +1,21 @@
 import * as _ from './util'
 import { COMPONENT_ID, VNODE_TYPE, TRUE } from './constant'
-import { clearDidMount } from './virtual-dom'
+import { clearPendingComponents } from './virtual-dom'
+import { updateQueue } from './Component' 
 
-let didMounts = []
-let cache = {}
-let store = {}
+let pendingRendering = {}
+let vtreeStore = {}
 let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	if (!vtree) {
 		throw new Error(`cannot render ${ vtree } to container`)
 	}
 	let id = container[COMPONENT_ID] || (container[COMPONENT_ID] = _.getUid())
-	let argsCache = cache[id]
+	let argsCache = pendingRendering[id]
+
+	// component lify cycle method maybe call root rendering, should bundle them and render by only one time
 	if (argsCache) {
 		if (argsCache === TRUE) {
-			cache[id] = argsCache = [vtree, callback, parentContext]
+			pendingRendering[id] = argsCache = [vtree, callback, parentContext]
 		} else {
 			argsCache[0] = vtree
 			argsCache[2] = parentContext
@@ -23,19 +25,21 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 		}
 		return
 	}
-	cache[id] = TRUE
-	if (store[id]) {
-		store[id].updateTree(container.firstChild, vtree, container, parentContext, didMounts)
+
+	pendingRendering[id] = TRUE
+	if (vtreeStore[id]) {
+		vtreeStore[id].updateTree(container.firstChild, vtree, container, parentContext)
 	} else {
 		container.innerHTML = ''
-		vtree.initTree(container, parentContext, didMounts)
+		vtree.initTree(container, parentContext)
 	}
-	store[id] = vtree
-	clearDidMount()	
+	vtreeStore[id] = vtree
+	updateQueue.isPending = true
+	clearPendingComponents()
+	argsCache = pendingRendering[id]
+	delete pendingRendering[id]
 
 	let result = null
-	argsCache = cache[id]
-	delete cache[id]
 	if (_.isArr(argsCache)) {
 		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2])
 	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
@@ -43,6 +47,8 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	} else if (vtree.vtype === VNODE_TYPE.COMPONENT) {
 		result = container.firstChild.cache[vtree.id]
 	}
+
+	updateQueue.batchUpdate()
 
 	if (_.isFn(callback)) {
 		callback.call(result)
@@ -67,9 +73,9 @@ export let unmountComponentAtNode = container => {
 		throw new Error('expect node')
 	}
 	let id = container[COMPONENT_ID]
-	if (store.hasOwnProperty(id)) {
-		store[id].destroyTree(container.firstChild)
-		delete store[id]
+	if (vtreeStore[id]) {
+		vtreeStore[id].destroyTree(container.firstChild)
+		delete vtreeStore[id]
 		return true
 	}
 	return false
