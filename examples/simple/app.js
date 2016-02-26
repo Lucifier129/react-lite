@@ -46,6 +46,16 @@
 
 	'use strict';
 
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 	if (typeof requestAnimationFrame === 'undefined') {
 		window.requestAnimationFrame = function (fn) {
 			return setTimeout(fn, 100 / 6);
@@ -334,33 +344,121 @@
 	};
 
 	var num = 10;
-	var reuslt1 = update(num);
-	// var Example = props =>
-	//   <div onClick={event => console.log('outer')}>
-	//     <span onClick={event => {
-	//     	event.stopImmediatePropagation();
-	//     	console.log('inner');
-	//     }} >asdfasdf</span>
-	//   </div>;
 
-	// React.render(
-	//  <Example />,
-	//   document.getElementById('container')
-	// )
+	var TestRootUpdateAtDidMount = (function (_React$Component) {
+		_inherits(TestRootUpdateAtDidMount, _React$Component);
 
-	// var result2 = React.render(
-	// 	wrap,
-	// 	document.getElementById('root')
-	// )
+		function TestRootUpdateAtDidMount() {
+			_classCallCheck(this, TestRootUpdateAtDidMount);
 
-	// console.log(reuslt1, result2, reuslt1 === result2)
-	// setInterval(() => {
-	// 	update(num++)
-	// }, 1000)
+			_get(Object.getPrototypeOf(TestRootUpdateAtDidMount.prototype), 'constructor', this).apply(this, arguments);
+		}
 
-	// setTimeout(() => {
-	// 	React.unmountComponentAtNode(document.getElementById('container'))
-	// }, 1000)
+		_createClass(TestRootUpdateAtDidMount, [{
+			key: 'componentDidMount',
+			value: function componentDidMount() {
+				console.log('TestRootUpdateAtDidMount didMount');
+				updateName('TestRootUpdateAtDidMount1', function () {
+					return console.log('TestRootUpdateAtDidMount1 done');
+				});
+				updateName('TestRootUpdateAtDidMount2', function () {
+					return console.log('TestRootUpdateAtDidMount2 done');
+				});
+				updateName('TestRootUpdateAtDidMount3', function () {
+					return console.log('TestRootUpdateAtDidMount3 done');
+				});
+			}
+		}, {
+			key: 'render',
+			value: function render() {
+				var props = this.props;
+
+				console.log('render count', props.name);
+				return React.createElement(
+					'div',
+					null,
+					props.name,
+					' asdfsdf'
+				);
+			}
+		}]);
+
+		return TestRootUpdateAtDidMount;
+	})(React.Component);
+
+	var TestRootUpdateAtDidMountWrapper = (function (_React$Component2) {
+		_inherits(TestRootUpdateAtDidMountWrapper, _React$Component2);
+
+		function TestRootUpdateAtDidMountWrapper() {
+			_classCallCheck(this, TestRootUpdateAtDidMountWrapper);
+
+			_get(Object.getPrototypeOf(TestRootUpdateAtDidMountWrapper.prototype), 'constructor', this).apply(this, arguments);
+
+			this.state = {
+				text: 'TestRootUpdateAtDidMount'
+			};
+		}
+
+		_createClass(TestRootUpdateAtDidMountWrapper, [{
+			key: 'componentDidMount',
+			value: function componentDidMount() {
+				console.log('TestRootUpdateAtDidMountWrapper didMount');
+				updateName('TestRootUpdateAtDidMountWrapper');
+				this.setState({
+					text: 'change at didMount'
+				});
+			}
+		}, {
+			key: 'render',
+			value: function render() {
+				var props = this.props;
+
+				var children = testCount++ > 0 ? React.createElement(TestRootUpdateAtDidMount, { name: props.name }) : 'init';
+				return React.createElement(
+					'div',
+					null,
+					this.state.text + ' ' + (this.props.name || 'default name'),
+					children
+				);
+			}
+		}]);
+
+		return TestRootUpdateAtDidMountWrapper;
+	})(React.Component);
+
+	var testCount = 0;
+
+	var Root = function Root(props) {
+
+		return React.createElement(
+			'div',
+			{ className: 'root' },
+			React.createElement(
+				'p',
+				null,
+				'placeholder'
+			),
+			React.createElement(TestRootUpdateAtDidMountWrapper, props)
+		);
+	};
+
+	var globalState = {
+		name: 'init'
+	};
+
+	var updateName = function updateName(name, callback) {
+		globalState = _extends({}, globalState, {
+			name: name
+		});
+		renderTest(callback);
+	};
+
+	var renderTest = function renderTest(callback) {
+		React.render(React.createElement(Root, globalState), document.getElementById('container'), callback);
+	};
+
+	updateName('init');
+	updateName('update');
 
 /***/ }
 /******/ ]);

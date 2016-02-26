@@ -2,7 +2,7 @@
   key/value configs
 */
 
-const TRUE = true
+export const TRUE = true
 const xlink = 'http://www.w3.org/1999/xlink'
 const xml = 'http://www.w3.org/XML/1998/namespace'
 

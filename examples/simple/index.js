@@ -232,31 +232,71 @@ let update = count => {
 }
 
 let num = 10
-var reuslt1 = update(num)
-// var Example = props =>
-//   <div onClick={event => console.log('outer')}>
-//     <span onClick={event => {
-//     	event.stopImmediatePropagation();
-//     	console.log('inner');
-//     }} >asdfasdf</span>
-//   </div>;
-    
-// React.render(
-//  <Example />,
-//   document.getElementById('container')
-// )
 
 
-// var result2 = React.render(
-// 	wrap,
-// 	document.getElementById('root')
-// )
 
-// console.log(reuslt1, result2, reuslt1 === result2)
-// setInterval(() => {
-// 	update(num++)
-// }, 1000)
+class TestRootUpdateAtDidMount extends React.Component {
+	componentDidMount() {
+		console.log('TestRootUpdateAtDidMount didMount')
+		updateName('TestRootUpdateAtDidMount1', () => console.log('TestRootUpdateAtDidMount1 done'))
+		updateName('TestRootUpdateAtDidMount2', () => console.log('TestRootUpdateAtDidMount2 done'))
+		updateName('TestRootUpdateAtDidMount3', () => console.log('TestRootUpdateAtDidMount3 done'))
+	}
+	render() {
+		let { props } = this
+		console.log('render count', props.name)
+		return <div>{props.name} asdfsdf</div>
+	}
+}
 
-// setTimeout(() => {
-// 	React.unmountComponentAtNode(document.getElementById('container'))
-// }, 1000)
+class TestRootUpdateAtDidMountWrapper extends React.Component {
+	state = {
+		text: 'TestRootUpdateAtDidMount'
+	};
+	componentDidMount() {
+		console.log('TestRootUpdateAtDidMountWrapper didMount')
+		updateName('TestRootUpdateAtDidMountWrapper')
+		this.setState({
+			text: 'change at didMount'
+		})
+	}
+	render() {
+		let { props } = this
+		let children = testCount++ > 0 ? <TestRootUpdateAtDidMount name={props.name} /> : 'init'
+		return (<div>
+					{this.state.text + ' ' + (this.props.name || 'default name')}
+					{children}
+				</div>)
+	}
+}
+
+let testCount = 0
+
+
+let Root = props => {
+	
+	return <div className="root"><p>placeholder</p><TestRootUpdateAtDidMountWrapper {...props} /></div>
+}
+
+var globalState = {
+	name: 'init'
+}
+
+var updateName = (name, callback) => {
+	globalState = {
+		...globalState,
+		name
+	}
+	renderTest(callback)
+}
+
+let renderTest = (callback) => {
+	React.render(
+		<Root {...globalState} />,
+		document.getElementById('container'),
+		callback
+	)
+}
+
+updateName('init')
+updateName('update')

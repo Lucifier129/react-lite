@@ -1186,7 +1186,7 @@
   		/*
       each updater.update may add new updater to updateQueue
       clear them with a loop
-    	 event bubbles from bottom-level to top-level
+    		 event bubbles from bottom-level to top-level
      reverse the updater order can merge some props and state and reduce the refresh times
      see Updater.update method below to know why
     */
@@ -1474,16 +1474,30 @@
   	return syntheticEvent;
   };
 
+  var cache = {};
   var store = {};
   var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container, callback, parentContext) {
   	if (!vtree) {
   		throw new Error('cannot render ' + vtree + ' to container');
   	}
-  	var id = container[COMPONENT_ID];
-  	if (store.hasOwnProperty(id)) {
+  	var id = container[COMPONENT_ID] || (container[COMPONENT_ID] = getUid());
+  	var argsCache = cache[id];
+  	if (argsCache) {
+  		if (argsCache === TRUE) {
+  			cache[id] = argsCache = [vtree, callback, parentContext];
+  		} else {
+  			argsCache[0] = vtree;
+  			argsCache[2] = parentContext;
+  			if (callback) {
+  				argsCache[1] = argsCache[1] ? pipe(argsCache[1], callback) : callback;
+  			}
+  		}
+  		return;
+  	}
+  	cache[id] = TRUE;
+  	if (store[id]) {
   		store[id].updateTree(container.firstChild, vtree, container, parentContext);
   	} else {
-  		container[COMPONENT_ID] = id = getUid();
   		container.innerHTML = '';
   		vtree.initTree(container, parentContext);
   	}
@@ -1491,13 +1505,14 @@
   	clearDidMount();
 
   	var result = null;
-  	switch (vtree.vtype) {
-  		case VNODE_TYPE.ELEMENT:
-  			result = container.firstChild;
-  			break;
-  		case VNODE_TYPE.COMPONENT:
-  			result = container.firstChild.cache[vtree.id];
-  			break;
+  	argsCache = cache[id];
+  	delete cache[id];
+  	if (isArr(argsCache)) {
+  		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2]);
+  	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
+  		result = container.firstChild;
+  	} else if (vtree.vtype === VNODE_TYPE.COMPONENT) {
+  		result = container.firstChild.cache[vtree.id];
   	}
 
   	if (isFn(callback)) {

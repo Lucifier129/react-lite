@@ -1,31 +1,46 @@
 import * as _ from './util'
-import { COMPONENT_ID, VNODE_TYPE } from './constant'
+import { COMPONENT_ID, VNODE_TYPE, TRUE } from './constant'
 import { clearDidMount } from './virtual-dom'
 
+let cache = {}
 let store = {}
 let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	if (!vtree) {
 		throw new Error(`cannot render ${ vtree } to container`)
 	}
-	let id = container[COMPONENT_ID]
-	if (store.hasOwnProperty(id)) {
+	let id = container[COMPONENT_ID] || (container[COMPONENT_ID] = _.getUid())
+	let argsCache = cache[id]
+	if (argsCache) {
+		if (argsCache === TRUE) {
+			cache[id] = argsCache = [vtree, callback, parentContext]
+		} else {
+			argsCache[0] = vtree
+			argsCache[2] = parentContext
+			if (callback) {
+				argsCache[1] = argsCache[1] ? _.pipe(argsCache[1], callback) : callback
+			}
+		}
+		return
+	}
+	cache[id] = TRUE
+	if (store[id]) {
 		store[id].updateTree(container.firstChild, vtree, container, parentContext)
 	} else {
-		container[COMPONENT_ID] = id = _.getUid()
 		container.innerHTML = ''
 		vtree.initTree(container, parentContext)
 	}
 	store[id] = vtree
-	clearDidMount()
+	clearDidMount()	
 
 	let result = null
-	switch (vtree.vtype) {
-		case VNODE_TYPE.ELEMENT:
-			result = container.firstChild
-			break
-		case VNODE_TYPE.COMPONENT:
-			result = container.firstChild.cache[vtree.id]
-			break
+	argsCache = cache[id]
+	delete cache[id]
+	if (_.isArr(argsCache)) {
+		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2])
+	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
+		result = container.firstChild
+	} else if (vtree.vtype === VNODE_TYPE.COMPONENT) {
+		result = container.firstChild.cache[vtree.id]
 	}
 
 	if (_.isFn(callback)) {
