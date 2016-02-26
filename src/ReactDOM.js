@@ -2,6 +2,7 @@ import * as _ from './util'
 import { COMPONENT_ID, VNODE_TYPE, TRUE } from './constant'
 import { clearDidMount } from './virtual-dom'
 
+let didMounts = []
 let cache = {}
 let store = {}
 let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
@@ -24,10 +25,10 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	}
 	cache[id] = TRUE
 	if (store[id]) {
-		store[id].updateTree(container.firstChild, vtree, container, parentContext)
+		store[id].updateTree(container.firstChild, vtree, container, parentContext, didMounts)
 	} else {
 		container.innerHTML = ''
-		vtree.initTree(container, parentContext)
+		vtree.initTree(container, parentContext, didMounts)
 	}
 	store[id] = vtree
 	clearDidMount()	

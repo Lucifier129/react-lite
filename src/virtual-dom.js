@@ -60,11 +60,11 @@ Vtree.prototype = {
 			newVtree.attachRef(refValue)
 		}
 	},
-	updateTree(node, newVtree, parentNode, parentContext) {
+	updateTree(node, newVtree, parentNode, parentContext, didMounts) {
 		let newNode = node
 		switch (diff(this, newVtree)) {
 			case DIFF_TYPE.UPDATE:
-				newNode = this.update(node, newVtree, parentNode, parentContext)
+				newNode = this.update(node, newVtree, parentNode, parentContext, didMounts)
 				break
 			case DIFF_TYPE.REMOVE:
 				this.destroyTree(node)
@@ -76,11 +76,12 @@ Vtree.prototype = {
 				removeNode = $removeNode
 				newNode = newVtree.initTree(
 					nextNode => parentNode.replaceChild(nextNode, node),
-					parentContext
+					parentContext,
+					didMounts
 				)
 				break
 			case DIFF_TYPE.CREATE:
-				newNode = newVtree.initTree(parentNode, parentContext)
+				newNode = newVtree.initTree(parentNode, parentContext, didMounts)
 				break
 		}
 		return newNode
@@ -119,7 +120,7 @@ export function Velem(type, props) {
 
 Velem.prototype = new Vtree({
 	vtype: VNODE_TYPE.ELEMENT,
-	initTree(parentNode, parentContext) {
+	initTree(parentNode, parentContext, didMounts) {
 		let { type, props } = this
 		let node
 		if (type === 'svg' || parentNode.namespaceURI === SVGNamespaceURI) {
@@ -130,7 +131,7 @@ Velem.prototype = new Vtree({
 		let { children } = props
 		let initChildren = vchild => {
 		    vchild = getVnode(vchild)
-		    vchild.initTree(node, parentContext)
+		    vchild.initTree(node, parentContext, didMounts)
 		    return vchild
 		}
 		if (_.isArr(children)) {
@@ -160,7 +161,7 @@ Velem.prototype = new Vtree({
 		this.detachRef()
 		removeNode(node)
 	},
-	update(node, newVelem, parentNode, parentContext) {
+	update(node, newVelem, parentNode, parentContext, didMounts) {
 		let { props } = this
 		let newProps = newVelem.props
 		let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
@@ -172,9 +173,9 @@ Velem.prototype = new Vtree({
 				newVchild = getVnode(newVchild)
 				var vchild = children[index]
 				if (vchild) {
-					vchild.updateTree(childNodes[index], newVchild, node, parentContext)
+					vchild.updateTree(childNodes[index], newVchild, node, parentContext, didMounts)
 				} else {
-					newVchild.initTree(node, parentContext)
+					newVchild.initTree(node, parentContext, didMounts)
 				}
 				return newVchild
 			}
@@ -197,7 +198,7 @@ Velem.prototype = new Vtree({
 			_.patchProps(node, props, newProps)
 			let initNewChildren = newVchild => {
 				newVchild = getVnode(newVchild)
-				newVchild.initTree(node, parentContext)
+				newVchild.initTree(node, parentContext, didMounts)
 				return newVchild
 			}
 			if (_.isArr(newChildren)) {
@@ -233,9 +234,9 @@ VstatelessComponent.prototype = new Vtree({
 		}
 		return getVnode(vtree)
 	},
-	initTree(parentNode, parentContext) {
+	initTree(parentNode, parentContext, didMounts) {
 		let vtree = this.renderTree(parentContext)
-		let node = vtree.initTree(parentNode, parentContext)
+		let node = vtree.initTree(parentNode, parentContext, didMounts)
 		node.cache = node.cache || {}
 		node.cache[this.id] = vtree
 		return node
@@ -246,12 +247,12 @@ VstatelessComponent.prototype = new Vtree({
 		delete node.cache[id]
 		vtree.destroyTree(node)
 	},
-	update(node, newVstatelessComponent, parentNode, parentContext) {
+	update(node, newVstatelessComponent, parentNode, parentContext, didMounts) {
 		let id = this.id
 		let vtree = node.cache[id]
 		delete node.cache[id]
 		let newVtree = newVstatelessComponent.renderTree(parentContext)
-		let newNode = vtree.updateTree(node, newVtree, parentNode, parentContext)
+		let newNode = vtree.updateTree(node, newVtree, parentNode, parentContext, didMounts)
 		newNode.cache = newNode.cache || {}
 		newNode.cache[newVstatelessComponent.id] = newVtree
 		if (newNode !== node) {
