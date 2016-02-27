@@ -66,6 +66,7 @@ let dispatchEvent = event => {
 		}
 		target = target.parentNode
 	}
+	updateQueue.isPending = false
 	updateQueue.batchUpdate()
 }
 

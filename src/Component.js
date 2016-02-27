@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { renderComponent, clearPendingComponents } from './virtual-dom'
+import { renderComponent, clearPendingComponents, compareTwoTrees } from './virtual-dom'
 
 export let updateQueue = {
 	updaters: [],
@@ -8,6 +8,9 @@ export let updateQueue = {
 		this.updaters.push(updater)
 	},
 	batchUpdate() {
+		if (this.isPending) {
+			return
+		}
 		this.isPending = true
 		/*
 		 each updater.update may add new updater to updateQueue
@@ -19,7 +22,7 @@ export let updateQueue = {
 		let { updaters } = this
 		let updater
 		while (updater = updaters.pop()) {
-			updater.update()
+			updater.updateComponent()
 		}
 		this.isPending = false
 	}
@@ -40,10 +43,10 @@ Updater.prototype = {
 		this.nextContext = nextContext
 		// receive nextProps!! should update immediately
 		nextProps || !updateQueue.isPending
-		? this.update()
+		? this.updateComponent()
 		: updateQueue.add(this)
 	},
-	update() {
+	updateComponent() {
 		let { instance, pendingStates, nextProps, nextContext } = this
 		if (nextProps || pendingStates.length > 0) {
 			nextProps = nextProps || instance.props
@@ -141,7 +144,7 @@ Component.prototype = {
 		this.props = nextProps
 		this.context = nextContext
 		let nextVtree = renderComponent(this, parentContext)
-		let newNode = vtree.updateTree(node, nextVtree, node.parentNode, nextVtree.context)
+		let newNode = compareTwoTrees(vtree, nextVtree, node, node.parentNode, nextVtree.context)
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {}
 			_.extend(newNode.cache, node.cache)

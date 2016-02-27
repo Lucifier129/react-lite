@@ -28,23 +28,21 @@ export let pipe = (fn1, fn2) => {
 	}
 }
 
-export let flattenChildren = (list, iteratee) => flat(list, iteratee, [])
-
-let flat = (list, iteratee, res) => {
+export let flattenChildren = (list, iteratee, record) => {
     let len = list.length
     let i = -1
+    record = record || []
 
     while (len--) {
-        let cur = list[++i]
-        if (isArr(cur)) {
-            flat(cur, iteratee, res)
-        } else if (!isUndefined(cur) && !isBln(cur)) {
-            res.push(iteratee(cur, res.length) || cur)
+        let item = list[++i]
+        if (isArr(item)) {
+            flattenChildren(item, iteratee, record)
+        } else if (!isUndefined(item) && !isBln(item)) {
+            record.push(iteratee(item, record.length) || item)
         }
     }
-    return res
+    return record
 }
-
 
 export let eachItem = (list, iteratee) => {
 	for (let i = 0, len = list.length; i < len; i++) {

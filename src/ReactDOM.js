@@ -1,7 +1,7 @@
 import * as _ from './util'
 import { COMPONENT_ID, VNODE_TYPE, TRUE } from './constant'
-import { clearPendingComponents } from './virtual-dom'
-import { updateQueue } from './Component' 
+import { clearPendingComponents, compareTwoTrees } from './virtual-dom'
+import { updateQueue } from './Component'
 
 let pendingRendering = {}
 let vtreeStore = {}
@@ -29,14 +29,15 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 
 	pendingRendering[id] = TRUE
 	if (vtreeStore[id]) {
-		vtreeStore[id].updateTree(container.firstChild, vtree, container, parentContext)
+		compareTwoTrees(vtreeStore[id], vtree, container.firstChild, container, parentContext)
 	} else {
 		container.innerHTML = ''
 		vtree.initTree(container, parentContext)
 	}
 	vtreeStore[id] = vtree
+	let isPending = updateQueue.isPending
 	updateQueue.isPending = true
-	clearPendingComponents()
+	clearPendingComponents(true)
 	argsCache = pendingRendering[id]
 	delete pendingRendering[id]
 
@@ -48,14 +49,21 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	} else if (vtree.vtype === VNODE_TYPE.COMPONENT) {
 		result = container.firstChild.cache[vtree.id]
 	}
-
-	updateQueue.batchUpdate()
+	
+	if (!isPending) {
+		updateQueue.isPending = false
+		updateQueue.batchUpdate()
+	}
 
 	if (callback) {
 		callback.call(result)
 	}
 	
 	return result
+}
+
+let updateComponents = component => {
+	component.$updater.updateComponent()
 }
 
 export let render = (vtree, container, callback) => {
