@@ -1,12 +1,12 @@
 import * as _ from './util'
 import { COMPONENT_ID, VNODE_TYPE, TRUE } from './constant'
-import { clearPendingComponents, compareTwoTrees } from './virtual-dom'
+import { initTree, destroyTree, clearPendingComponents, compareTwoTrees } from './virtual-dom'
 import { updateQueue } from './Component'
 
 let pendingRendering = {}
 let vtreeStore = {}
 let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
-	if (!vtree) {
+	if (!vtree.vtype) {
 		throw new Error(`cannot render ${ vtree } to container`)
 	}
 	let id = container[COMPONENT_ID] || (container[COMPONENT_ID] = _.getUid())
@@ -32,7 +32,7 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 		compareTwoTrees(vtreeStore[id], vtree, container.firstChild, container, parentContext)
 	} else {
 		container.innerHTML = ''
-		vtree.initTree(container, parentContext)
+		initTree(vtree, container, parentContext)
 	}
 	vtreeStore[id] = vtree
 	let isPending = updateQueue.isPending
@@ -83,7 +83,7 @@ export let unmountComponentAtNode = container => {
 	}
 	let id = container[COMPONENT_ID]
 	if (vtreeStore[id]) {
-		vtreeStore[id].destroyTree(container.firstChild)
+		destroyTree(vtreeStore[id], container.firstChild)
 		delete vtreeStore[id]
 		return true
 	}

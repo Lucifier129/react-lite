@@ -18,6 +18,7 @@ export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
 export let isStatelessComponent = obj => isFn(obj) && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
+export let hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
 export let noop = () => {}
 export let identity = obj => obj
 
@@ -52,7 +53,7 @@ export let eachItem = (list, iteratee) => {
 
 export let mapValue = (obj, iteratee) => {
 	for (let key in obj) {
-		if (obj.hasOwnProperty(key)) {
+		if (hasOwn(obj, key)) {
 			iteratee(obj[key], key)
 		}
 	}
@@ -61,13 +62,13 @@ export let mapValue = (obj, iteratee) => {
 export let mapKey = (oldObj, newObj, iteratee) => {
 	let keyMap = {}
 	for (let key in oldObj) {
-		if (oldObj.hasOwnProperty(key)) {
+		if (hasOwn(oldObj, key)) {
 			keyMap[key] = true
 			iteratee(key)
 		}
 	}
 	for (let key in newObj) {
-		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
+		if (hasOwn(newObj, key) && keyMap[key] !== true) {
 			iteratee(key)
 		}
 	}
@@ -140,14 +141,18 @@ export let setProp = (elem, key, value) => {
 	}
 }
 export let setProps = (elem, props) => {
-	mapValue(props, (value, key) => {
-		setProp(elem, key, value)
-	})
+	for (let key in props) {
+		if (hasOwn(props, key)) {
+			setProp(elem, key, props[key])
+		}
+	}
 }
-export let removeProps = (elem, oldProps) => {
-	mapValue(oldProps, (oldValue, key) => {
-		removeProp(elem, key, oldValue)
-	})
+export let removeProps = (elem, props) => {
+	for (let key in props) {
+		if (hasOwn(props, key)) {
+			removeProp(elem, key, props[key])
+		}
+	}
 }
 export let removeProp = (elem, key, oldValue) => {
 	key = propAlias[key] || key
@@ -185,6 +190,38 @@ export let removeProp = (elem, key, oldValue) => {
 	}
 }
 
+let $props = null
+let $newProps = null
+let $elem = null
+let $patchProps = key => {
+    if (key === 'children') {
+        return
+    }
+    let value = $newProps[key]
+    let oldValue = shouldUseDOMProp[key] == true
+    ? $elem[key]
+    : $props[key]
+    if (value === oldValue) {
+        return
+    }
+    if (isUndefined(value)) {
+        removeProp($elem, key, oldValue)
+        return
+    }
+    if (isStyleKey(key)) {
+        patchStyle($elem, oldValue, value)
+    } else if (isInnerHTMLKey(key)) {
+        let oldHtml = oldValue && oldValue.__html
+        let html = value && value.__html
+        if (html != null && html !== oldHtml) {
+            $elem.innerHTML = html
+        }
+    } else {
+        setProp($elem, key, value)
+    }
+}
+
+
 export let patchProps = (elem, props, newProps) => {
 	if (props === newProps) {
 		return
@@ -197,31 +234,11 @@ export let patchProps = (elem, props, newProps) => {
 		return
 	}
 
-	mapKey(props, newProps, key => {
-		if (key === 'children') {
-			return
-		}
-		let value = newProps[key]
-		let oldValue = shouldUseDOMProp[key] == true ? elem[key] : props[key]
-		if (value === oldValue) {
-			return
-		}
-		if (isUndefined(value)) {
-			removeProp(elem, key, oldValue)
-			return
-		}
-		if (isStyleKey(key)) {
-			patchStyle(elem, oldValue, value)
-		} else if (isInnerHTMLKey(key)) {
-			let oldHtml = oldValue && oldValue.__html
-			let html = value && value.__html
-			if (html != null && html !== oldHtml) {
-				elem.innerHTML = html
-			}
-		} else {
-			setProp(elem, key, value)
-		}
-	})
+	$elem = elem
+	$props = props
+	$newProps = newProps
+	mapKey(props, newProps, $patchProps)
+	$elem = $props = $newProps = null
 }
 
 export let removeStyle = (elem, style) => {
@@ -229,19 +246,35 @@ export let removeStyle = (elem, style) => {
 		return
 	}
 	let elemStyle = elem.style
-	mapValue(style, (_, key) => {
-		elemStyle[key] = ''
-	})
+	for (let key in style) {
+		if (hasOwn(style, key)) {
+			elemStyle[key] = ''
+		}
+	}
 }
 export let setStyle = (elem, style) => {
 	if (!isObj(style)) {
 		return
 	}
 	let elemStyle = elem.style
-	mapValue(style, (value, key) => {
-		setStyleValue(elemStyle, key, value)
-	})
+	for (let key in style) {
+		if (hasOwn(style, key)) {
+			setStyleValue(elemStyle, key, style[key])
+		}
+	}
 }
+
+let $elemStyle = null
+let $style = null
+let $newStyle = null
+let $patchStyle = key => {
+    let value = $newStyle[key]
+    let oldValue = $style[key]
+    if (value !== oldValue) {
+        setStyleValue($elemStyle, key, value)
+    }
+}
+
 export let patchStyle = (elem, style, newStyle) => {
 	if (style === newStyle) {
 		return
@@ -251,14 +284,11 @@ export let patchStyle = (elem, style, newStyle) => {
 	} else if (newStyle && !style) {
 		setStyle(elem, newStyle)
 	} else {
-		var elemStyle = elem.style
-		mapKey(style, newStyle, key => {
-			let value = newStyle[key]
-			let oldValue = style[key]
-			if (value !== oldValue) {
-				setStyleValue(elemStyle, key, value)
-			}
-		})
+		$elemStyle = elem.style
+		$style = style
+		$newStyle = newStyle
+		mapKey(style, newStyle, $patchStyle)
+		$elemStyle = $style = $newStyle = null
 	}
 }
 
