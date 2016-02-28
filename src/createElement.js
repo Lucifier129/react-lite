@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { createVelem, createVcomponent, createVstatelessComponent, handleVnodeWithRef } from './virtual-dom'
+import { createVelem, createVcomponent, createVstatelessComponent } from './virtual-dom'
 
 export let isValidElement = obj => obj != null && !!obj.vtype
 
@@ -36,7 +36,6 @@ let createElement = (type, props, ...children) => {
 	}
 	let key = null
 	let ref = null
-	let hasRef = false
 	if (props != null) {
 		if (props.key !== undefined) {
 			key = '' + props.key
@@ -45,15 +44,11 @@ let createElement = (type, props, ...children) => {
 		if (props.ref !== undefined) {
 			ref = props.ref
 			delete props.ref
-			hasRef = true
 		}
 	}
 	let vnode = createVnode(type, _.mergeProps(props, children, type.defaultProps))
 	vnode.key = key
 	vnode.ref = ref
-	if (hasRef && createVnode !== createVstatelessComponent) {
-		handleVnodeWithRef(vnode)
-	}
 	return vnode
 }
 

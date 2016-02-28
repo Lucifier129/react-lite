@@ -1,9 +1,9 @@
 import * as _ from './util'
 import { VNODE_TYPE, DIFF_TYPE, SVGNamespaceURI } from './constant'
-import { isValidElement } from './createElement'
 import diff from './diff'
 
 let noop = _.noop
+let refs = null
 
 export let initTree = (vtree, parentNode, parentContext) => {
     let { vtype } = vtree
@@ -77,7 +77,8 @@ let destroyVtext = textNode => {
 export let createVelem = (type, props) => ({
 	vtype: VNODE_TYPE.ELEMENT,
 	type: type,
-	props: props
+	props: props,
+    refs: refs
 })
 
 let initVelem = (velem, parentNode, parentContext) => {
@@ -163,7 +164,6 @@ let destroyVelem = (velem, node) => {
     removeNode(node)
 }
 
-
 let getFlattenChildren = (children, iteratee) => {
     if (_.isArr(children)) {
         return _.flattenChildren(children, iteratee)
@@ -222,7 +222,8 @@ export let createVcomponent = (type, props) => ({
 	id: _.getUid(),
 	vtype: VNODE_TYPE.COMPONENT,
 	type: type,
-	props: props
+	props: props,
+    refs: refs
 })
 
 let initVcomponent = (vcomponent, parentNode, parentContext) => {
@@ -233,8 +234,10 @@ let initVcomponent = (vcomponent, parentNode, parentContext) => {
     cache.parentContext = parentContext
     updater.isPending = true
     component.props = component.props || props
-    component.componentWillMount()
-    component.state = updater.getState()
+    if (component.componentWillMount) {
+        component.componentWillMount()
+        component.state = updater.getState()
+    }
     let vtree = renderComponent(component, parentContext)
     let node = initTree(vtree, parentNode, vtree.context)
     node.cache = node.cache || {}
@@ -262,9 +265,11 @@ let updateVcomponent = (vcomponent, newVcomponent, node, parentNode, parentConte
     delete node.cache[id]
     node.cache[newVcomponent.id] = component
     cache.parentContext = parentContext
-    updater.isPending = true
-    component.componentWillReceiveProps(nextProps, componentContext)
-    updater.isPending = false
+    if (component.componentWillReceiveProps) {
+        updater.isPending = true
+        component.componentWillReceiveProps(nextProps, componentContext)
+        updater.isPending = false
+    }
     updater.emitUpdate(nextProps, componentContext)
     updateRef(vcomponent, newVcomponent, component)
     return cache.node
@@ -277,19 +282,15 @@ let destroyVcomponent = (vcomponent, node) => {
     delete node.cache[id]
     detachRef(vcomponent)
     component.setState = component.forceUpdate = noop
-    component.componentWillUnmount()
+    if (component.componentWillUnmount) {
+        component.componentWillUnmount()
+    }
     destroyTree(cache.vtree, node)
     delete component.setState
     cache.isMounted = false
     cache.node = cache.parentContext = cache.vtree = component.refs = component.context = null
 }
 
-let setRefs = noop
-export let handleVnodeWithRef = vnode => {
-	if (setRefs !== noop) {
-		setRefs(vnode)
-	}
-}
 export let getContextByTypes = (curContext, contextTypes) => {
 	let context = {}
 	if (!contextTypes || !curContext) {
@@ -303,25 +304,23 @@ export let getContextByTypes = (curContext, contextTypes) => {
 	return context
 }
 
-let bindRefs = refs => vnode => {
-	vnode.refs = vnode.refs || refs
-}
-
 export let renderComponent = (component, parentContext) => {
-	setRefs = bindRefs(component.refs)
+    refs = component.refs
 	let vtree = component.render()
 	if (_.isUndefined(vtree)) {
 		throw new Error('component can not render undefined')
 	}
 	vtree = getVnode(vtree)
-	let curContext = component.getChildContext()
+	let curContext = refs = null
+    if (component.getChildContext) {
+        curContext = component.getChildContext()
+    }
 	if (curContext) {
 		curContext = _.extend(_.extend({}, parentContext), curContext)
 	} else {
 		curContext = parentContext
 	}
 	vtree.context = curContext
-	setRefs = noop
 	return vtree
 }
 
@@ -337,7 +336,9 @@ export let clearPendingComponents = () => {
     while (len--) {
         let component = components[++i]
         let updater = component.$updater
-        component.componentDidMount()
+        if (component.componentDidMount) {
+            component.componentDidMount()
+        }
         updater.isPending = false
         updater.emitUpdate()
     }
@@ -388,12 +389,11 @@ let appendNode = (parentNode, node) => {
 let getVnode = vnode => {
 	if (vnode === null) {
 		vnode = createVelem('noscript', {})
-	} else if (!vnode.vtype) {
+	} else if (!vnode || !vnode.vtype) {
 		vnode = createVtext(vnode)
 	}
 	return vnode
 }
-
 
 let getDOMNode = function() { return this }
 

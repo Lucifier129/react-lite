@@ -113,19 +113,18 @@ export default function Component(props, context) {
 	this.context = context || {}
 }
 
-let noop = _.noop
 Component.prototype = {
 	constructor: Component,
-	getChildContext: noop,
-	componentWillUpdate: noop,
-	componentDidUpdate: noop,
-	componentWillReceiveProps: noop,
-	componentWillMount: noop,
-	componentDidMount: noop,
-	componentWillUnmount: noop,
-	shouldComponentUpdate(nextProps, nextState) {
-		return true
-	},
+	// getChildContext: _.noop,
+	// componentWillUpdate: _.noop,
+	// componentDidUpdate: _.noop,
+	// componentWillReceiveProps: _.noop,
+	// componentWillMount: _.noop,
+	// componentDidMount: _.noop,
+	// componentWillUnmount: _.noop,
+	// shouldComponentUpdate(nextProps, nextState) {
+	// 	return true
+	// },
 	forceUpdate(callback) {
 		let { $updater, $cache, props, state, context } = this
 		if ($updater.isPending || !$cache.isMounted) {
@@ -139,7 +138,9 @@ Component.prototype = {
 		let vtree = $cache.vtree
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
-		this.componentWillUpdate(nextProps, nextState, nextContext)
+		if (this.componentWillUpdate) {
+			this.componentWillUpdate(nextProps, nextState, nextContext)
+		}
 		this.state = nextState
 		this.props = nextProps
 		this.context = nextContext
@@ -152,7 +153,9 @@ Component.prototype = {
 		$cache.vtree = nextVtree
 		$cache.node = newNode
 		clearPendingComponents()
-		this.componentDidUpdate(props, state, context)
+		if (this.componentDidUpdate) {
+			this.componentDidUpdate(props, state, context)
+		}
 		if (callback) {
 			callback.call(this)
 		}
@@ -178,18 +181,20 @@ Component.prototype = {
 	}
 }
 
-export let updatePropsAndState = (component, props, state, context) => {
-	component.state = state
-	component.props = props
-	component.context = context || {}
-}
-
-export let shouldUpdate = (component, nextProps, nextState, nextContext, callback) => {
-	let shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext)
+let shouldUpdate = (component, nextProps, nextState, nextContext, callback) => {
+	let shouldComponentUpdate = true
+	if (component.shouldComponentUpdate) {
+		shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext)
+	}
 	if (shouldComponentUpdate === false) {
-		updatePropsAndState(component, nextProps, nextState, nextContext)
+		component.props = nextProps
+		component.state = nextState
+		component.context = nextContext || {}
 		return
 	}
-	updatePropsAndState(component.$cache, nextProps, nextState, nextContext)
+	let cache = component.$cache
+	cache.props = nextProps
+	cache.state = nextState
+	cache.context = nextContext || {}
 	component.forceUpdate(callback)
 }

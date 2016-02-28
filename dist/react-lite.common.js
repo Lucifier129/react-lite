@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.28
+ * react-lite.js v0.0.29
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -312,81 +312,6 @@ var notBubbleEvents = {
     oncontextmenu: TRUE
 };
 
-var isValidElement = function isValidElement(obj) {
-	return obj != null && !!obj.vtype;
-};
-
-var cloneElement = function cloneElement(originElem, props) {
-	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-		children[_key - 2] = arguments[_key];
-	}
-
-	var type = originElem.type;
-	var key = originElem.key;
-	var ref = originElem.ref;
-
-	var newProps = extend(extend({ key: key, ref: ref }, originElem.props), props);
-	var vnode = createElement.apply(undefined, [type, newProps].concat(children));
-	if (vnode.ref === originElem.ref) {
-		vnode.refs = originElem.refs;
-	}
-	return vnode;
-};
-
-var createFactory = function createFactory(type) {
-	var factory = function factory() {
-		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-			args[_key2] = arguments[_key2];
-		}
-
-		return createElement.apply(undefined, [type].concat(args));
-	};
-	factory.type = type;
-	return factory;
-};
-
-var createElement = function createElement(type, props) {
-	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-		children[_key3 - 2] = arguments[_key3];
-	}
-
-	var createVnode = undefined;
-	switch (true) {
-		case isStr(type):
-			createVnode = createVelem;
-			break;
-		case isComponent(type):
-			createVnode = createVcomponent;
-			break;
-		case isStatelessComponent(type):
-			createVnode = createVstatelessComponent;
-			break;
-		default:
-			throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
-	}
-	var key = null;
-	var ref = null;
-	var hasRef = false;
-	if (props != null) {
-		if (props.key !== undefined) {
-			key = '' + props.key;
-			delete props.key;
-		}
-		if (props.ref !== undefined) {
-			ref = props.ref;
-			delete props.ref;
-			hasRef = true;
-		}
-	}
-	var vnode = createVnode(type, mergeProps(props, children, type.defaultProps));
-	vnode.key = key;
-	vnode.ref = ref;
-	if (hasRef && createVnode !== createVstatelessComponent) {
-		handleVnodeWithRef(vnode);
-	}
-	return vnode;
-};
-
 var diff = function diff(vnode, newVnode) {
 	var type = undefined;
 	switch (true) {
@@ -440,7 +365,7 @@ var isStatelessComponent = function isStatelessComponent(obj) {
 var hasOwn = function hasOwn(obj, key) {
 	return Object.prototype.hasOwnProperty.call(obj, key);
 };
-var noop$1 = function noop() {};
+var noop = function noop() {};
 var identity = function identity(obj) {
 	return obj;
 };
@@ -746,7 +671,8 @@ if (!Object.freeze) {
 	Object.freeze = identity;
 }
 
-var noop$2 = noop$1;
+var noop$1 = noop;
+var refs = null;
 
 var initTree = function initTree(vtree, parentNode, parentContext) {
     var vtype = vtree.vtype;
@@ -826,7 +752,8 @@ var createVelem = function createVelem(type, props) {
     return {
         vtype: VNODE_TYPE.ELEMENT,
         type: type,
-        props: props
+        props: props,
+        refs: refs
     };
 };
 
@@ -905,7 +832,7 @@ var destroyVelem = function destroyVelem(velem, node) {
     if (children) {
         var childNodes = node.childNodes;
         var $removeNode = removeNode;
-        removeNode = noop$2;
+        removeNode = noop$1;
         var len = children.length;
         var i = -1;
         while (len--) {
@@ -980,7 +907,8 @@ var createVcomponent = function createVcomponent(type, props) {
         id: getUid(),
         vtype: VNODE_TYPE.COMPONENT,
         type: type,
-        props: props
+        props: props,
+        refs: refs
     };
 };
 
@@ -997,8 +925,10 @@ var initVcomponent = function initVcomponent(vcomponent, parentNode, parentConte
     cache.parentContext = parentContext;
     updater.isPending = true;
     component.props = component.props || props;
-    component.componentWillMount();
-    component.state = updater.getState();
+    if (component.componentWillMount) {
+        component.componentWillMount();
+        component.state = updater.getState();
+    }
     var vtree = renderComponent(component, parentContext);
     var node = initTree(vtree, parentNode, vtree.context);
     node.cache = node.cache || {};
@@ -1023,9 +953,11 @@ var updateVcomponent = function updateVcomponent(vcomponent, newVcomponent, node
     delete node.cache[id];
     node.cache[newVcomponent.id] = component;
     cache.parentContext = parentContext;
-    updater.isPending = true;
-    component.componentWillReceiveProps(nextProps, componentContext);
-    updater.isPending = false;
+    if (component.componentWillReceiveProps) {
+        updater.isPending = true;
+        component.componentWillReceiveProps(nextProps, componentContext);
+        updater.isPending = false;
+    }
     updater.emitUpdate(nextProps, componentContext);
     updateRef(vcomponent, newVcomponent, component);
     return cache.node;
@@ -1037,20 +969,16 @@ var destroyVcomponent = function destroyVcomponent(vcomponent, node) {
     var cache = component.$cache;
     delete node.cache[id];
     detachRef(vcomponent);
-    component.setState = component.forceUpdate = noop$2;
-    component.componentWillUnmount();
+    component.setState = component.forceUpdate = noop$1;
+    if (component.componentWillUnmount) {
+        component.componentWillUnmount();
+    }
     destroyTree(cache.vtree, node);
     delete component.setState;
     cache.isMounted = false;
     cache.node = cache.parentContext = cache.vtree = component.refs = component.context = null;
 };
 
-var setRefs = noop$2;
-var handleVnodeWithRef = function handleVnodeWithRef(vnode) {
-    if (setRefs !== noop$2) {
-        setRefs(vnode);
-    }
-};
 var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
     var context = {};
     if (!contextTypes || !curContext) {
@@ -1064,27 +992,23 @@ var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
     return context;
 };
 
-var bindRefs = function bindRefs(refs) {
-    return function (vnode) {
-        vnode.refs = vnode.refs || refs;
-    };
-};
-
 var renderComponent = function renderComponent(component, parentContext) {
-    setRefs = bindRefs(component.refs);
+    refs = component.refs;
     var vtree = component.render();
     if (isUndefined(vtree)) {
         throw new Error('component can not render undefined');
     }
     vtree = getVnode(vtree);
-    var curContext = component.getChildContext();
+    var curContext = refs = null;
+    if (component.getChildContext) {
+        curContext = component.getChildContext();
+    }
     if (curContext) {
         curContext = extend(extend({}, parentContext), curContext);
     } else {
         curContext = parentContext;
     }
     vtree.context = curContext;
-    setRefs = noop$2;
     return vtree;
 };
 
@@ -1100,7 +1024,9 @@ var clearPendingComponents = function clearPendingComponents() {
     while (len--) {
         var component = components[++i];
         var updater = component.$updater;
-        component.componentDidMount();
+        if (component.componentDidMount) {
+            component.componentDidMount();
+        }
         updater.isPending = false;
         updater.emitUpdate();
     }
@@ -1117,7 +1043,7 @@ function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
             break;
         case DIFF_TYPE.REPLACE:
             var $removeNode = removeNode;
-            removeNode = noop$2;
+            removeNode = noop$1;
             destroyTree(vtree, node);
             removeNode = $removeNode;
             newNode = initTree(newVtree, function (nextNode) {
@@ -1149,7 +1075,7 @@ var appendNode = function appendNode(parentNode, node) {
 var getVnode = function getVnode(vnode) {
     if (vnode === null) {
         vnode = createVelem('noscript', {});
-    } else if (!vnode.vtype) {
+    } else if (!vnode || !vnode.vtype) {
         vnode = createVtext(vnode);
     }
     return vnode;
@@ -1338,19 +1264,18 @@ function Component(props, context) {
 	this.context = context || {};
 }
 
-var noop = noop$1;
 Component.prototype = {
 	constructor: Component,
-	getChildContext: noop,
-	componentWillUpdate: noop,
-	componentDidUpdate: noop,
-	componentWillReceiveProps: noop,
-	componentWillMount: noop,
-	componentDidMount: noop,
-	componentWillUnmount: noop,
-	shouldComponentUpdate: function shouldComponentUpdate(nextProps, nextState) {
-		return true;
-	},
+	// getChildContext: _.noop,
+	// componentWillUpdate: _.noop,
+	// componentDidUpdate: _.noop,
+	// componentWillReceiveProps: _.noop,
+	// componentWillMount: _.noop,
+	// componentDidMount: _.noop,
+	// componentWillUnmount: _.noop,
+	// shouldComponentUpdate(nextProps, nextState) {
+	// 	return true
+	// },
 	forceUpdate: function forceUpdate(callback) {
 		var $updater = this.$updater;
 		var $cache = this.$cache;
@@ -1369,7 +1294,9 @@ Component.prototype = {
 		var vtree = $cache.vtree;
 		$cache.props = $cache.state = $cache.context = null;
 		$updater.isPending = true;
-		this.componentWillUpdate(nextProps, nextState, nextContext);
+		if (this.componentWillUpdate) {
+			this.componentWillUpdate(nextProps, nextState, nextContext);
+		}
 		this.state = nextState;
 		this.props = nextProps;
 		this.context = nextContext;
@@ -1382,7 +1309,9 @@ Component.prototype = {
 		$cache.vtree = nextVtree;
 		$cache.node = newNode;
 		clearPendingComponents();
-		this.componentDidUpdate(props, state, context);
+		if (this.componentDidUpdate) {
+			this.componentDidUpdate(props, state, context);
+		}
 		if (callback) {
 			callback.call(this);
 		}
@@ -1410,19 +1339,21 @@ Component.prototype = {
 	}
 };
 
-var updatePropsAndState = function updatePropsAndState(component, props, state, context) {
-	component.state = state;
-	component.props = props;
-	component.context = context || {};
-};
-
 var shouldUpdate = function shouldUpdate(component, nextProps, nextState, nextContext, callback) {
-	var shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext);
+	var shouldComponentUpdate = true;
+	if (component.shouldComponentUpdate) {
+		shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext);
+	}
 	if (shouldComponentUpdate === false) {
-		updatePropsAndState(component, nextProps, nextState, nextContext);
+		component.props = nextProps;
+		component.state = nextState;
+		component.context = nextContext || {};
 		return;
 	}
-	updatePropsAndState(component.$cache, nextProps, nextState, nextContext);
+	var cache = component.$cache;
+	cache.props = nextProps;
+	cache.state = nextState;
+	cache.context = nextContext || {};
 	component.forceUpdate(callback);
 };
 
@@ -1620,6 +1551,76 @@ var ReactDOM = Object.freeze({
 	unmountComponentAtNode: unmountComponentAtNode,
 	findDOMNode: findDOMNode
 });
+
+var isValidElement = function isValidElement(obj) {
+	return obj != null && !!obj.vtype;
+};
+
+var cloneElement = function cloneElement(originElem, props) {
+	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+		children[_key - 2] = arguments[_key];
+	}
+
+	var type = originElem.type;
+	var key = originElem.key;
+	var ref = originElem.ref;
+
+	var newProps = extend(extend({ key: key, ref: ref }, originElem.props), props);
+	var vnode = createElement.apply(undefined, [type, newProps].concat(children));
+	if (vnode.ref === originElem.ref) {
+		vnode.refs = originElem.refs;
+	}
+	return vnode;
+};
+
+var createFactory = function createFactory(type) {
+	var factory = function factory() {
+		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+			args[_key2] = arguments[_key2];
+		}
+
+		return createElement.apply(undefined, [type].concat(args));
+	};
+	factory.type = type;
+	return factory;
+};
+
+var createElement = function createElement(type, props) {
+	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+		children[_key3 - 2] = arguments[_key3];
+	}
+
+	var createVnode = undefined;
+	switch (true) {
+		case isStr(type):
+			createVnode = createVelem;
+			break;
+		case isComponent(type):
+			createVnode = createVcomponent;
+			break;
+		case isStatelessComponent(type):
+			createVnode = createVstatelessComponent;
+			break;
+		default:
+			throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
+	}
+	var key = null;
+	var ref = null;
+	if (props != null) {
+		if (props.key !== undefined) {
+			key = '' + props.key;
+			delete props.key;
+		}
+		if (props.ref !== undefined) {
+			ref = props.ref;
+			delete props.ref;
+		}
+	}
+	var vnode = createVnode(type, mergeProps(props, children, type.defaultProps));
+	vnode.key = key;
+	vnode.ref = ref;
+	return vnode;
+};
 
 var tagNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';
 var DOM = {};
