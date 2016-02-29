@@ -6,7 +6,7 @@ import { updateQueue } from './Component'
 let pendingRendering = {}
 let vtreeStore = {}
 let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
-	if (!vtree.vtype) {
+	if (!vtree.isVdom) {
 		throw new Error(`cannot render ${ vtree } to container`)
 	}
 	let id = container[COMPONENT_ID] || (container[COMPONENT_ID] = _.getUid())
@@ -44,9 +44,9 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	let result = null
 	if (_.isArr(argsCache)) {
 		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2])
-	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
+	} else if (_.isStr(vtree.type)) {
 		result = container.firstChild
-	} else if (vtree.vtype === VNODE_TYPE.COMPONENT) {
+	} else if (_.isComponent(vtree.type)) {
 		result = container.firstChild.cache[vtree.id]
 	}
 	

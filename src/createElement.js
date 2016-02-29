@@ -1,7 +1,7 @@
 import * as _ from './util'
-import { createVelem, createVcomponent, createVstatelessComponent } from './virtual-dom'
+import { Velem, Vcomponent, VstatelessComponent } from './virtual-dom'
 
-export let isValidElement = obj => obj != null && !!obj.vtype
+export let isValidElement = obj => obj != null && !!obj.isVdom
 
 export let cloneElement = (originElem, props, ...children) => {
 	let { type, key, ref } = originElem
@@ -20,14 +20,14 @@ export let createFactory = type => {
 }
 
 let createElement = (type, props, ...children) => {
-	let createVnode
+	let Vnode = null
 
 	if (_.isStr(type)) {
-		createVnode = createVelem
+		Vnode = Velem
 	} else if (_.isComponent(type)) {
-		createVnode = createVcomponent
+		Vnode = Vcomponent
 	} else if (_.isStatelessComponent(type)) {
-		createVnode = createVstatelessComponent
+		Vnode = VstatelessComponent
 	} else {
 		throw new Error(`React.createElement: unexpect type [ ${type} ]`)
 	}
@@ -45,7 +45,7 @@ let createElement = (type, props, ...children) => {
 		}
 	}
 
-	let vnode = createVnode(type, _.mergeProps(props, children, type.defaultProps))
+	let vnode = new Vnode(type, _.mergeProps(props, children, type.defaultProps))
 	vnode.key = key
 	vnode.ref = ref
 	return vnode

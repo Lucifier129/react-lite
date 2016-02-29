@@ -10,20 +10,6 @@ var xlink = 'http://www.w3.org/1999/xlink';
 var xml = 'http://www.w3.org/XML/1998/namespace';
 
 var SVGNamespaceURI = 'http://www.w3.org/2000/svg';
-
-var VNODE_TYPE = {
-    ELEMENT: 1,
-    COMPONENT: 2,
-    STATELESS_COMPONENT: 3,
-    TEXT: 4
-};
-var DIFF_TYPE = {
-    CREATE: 1,
-    REMOVE: 2,
-    REPLACE: 3,
-    UPDATE: 4
-};
-
 var COMPONENT_ID = 'liteid';
 
 var propAlias = {
@@ -311,23 +297,6 @@ var notBubbleEvents = {
     ondraggesture: TRUE,
     ondragover: TRUE,
     oncontextmenu: TRUE
-};
-
-var diff = function diff(vnode, newVnode) {
-	if (vnode === newVnode) {
-		return;
-	} else if (newVnode === undefined) {
-		return DIFF_TYPE.REMOVE;
-	} else if (vnode === undefined) {
-		return DIFF_TYPE.CREATE;
-	} else if (vnode.type !== newVnode.type) {
-		return DIFF_TYPE.REPLACE;
-	} else if (newVnode.key !== null) {
-		return vnode.key === null || newVnode.key !== vnode.key ? DIFF_TYPE.REPLACE : DIFF_TYPE.UPDATE;
-	} else if (vnode.key !== null) {
-		return DIFF_TYPE.REPLACE;
-	}
-	return DIFF_TYPE.UPDATE;
 };
 
 var isType = function isType(type) {
@@ -656,46 +625,36 @@ if (!Object.freeze) {
 var noop$1 = noop;
 var refs = null;
 
-var createVtext = function createVtext(text) {
-    return {
-        vtype: VNODE_TYPE.TEXT,
-        text: text,
-        init: initVtext,
-        update: updateVtext,
-        destroy: destroyVtext
-    };
-};
+function Vtext(text) {
+    this.text = text;
+}
 
-var initVtext = function initVtext(parentNode) {
+var VtextPrototype = Vtext.prototype;
+VtextPrototype.isVdom = true;
+VtextPrototype.init = function (parentNode) {
     var textNode = document.createTextNode(this.text);
     appendNode(parentNode, textNode);
     return textNode;
 };
-
-var updateVtext = function updateVtext(newVtext, textNode) {
+VtextPrototype.update = function (newVtext, textNode) {
     if (newVtext.text !== this.text) {
         textNode.replaceData(0, textNode.length, newVtext.text);
     }
     return textNode;
 };
-
-var destroyVtext = function destroyVtext(textNode) {
+VtextPrototype.destroy = function (textNode) {
     removeNode(textNode);
 };
 
-var createVelem = function createVelem(type, props) {
-    return {
-        vtype: VNODE_TYPE.ELEMENT,
-        type: type,
-        props: props,
-        refs: refs,
-        init: initVelem,
-        update: updateVelem,
-        destroy: destroyVelem
-    };
-};
+function Velem(type, props) {
+    this.type = type;
+    this.props = props;
+    this.refs = refs;
+}
 
-var initVelem = function initVelem(parentNode, parentContext) {
+var VelemPrototype = Velem.prototype;
+VelemPrototype.isVdom = true;
+VelemPrototype.init = function (parentNode, parentContext) {
     var type = this.type;
     var props = this.props;
 
@@ -727,8 +686,7 @@ var initVelem = function initVelem(parentNode, parentContext) {
     attachRef(this, node);
     return node;
 };
-
-var updateVelem = function updateVelem(newVelem, node, parentNode, parentContext) {
+VelemPrototype.update = function (newVelem, node, parentNode, parentContext) {
     var props = this.props;
 
     var newProps = newVelem.props;
@@ -782,8 +740,7 @@ var updateVelem = function updateVelem(newVelem, node, parentNode, parentContext
     updateRef(this, newVelem, node);
     return node;
 };
-
-var destroyVelem = function destroyVelem(node) {
+VelemPrototype.destroy = function (node) {
     var children = this.props.children;
 
     if (children) {
@@ -801,27 +758,22 @@ var destroyVelem = function destroyVelem(node) {
     removeNode(node);
 };
 
-var createVstatelessComponent = function createVstatelessComponent(type, props) {
-    return {
-        id: getUid(),
-        vtype: VNODE_TYPE.STATELESS_COMPONENT,
-        type: type,
-        props: props,
-        init: initVstatelessComponent,
-        update: updateVstatelessComponent,
-        destroy: destroyVstatelessComponent
-    };
-};
+function VstatelessComponent(type, props) {
+    this.id = getUid();
+    this.type = type;
+    this.props = props;
+}
 
-var initVstatelessComponent = function initVstatelessComponent(parentNode, parentContext) {
+var VstatelessComponentPrototype = VstatelessComponent.prototype;
+VstatelessComponentPrototype.isVdom = true;
+VstatelessComponentPrototype.init = function (parentNode, parentContext) {
     var vtree = renderVstatelessComponent(this, parentContext);
     var node = vtree.init(parentNode, parentContext);
     node.cache = node.cache || {};
     node.cache[this.id] = vtree;
     return node;
 };
-
-var updateVstatelessComponent = function updateVstatelessComponent(newVstatelessComponent, node, parentNode, parentContext) {
+VstatelessComponentPrototype.update = function (newVstatelessComponent, node, parentNode, parentContext) {
     var id = this.id;
     var vtree = node.cache[id];
     delete node.cache[id];
@@ -834,8 +786,7 @@ var updateVstatelessComponent = function updateVstatelessComponent(newVstateless
     }
     return newNode;
 };
-
-var destroyVstatelessComponent = function destroyVstatelessComponent(node) {
+VstatelessComponentPrototype.destroy = function (node) {
     var id = this.id;
     var vtree = node.cache[id];
     delete node.cache[id];
@@ -854,20 +805,16 @@ var renderVstatelessComponent = function renderVstatelessComponent(vstatelessCom
     return getVnode(vtree);
 };
 
-var createVcomponent = function createVcomponent(type, props) {
-    return {
-        id: getUid(),
-        vtype: VNODE_TYPE.COMPONENT,
-        type: type,
-        props: props,
-        refs: refs,
-        init: initVcomponent,
-        update: updateVcomponent,
-        destroy: destroyVcomponent
-    };
-};
+function Vcomponent(type, props) {
+    this.id = getUid();
+    this.type = type;
+    this.props = props;
+    this.refs = refs;
+}
 
-var initVcomponent = function initVcomponent(parentNode, parentContext) {
+var VcomponentPrototype = Vcomponent.prototype;
+VcomponentPrototype.isVdom = true;
+VcomponentPrototype.init = function (parentNode, parentContext) {
     var Component = this.type;
     var props = this.props;
     var id = this.id;
@@ -895,8 +842,7 @@ var initVcomponent = function initVcomponent(parentNode, parentContext) {
     attachRef(this, component);
     return node;
 };
-
-var updateVcomponent = function updateVcomponent(newVcomponent, node, parentNode, parentContext) {
+VcomponentPrototype.update = function (newVcomponent, node, parentNode, parentContext) {
     var id = this.id;
     var component = node.cache[id];
     var updater = component.$updater;
@@ -917,8 +863,7 @@ var updateVcomponent = function updateVcomponent(newVcomponent, node, parentNode
     updateRef(this, newVcomponent, component);
     return cache.node;
 };
-
-var destroyVcomponent = function destroyVcomponent(node) {
+VcomponentPrototype.destroy = function (node) {
     var id = this.id;
     var component = node.cache[id];
     var cache = component.$cache;
@@ -989,13 +934,25 @@ var clearPendingComponents = function clearPendingComponents() {
 
 function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
     var newNode = node;
-    var diffType = diff(vtree, newVtree);
+    var isReplace = null;
 
-    if (diffType === DIFF_TYPE.UPDATE) {
-        newNode = vtree.update(newVtree, node, parentNode, parentContext);
-    } else if (diffType === DIFF_TYPE.REMOVE) {
+    if (vtree === newVtree) {
+        return newNode;
+    } else if (newVtree === undefined) {
         vtree.destroy(node);
-    } else if (diffType === DIFF_TYPE.REPLACE) {
+    } else if (vtree === undefined) {
+        newNode = newVtree.init(parentNode, parentContext);
+    } else if (vtree.type !== newVtree.type) {
+        isReplace = true;
+    } else if (newVtree.key !== null) {
+        if (vtree.key === null || newVtree.key !== vtree.key) {
+            isReplace = true;
+        }
+    } else if (vtree.key !== null) {
+        isReplace = true;
+    }
+
+    if (isReplace) {
         var $removeNode = removeNode;
         removeNode = noop$1;
         vtree.destroy(node);
@@ -1003,8 +960,8 @@ function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
         newNode = newVtree.init(function (nextNode) {
             return parentNode.replaceChild(nextNode, node);
         }, parentContext);
-    } else if (diffType === DIFF_TYPE.CREATE) {
-        newNode = newVtree.init(parentNode, parentContext);
+    } else {
+        newNode = vtree.update(newVtree, node, parentNode, parentContext);
     }
 
     return newNode;
@@ -1027,9 +984,9 @@ var appendNode = function appendNode(parentNode, node) {
 
 var getVnode = function getVnode(vnode) {
     if (vnode === null) {
-        vnode = createVelem('noscript', {});
-    } else if (!vnode || !vnode.vtype) {
-        vnode = createVtext(vnode);
+        vnode = new Velem('noscript', {});
+    } else if (!vnode || !vnode.isVdom) {
+        vnode = new Vtext('' + vnode);
     }
     return vnode;
 };
@@ -1041,7 +998,6 @@ var getDOMNode = function getDOMNode() {
 var attachRef = function attachRef(vtree, refValue) {
     var refKey = vtree.ref;
     var refs = vtree.refs;
-    var vtype = vtree.vtype;
 
     if (!refs || refKey == null || !refValue) {
         return;
@@ -1072,24 +1028,7 @@ var detachRef = function detachRef(vtree) {
 };
 
 var updateRef = function updateRef(vtree, newVtree, refValue) {
-    if (!vtree.refs) {
-        attachRef(newVtree, refValue);
-        return;
-    }
-    if (!newVtree.refs) {
-        detachRef(vtree);
-        return;
-    }
-    if (vtree.refs !== newVtree.refs) {
-        detachRef(vtree);
-        attachRef(newVtree, refValue);
-        return;
-    }
-    var oldRef = vtree.ref;
-    var newRef = newVtree.ref;
-    if (newRef == null) {
-        detachRef(vtree);
-    } else if (oldRef !== newRef) {
+    if (vtree.ref !== newVtree.ref) {
         detachRef(vtree);
         attachRef(newVtree, refValue);
     }
@@ -1404,7 +1343,7 @@ var createSyntheticEvent = function createSyntheticEvent(nativeEvent) {
 var pendingRendering = {};
 var vtreeStore = {};
 var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container, callback, parentContext) {
-	if (!vtree.vtype) {
+	if (!vtree.isVdom) {
 		throw new Error('cannot render ' + vtree + ' to container');
 	}
 	var id = container[COMPONENT_ID] || (container[COMPONENT_ID] = getUid());
@@ -1442,9 +1381,9 @@ var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container,
 	var result = null;
 	if (isArr(argsCache)) {
 		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2]);
-	} else if (vtree.vtype === VNODE_TYPE.ELEMENT) {
+	} else if (isStr(vtree.type)) {
 		result = container.firstChild;
-	} else if (vtree.vtype === VNODE_TYPE.COMPONENT) {
+	} else if (isComponent(vtree.type)) {
 		result = container.firstChild.cache[vtree.id];
 	}
 
@@ -1506,7 +1445,7 @@ var ReactDOM = Object.freeze({
 });
 
 var isValidElement = function isValidElement(obj) {
-	return obj != null && !!obj.vtype;
+	return obj != null && !!obj.isVdom;
 };
 
 var cloneElement = function cloneElement(originElem, props) {
@@ -1543,14 +1482,14 @@ var createElement = function createElement(type, props) {
 		children[_key3 - 2] = arguments[_key3];
 	}
 
-	var createVnode = undefined;
+	var Vnode = null;
 
 	if (isStr(type)) {
-		createVnode = createVelem;
+		Vnode = Velem;
 	} else if (isComponent(type)) {
-		createVnode = createVcomponent;
+		Vnode = Vcomponent;
 	} else if (isStatelessComponent(type)) {
-		createVnode = createVstatelessComponent;
+		Vnode = VstatelessComponent;
 	} else {
 		throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
 	}
@@ -1568,7 +1507,7 @@ var createElement = function createElement(type, props) {
 		}
 	}
 
-	var vnode = createVnode(type, mergeProps(props, children, type.defaultProps));
+	var vnode = new Vnode(type, mergeProps(props, children, type.defaultProps));
 	vnode.key = key;
 	vnode.ref = ref;
 	return vnode;
