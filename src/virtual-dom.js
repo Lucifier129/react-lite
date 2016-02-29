@@ -7,49 +7,47 @@ let refs = null
 
 export let initTree = (vtree, parentNode, parentContext) => {
     let { vtype } = vtree
-    let node
-
-    if (vtype === VNODE_TYPE.TEXT) {
-        node = initVtext(vtree, parentNode, parentContext)
-    } else if (vtype === VNODE_TYPE.ELEMENT) {
-        node = initVelem(vtree, parentNode, parentContext)
+    let init = null
+    if (vtype === VNODE_TYPE.ELEMENT) {
+        init = initVelem
+    } else if (vtype === VNODE_TYPE.TEXT) {
+        init = initVtext
     } else if (vtype === VNODE_TYPE.COMPONENT) {
-        node = initVcomponent(vtree, parentNode, parentContext)
+        init = initVcomponent
     } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-        node = initVstatelessComponent(vtree, parentNode, parentContext)
+        init = initVstatelessComponent
     }
-
-    return node
+    return init(vtree, parentNode, parentContext)
 }
 
 export let updateTree = (vtree, newVtree, node, parentNode, parentContext) => {
     let { vtype } = vtree
-    let newNode
-
-    if (vtype === VNODE_TYPE.TEXT) {
-        newNode = updateVtext(vtree, newVtree, node, parentNode, parentContext)
-    } else if (vtype === VNODE_TYPE.ELEMENT) {
-        newNode = updateVelem(vtree, newVtree, node, parentNode, parentContext)
+    let update = null
+    if (vtype === VNODE_TYPE.ELEMENT) {
+        update = updateVelem
+    } else if (vtype === VNODE_TYPE.TEXT) {
+        update = updateVtext
     } else if (vtype === VNODE_TYPE.COMPONENT) {
-        newNode = updateVcomponent(vtree, newVtree, node, parentNode, parentContext)
+        update = updateVcomponent
     } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-        newNode = updateVstatelessComponent(vtree, newVtree, node, parentNode, parentContext)
+        update = updateVstatelessComponent
     }
-
-    return newNode
+    return update(vtree, newVtree, node, parentNode, parentContext)
 }
 
 export let destroyTree = (vtree, node) => {
     let { vtype } = vtree
-    if (vtype === VNODE_TYPE.TEXT) {
-        node = destroyVtext(vtree, node)
-    } else if (vtype === VNODE_TYPE.ELEMENT) {
-        node = destroyVelem(vtree, node)
+    let destroy = null
+    if (vtype === VNODE_TYPE.ELEMENT) {
+        destroy = destroyVelem
+    } else if (vtype === VNODE_TYPE.TEXT) {
+        destroy = destroyVtext
     } else if (vtype === VNODE_TYPE.COMPONENT) {
-        node = destroyVcomponent(vtree, node)
+        destroy = destroyVcomponent
     } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-        node = destroyVstatelessComponent(vtree, node)
+        destroy = destroyVstatelessComponent
     }
+    destroy(vtree, node)
 }
 
 export let createVtext = text => ({
@@ -126,13 +124,15 @@ let updateVelem = (velem, newVelem, node, parentNode, parentContext) => {
         }
         var childrenLen = children.length
         var newChildrenLen = newChildren && newChildren.length || 0
-            // destroy old children not in the newChildren
+        
+        // destroy old children not in the newChildren
         while (childrenLen > newChildrenLen) {
             childrenLen -= 1
             destroyTree(children[childrenLen], childNodes[childrenLen])
         }
         _.patchProps(node, props, newProps)
     } else {
+        // should patch props first, make sure innerHTML was cleared 
         _.patchProps(node, props, newProps)
         var newChildren = newProps.children = getFlattenChildren(newProps.children, getVnode)
         if (newChildren) {

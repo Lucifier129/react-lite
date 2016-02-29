@@ -681,51 +681,49 @@
   var initTree = function initTree(vtree, parentNode, parentContext) {
       var vtype = vtree.vtype;
 
-      var node = undefined;
-
-      if (vtype === VNODE_TYPE.TEXT) {
-          node = initVtext(vtree, parentNode, parentContext);
-      } else if (vtype === VNODE_TYPE.ELEMENT) {
-          node = initVelem(vtree, parentNode, parentContext);
+      var init = null;
+      if (vtype === VNODE_TYPE.ELEMENT) {
+          init = initVelem;
+      } else if (vtype === VNODE_TYPE.TEXT) {
+          init = initVtext;
       } else if (vtype === VNODE_TYPE.COMPONENT) {
-          node = initVcomponent(vtree, parentNode, parentContext);
+          init = initVcomponent;
       } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-          node = initVstatelessComponent(vtree, parentNode, parentContext);
+          init = initVstatelessComponent;
       }
-
-      return node;
+      return init(vtree, parentNode, parentContext);
   };
 
   var updateTree = function updateTree(vtree, newVtree, node, parentNode, parentContext) {
       var vtype = vtree.vtype;
 
-      var newNode = undefined;
-
-      if (vtype === VNODE_TYPE.TEXT) {
-          newNode = updateVtext(vtree, newVtree, node, parentNode, parentContext);
-      } else if (vtype === VNODE_TYPE.ELEMENT) {
-          newNode = updateVelem(vtree, newVtree, node, parentNode, parentContext);
+      var update = null;
+      if (vtype === VNODE_TYPE.ELEMENT) {
+          update = updateVelem;
+      } else if (vtype === VNODE_TYPE.TEXT) {
+          update = updateVtext;
       } else if (vtype === VNODE_TYPE.COMPONENT) {
-          newNode = updateVcomponent(vtree, newVtree, node, parentNode, parentContext);
+          update = updateVcomponent;
       } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-          newNode = updateVstatelessComponent(vtree, newVtree, node, parentNode, parentContext);
+          update = updateVstatelessComponent;
       }
-
-      return newNode;
+      return update(vtree, newVtree, node, parentNode, parentContext);
   };
 
   var destroyTree = function destroyTree(vtree, node) {
       var vtype = vtree.vtype;
 
-      if (vtype === VNODE_TYPE.TEXT) {
-          node = destroyVtext(vtree, node);
-      } else if (vtype === VNODE_TYPE.ELEMENT) {
-          node = destroyVelem(vtree, node);
+      var destroy = null;
+      if (vtype === VNODE_TYPE.ELEMENT) {
+          destroy = destroyVelem;
+      } else if (vtype === VNODE_TYPE.TEXT) {
+          destroy = destroyVtext;
       } else if (vtype === VNODE_TYPE.COMPONENT) {
-          node = destroyVcomponent(vtree, node);
+          destroy = destroyVcomponent;
       } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-          node = destroyVstatelessComponent(vtree, node);
+          destroy = destroyVstatelessComponent;
       }
+      destroy(vtree, node);
   };
 
   var createVtext = function createVtext(text) {
