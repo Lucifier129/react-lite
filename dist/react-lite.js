@@ -88,6 +88,7 @@
 
   // those key must use be attributes
   var attrbutesConfigs = {
+      children: TRUE,
       type: TRUE,
       clipPath: TRUE,
       cx: TRUE,
@@ -317,33 +318,20 @@
   };
 
   var diff = function diff(vnode, newVnode) {
-  	var type = undefined;
-  	switch (true) {
-  		case vnode === newVnode:
-  			return type;
-  		case isUndefined(newVnode):
-  			type = DIFF_TYPE.REMOVE;
-  			break;
-  		case isUndefined(vnode):
-  			type = DIFF_TYPE.CREATE;
-  			break;
-  		case vnode.type !== newVnode.type:
-  			type = DIFF_TYPE.REPLACE;
-  			break;
-  		case newVnode.key !== null:
-  			if (vnode.key === null || newVnode.key !== vnode.key) {
-  				type = DIFF_TYPE.REPLACE;
-  			} else {
-  				type = DIFF_TYPE.UPDATE;
-  			}
-  			break;
-  		case vnode.key !== null:
-  			type = DIFF_TYPE.REPLACE;
-  			break;
-  		default:
-  			type = DIFF_TYPE.UPDATE;
+  	if (vnode === newVnode) {
+  		return;
+  	} else if (newVnode === undefined) {
+  		return DIFF_TYPE.REMOVE;
+  	} else if (vnode === undefined) {
+  		return DIFF_TYPE.CREATE;
+  	} else if (vnode.type !== newVnode.type) {
+  		return DIFF_TYPE.REPLACE;
+  	} else if (newVnode.key !== null) {
+  		return vnode.key === null || newVnode.key !== vnode.key ? DIFF_TYPE.REPLACE : DIFF_TYPE.UPDATE;
+  	} else if (vnode.key !== null) {
+  		return DIFF_TYPE.REPLACE;
   	}
-  	return type;
+  	return DIFF_TYPE.UPDATE;
   };
 
   var isType = function isType(type) {
@@ -465,36 +453,35 @@
   };
 
   var setProp = function setProp(elem, key, value) {
+
+  	if (key === 'children') {
+  		return;
+  	}
+
   	var originalKey = key;
   	key = propAlias[key] || key;
-  	switch (true) {
-  		case key === 'children':
-  			break;
-  		case EVENT_KEYS.test(key):
-  			addEvent(elem, key, value);
-  			break;
-  		case isStyleKey(key):
-  			setStyle(elem, value);
-  			break;
-  		case isInnerHTMLKey(key):
-  			value && value.__html != null && (elem.innerHTML = value.__html);
-  			break;
-  		case key in elem && attrbutesConfigs[originalKey] !== true:
-  			if (readOnlyProps[key] !== true) {
-  				if (key === 'title' && value == null) {
-  					value = '';
-  				}
-  				elem[key] = value;
+
+  	if (EVENT_KEYS.test(key)) {
+  		addEvent(elem, key, value);
+  	} else if (isStyleKey(key)) {
+  		setStyle(elem, value);
+  	} else if (isInnerHTMLKey(key)) {
+  		value && value.__html != null && (elem.innerHTML = value.__html);
+  	} else if (key in elem && attrbutesConfigs[originalKey] !== true) {
+  		if (readOnlyProps[key] !== true) {
+  			if (key === 'title' && value == null) {
+  				value = '';
   			}
-  			break;
-  		default:
-  			if (value == null) {
-  				elem.removeAttribute(key);
-  			} else if (attributesNS[originalKey] === true) {
-  				elem.setAttributeNS(key, value);
-  			} else {
-  				elem.setAttribute(key, value);
-  			}
+  			elem[key] = value;
+  		}
+  	} else {
+  		if (value == null) {
+  			elem.removeAttribute(key);
+  		} else if (attributesNS[originalKey] === true) {
+  			elem.setAttributeNS(key, value);
+  		} else {
+  			elem.setAttribute(key, value);
+  		}
   	}
   };
   var setProps = function setProps(elem, props) {
@@ -512,38 +499,33 @@
   	}
   };
   var removeProp = function removeProp(elem, key, oldValue) {
+  	if (key === 'children') {
+  		return;
+  	}
+
   	key = propAlias[key] || key;
-  	switch (true) {
-  		case key === 'children':
-  			break;
-  		case EVENT_KEYS.test(key):
-  			removeEvent(elem, key);
-  			break;
-  		case isStyleKey(key):
-  			removeStyle(elem, oldValue);
-  			break;
-  		case isInnerHTMLKey(key):
-  			elem.innerHTML = '';
-  			break;
-  		case attrbutesConfigs[key] === true || !(key in elem):
-  			elem.removeAttribute(key);
-  			break;
-  		case isFn(oldValue):
-  			elem[key] = null;
-  			break;
-  		case isStr(oldValue):
-  			elem[key] = '';
-  			break;
-  		case isBln(oldValue):
-  			elem[key] = false;
-  			break;
-  		default:
-  			try {
-  				elem[key] = undefined;
-  				delete elem[key];
-  			} catch (e) {
-  				//pass
-  			}
+
+  	if (EVENT_KEYS.test(key)) {
+  		removeEvent(elem, key);
+  	} else if (isStyleKey(key)) {
+  		removeStyle(elem, oldValue);
+  	} else if (isInnerHTMLKey(key)) {
+  		elem.innerHTML = '';
+  	} else if (attrbutesConfigs[key] === true || !(key in elem)) {
+  		elem.removeAttribute(key);
+  	} else if (isFn(oldValue)) {
+  		elem[key] = null;
+  	} else if (isStr(oldValue)) {
+  		elem[key] = '';
+  	} else if (isBln(oldValue)) {
+  		elem[key] = false;
+  	} else {
+  		try {
+  			elem[key] = undefined;
+  			delete elem[key];
+  		} catch (e) {
+  			//pass
+  		}
   	}
   };
 
@@ -1047,26 +1029,24 @@
 
   function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
       var newNode = node;
-      switch (diff(vtree, newVtree)) {
-          case DIFF_TYPE.UPDATE:
-              newNode = updateTree(vtree, newVtree, node, parentNode, parentContext);
-              break;
-          case DIFF_TYPE.REMOVE:
-              destroyTree(vtree, node);
-              break;
-          case DIFF_TYPE.REPLACE:
-              var $removeNode = removeNode;
-              removeNode = noop$1;
-              destroyTree(vtree, node);
-              removeNode = $removeNode;
-              newNode = initTree(newVtree, function (nextNode) {
-                  return parentNode.replaceChild(nextNode, node);
-              }, parentContext);
-              break;
-          case DIFF_TYPE.CREATE:
-              newNode = initTree(newVtree, parentNode, parentContext);
-              break;
+      var diffType = diff(vtree, newVtree);
+
+      if (diffType === DIFF_TYPE.UPDATE) {
+          newNode = updateTree(vtree, newVtree, node, parentNode, parentContext);
+      } else if (diffType === DIFF_TYPE.REMOVE) {
+          destroyTree(vtree, node);
+      } else if (diffType === DIFF_TYPE.REPLACE) {
+          var $removeNode = removeNode;
+          removeNode = noop$1;
+          destroyTree(vtree, node);
+          removeNode = $removeNode;
+          newNode = initTree(newVtree, function (nextNode) {
+              return parentNode.replaceChild(nextNode, node);
+          }, parentContext);
+      } else if (diffType === DIFF_TYPE.CREATE) {
+          newNode = initTree(newVtree, parentNode, parentContext);
       }
+
       return newNode;
   }
 
@@ -1604,19 +1584,17 @@
   	}
 
   	var createVnode = undefined;
-  	switch (true) {
-  		case isStr(type):
-  			createVnode = createVelem;
-  			break;
-  		case isComponent(type):
-  			createVnode = createVcomponent;
-  			break;
-  		case isStatelessComponent(type):
-  			createVnode = createVstatelessComponent;
-  			break;
-  		default:
-  			throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
+
+  	if (isStr(type)) {
+  		createVnode = createVelem;
+  	} else if (isComponent(type)) {
+  		createVnode = createVcomponent;
+  	} else if (isStatelessComponent(type)) {
+  		createVnode = createVstatelessComponent;
+  	} else {
+  		throw new Error('React.createElement: unexpect type [ ' + type + ' ]');
   	}
+
   	var key = null;
   	var ref = null;
   	if (props != null) {
@@ -1629,6 +1607,7 @@
   			delete props.ref;
   		}
   	}
+
   	var vnode = createVnode(type, mergeProps(props, children, type.defaultProps));
   	vnode.key = key;
   	vnode.ref = ref;

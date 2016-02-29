@@ -108,36 +108,35 @@ let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
 
 export let setProp = (elem, key, value) => {
+
+	if (key === 'children') {
+		return
+	}
+
 	let originalKey = key
 	key = propAlias[key] || key
-	switch (true) {
-		case key === 'children':
-			break
-		case EVENT_KEYS.test(key):
-			addEvent(elem, key, value)
-			break
-		case isStyleKey(key):
-			setStyle(elem, value)
-			break
-		case isInnerHTMLKey(key):
-			value && value.__html != null && (elem.innerHTML = value.__html)
-			break
-		case (key in elem) && attrbutesConfigs[originalKey] !== true:
-			if (readOnlyProps[key] !== true) {
-				if (key === 'title' && value == null) {
-					value = ''
-				}
-				elem[key] = value
+
+	if (EVENT_KEYS.test(key)) {
+		addEvent(elem, key, value)
+	} else if (isStyleKey(key)) {
+		setStyle(elem, value)
+	} else if (isInnerHTMLKey(key)) {
+		value && value.__html != null && (elem.innerHTML = value.__html)
+	} else if ((key in elem) && attrbutesConfigs[originalKey] !== true) {
+		if (readOnlyProps[key] !== true) {
+			if (key === 'title' && value == null) {
+				value = ''
 			}
-			break
-		default:
-			if (value == null) {
-				elem.removeAttribute(key)
-			} else if (attributesNS[originalKey] === true) {
-				elem.setAttributeNS(key, value)
-			} else {
-				elem.setAttribute(key, value)
-			}
+			elem[key] = value
+		}
+	} else {
+		if (value == null) {
+		    elem.removeAttribute(key)
+		} else if (attributesNS[originalKey] === true) {
+		    elem.setAttributeNS(key, value)
+		} else {
+		    elem.setAttribute(key, value)
+		}
 	}
 }
 export let setProps = (elem, props) => {
@@ -155,38 +154,33 @@ export let removeProps = (elem, props) => {
 	}
 }
 export let removeProp = (elem, key, oldValue) => {
+	if (key === 'children') {
+		return
+	}
+
 	key = propAlias[key] || key
-	switch (true) {
-		case key === 'children':
-			break
-		case EVENT_KEYS.test(key):
-			removeEvent(elem, key)
-			break
-		case isStyleKey(key):
-			removeStyle(elem, oldValue)
-			break
-		case isInnerHTMLKey(key):
-			elem.innerHTML = ''
-			break
-		case attrbutesConfigs[key] === true || !(key in elem):
-			elem.removeAttribute(key)
-			break
-		case isFn(oldValue):
-			elem[key] = null
-			break
-		case isStr(oldValue):
-			elem[key] = ''
-			break
-		case isBln(oldValue):
-			elem[key] = false
-			break
-		default:
-			try {
-				elem[key] = undefined
-				delete elem[key]
-			} catch(e) {
-				//pass
-			}
+
+	if (EVENT_KEYS.test(key)) {
+		removeEvent(elem, key)
+	} else if (isStyleKey(key)) {
+		removeStyle(elem, oldValue)
+	} else if (isInnerHTMLKey(key)) {
+		elem.innerHTML = ''
+	} else if (attrbutesConfigs[key] === true || !(key in elem)) {
+		elem.removeAttribute(key)
+	} else if (isFn(oldValue)) {
+		elem[key] = null
+	} else if (isStr(oldValue)) {
+		elem[key] = ''
+	} else if (isBln(oldValue)) {
+		elem[key] = false
+	} else {
+		try {
+		    elem[key] = undefined
+		    delete elem[key]
+		} catch (e) {
+		    //pass
+		}
 	}
 }
 

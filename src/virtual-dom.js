@@ -355,28 +355,26 @@ export let clearPendingComponents = () => {
 
 export function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
     let newNode = node
-    switch (diff(vtree, newVtree)) {
-        case DIFF_TYPE.UPDATE:
-            newNode = updateTree(vtree, newVtree, node, parentNode, parentContext)
-            break
-        case DIFF_TYPE.REMOVE:
-            destroyTree(vtree, node)
-            break
-        case DIFF_TYPE.REPLACE:
-            let $removeNode = removeNode
-            removeNode = noop
-            destroyTree(vtree, node)
-            removeNode = $removeNode
-            newNode = initTree(
-            	newVtree,
-                nextNode => parentNode.replaceChild(nextNode, node),
-                parentContext
-            )
-            break
-        case DIFF_TYPE.CREATE:
-            newNode = initTree(newVtree, parentNode, parentContext)
-            break
+    let diffType = diff(vtree, newVtree)
+
+    if (diffType === DIFF_TYPE.UPDATE) {
+        newNode = updateTree(vtree, newVtree, node, parentNode, parentContext)
+    } else if (diffType === DIFF_TYPE.REMOVE) {
+        destroyTree(vtree, node)
+    } else if (diffType === DIFF_TYPE.REPLACE) {
+        let $removeNode = removeNode
+        removeNode = noop
+        destroyTree(vtree, node)
+        removeNode = $removeNode
+        newNode = initTree(
+            newVtree,
+            nextNode => parentNode.replaceChild(nextNode, node),
+            parentContext
+        )
+    } else if (diffType === DIFF_TYPE.CREATE) {
+        newNode = initTree(newVtree, parentNode, parentContext)
     }
+    
     return newNode
 }
 

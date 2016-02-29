@@ -21,19 +21,17 @@ export let createFactory = type => {
 
 let createElement = (type, props, ...children) => {
 	let createVnode
-	switch (true) {
-		case _.isStr(type):
-			createVnode = createVelem
-			break
-		case _.isComponent(type):
-			createVnode = createVcomponent
-			break
-		case _.isStatelessComponent(type):
-			createVnode = createVstatelessComponent
-			break
-		default:
-			throw new Error(`React.createElement: unexpect type [ ${type} ]`)
+
+	if (_.isStr(type)) {
+		createVnode = createVelem
+	} else if (_.isComponent(type)) {
+		createVnode = createVcomponent
+	} else if (_.isStatelessComponent(type)) {
+		createVnode = createVstatelessComponent
+	} else {
+		throw new Error(`React.createElement: unexpect type [ ${type} ]`)
 	}
+
 	let key = null
 	let ref = null
 	if (props != null) {
@@ -46,6 +44,7 @@ let createElement = (type, props, ...children) => {
 			delete props.ref
 		}
 	}
+
 	let vnode = createVnode(type, _.mergeProps(props, children, type.defaultProps))
 	vnode.key = key
 	vnode.ref = ref
