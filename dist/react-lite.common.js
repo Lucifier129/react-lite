@@ -656,69 +656,24 @@ if (!Object.freeze) {
 var noop$1 = noop;
 var refs = null;
 
-var initTree = function initTree(vtree, parentNode, parentContext) {
-    var vtype = vtree.vtype;
-
-    var init = null;
-    if (vtype === VNODE_TYPE.ELEMENT) {
-        init = initVelem;
-    } else if (vtype === VNODE_TYPE.TEXT) {
-        init = initVtext;
-    } else if (vtype === VNODE_TYPE.COMPONENT) {
-        init = initVcomponent;
-    } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-        init = initVstatelessComponent;
-    }
-    return init(vtree, parentNode, parentContext);
-};
-
-var updateTree = function updateTree(vtree, newVtree, node, parentNode, parentContext) {
-    var vtype = vtree.vtype;
-
-    var update = null;
-    if (vtype === VNODE_TYPE.ELEMENT) {
-        update = updateVelem;
-    } else if (vtype === VNODE_TYPE.TEXT) {
-        update = updateVtext;
-    } else if (vtype === VNODE_TYPE.COMPONENT) {
-        update = updateVcomponent;
-    } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-        update = updateVstatelessComponent;
-    }
-    return update(vtree, newVtree, node, parentNode, parentContext);
-};
-
-var destroyTree = function destroyTree(vtree, node) {
-    var vtype = vtree.vtype;
-
-    var destroy = null;
-    if (vtype === VNODE_TYPE.ELEMENT) {
-        destroy = destroyVelem;
-    } else if (vtype === VNODE_TYPE.TEXT) {
-        destroy = destroyVtext;
-    } else if (vtype === VNODE_TYPE.COMPONENT) {
-        destroy = destroyVcomponent;
-    } else if (vtype === VNODE_TYPE.STATELESS_COMPONENT) {
-        destroy = destroyVstatelessComponent;
-    }
-    destroy(vtree, node);
-};
-
 var createVtext = function createVtext(text) {
     return {
         vtype: VNODE_TYPE.TEXT,
-        text: text
+        text: text,
+        init: initVtext,
+        update: updateVtext,
+        destroy: destroyVtext
     };
 };
 
-var initVtext = function initVtext(vtext, parentNode) {
-    var textNode = document.createTextNode(vtext.text);
+var initVtext = function initVtext(parentNode) {
+    var textNode = document.createTextNode(this.text);
     appendNode(parentNode, textNode);
     return textNode;
 };
 
-var updateVtext = function updateVtext(vtext, newVtext, textNode) {
-    if (newVtext.text !== vtext.text) {
+var updateVtext = function updateVtext(newVtext, textNode) {
+    if (newVtext.text !== this.text) {
         textNode.replaceData(0, textNode.length, newVtext.text);
     }
     return textNode;
@@ -733,13 +688,16 @@ var createVelem = function createVelem(type, props) {
         vtype: VNODE_TYPE.ELEMENT,
         type: type,
         props: props,
-        refs: refs
+        refs: refs,
+        init: initVelem,
+        update: updateVelem,
+        destroy: destroyVelem
     };
 };
 
-var initVelem = function initVelem(velem, parentNode, parentContext) {
-    var type = velem.type;
-    var props = velem.props;
+var initVelem = function initVelem(parentNode, parentContext) {
+    var type = this.type;
+    var props = this.props;
 
     var node = undefined;
     if (type === 'svg' || parentNode.namespaceURI === SVGNamespaceURI) {
@@ -761,17 +719,17 @@ var initVelem = function initVelem(velem, parentNode, parentContext) {
         var len = children.length;
         var i = -1;
         while (len--) {
-            initTree(children[++i], node, parentContext);
+            children[++i].init(node, parentContext);
         }
     }
     setProps(node, props);
     appendNode(parentNode, node);
-    attachRef(velem, node);
+    attachRef(this, node);
     return node;
 };
 
-var updateVelem = function updateVelem(velem, newVelem, node, parentNode, parentContext) {
-    var props = velem.props;
+var updateVelem = function updateVelem(newVelem, node, parentNode, parentContext) {
+    var props = this.props;
 
     var newProps = newVelem.props;
     var oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html;
@@ -797,7 +755,7 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentNode, parent
                 if (vchild) {
                     compareTwoTrees(vchild, newVchild, childNodes[i], node, parentContext);
                 } else {
-                    initTree(newVchild, node, parentContext);
+                    newVchild.init(node, parentContext);
                 }
             }
         }
@@ -807,7 +765,7 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentNode, parent
         // destroy old children not in the newChildren
         while (childrenLen > newChildrenLen) {
             childrenLen -= 1;
-            destroyTree(children[childrenLen], childNodes[childrenLen]);
+            children[childrenLen].destroy(childNodes[childrenLen]);
         }
         patchProps(node, props, newProps);
     } else {
@@ -817,16 +775,16 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentNode, parent
             var len = newChildren.length;
             var i = -1;
             while (len--) {
-                initTree(newChildren[++i], node, parentContext);
+                newChildren[++i].init(node, parentContext);
             }
         }
     }
-    updateRef(velem, newVelem, node);
+    updateRef(this, newVelem, node);
     return node;
 };
 
-var destroyVelem = function destroyVelem(velem, node) {
-    var children = velem.props.children;
+var destroyVelem = function destroyVelem(node) {
+    var children = this.props.children;
 
     if (children) {
         var childNodes = node.childNodes;
@@ -835,11 +793,11 @@ var destroyVelem = function destroyVelem(velem, node) {
         var len = children.length;
         var i = -1;
         while (len--) {
-            destroyTree(children[++i], childNodes[i]);
+            children[++i].destroy(childNodes[i]);
         }
         removeNode = $removeNode;
     }
-    detachRef(velem);
+    detachRef(this);
     removeNode(node);
 };
 
@@ -848,20 +806,23 @@ var createVstatelessComponent = function createVstatelessComponent(type, props) 
         id: getUid(),
         vtype: VNODE_TYPE.STATELESS_COMPONENT,
         type: type,
-        props: props
+        props: props,
+        init: initVstatelessComponent,
+        update: updateVstatelessComponent,
+        destroy: destroyVstatelessComponent
     };
 };
 
-var initVstatelessComponent = function initVstatelessComponent(vstatelessComponent, parentNode, parentContext) {
-    var vtree = renderVstatelessComponent(vstatelessComponent, parentContext);
-    var node = initTree(vtree, parentNode, parentContext);
+var initVstatelessComponent = function initVstatelessComponent(parentNode, parentContext) {
+    var vtree = renderVstatelessComponent(this, parentContext);
+    var node = vtree.init(parentNode, parentContext);
     node.cache = node.cache || {};
-    node.cache[vstatelessComponent.id] = vtree;
+    node.cache[this.id] = vtree;
     return node;
 };
 
-var updateVstatelessComponent = function updateVstatelessComponent(vstatelessComponent, newVstatelessComponent, node, parentNode, parentContext) {
-    var id = vstatelessComponent.id;
+var updateVstatelessComponent = function updateVstatelessComponent(newVstatelessComponent, node, parentNode, parentContext) {
+    var id = this.id;
     var vtree = node.cache[id];
     delete node.cache[id];
     var newVtree = renderVstatelessComponent(newVstatelessComponent, parentContext);
@@ -874,11 +835,11 @@ var updateVstatelessComponent = function updateVstatelessComponent(vstatelessCom
     return newNode;
 };
 
-var destroyVstatelessComponent = function destroyVstatelessComponent(vstatelessComponent, node) {
-    var id = vstatelessComponent.id;
+var destroyVstatelessComponent = function destroyVstatelessComponent(node) {
+    var id = this.id;
     var vtree = node.cache[id];
     delete node.cache[id];
-    destroyTree(vtree, node);
+    vtree.destroy(node);
 };
 
 var renderVstatelessComponent = function renderVstatelessComponent(vstatelessComponent, parentContext) {
@@ -899,14 +860,17 @@ var createVcomponent = function createVcomponent(type, props) {
         vtype: VNODE_TYPE.COMPONENT,
         type: type,
         props: props,
-        refs: refs
+        refs: refs,
+        init: initVcomponent,
+        update: updateVcomponent,
+        destroy: destroyVcomponent
     };
 };
 
-var initVcomponent = function initVcomponent(vcomponent, parentNode, parentContext) {
-    var Component = vcomponent.type;
-    var props = vcomponent.props;
-    var id = vcomponent.id;
+var initVcomponent = function initVcomponent(parentNode, parentContext) {
+    var Component = this.type;
+    var props = this.props;
+    var id = this.id;
 
     var componentContext = getContextByTypes(parentContext, Component.contextTypes);
     var component = new Component(props, componentContext);
@@ -921,19 +885,19 @@ var initVcomponent = function initVcomponent(vcomponent, parentNode, parentConte
         component.state = updater.getState();
     }
     var vtree = renderComponent(component, parentContext);
-    var node = initTree(vtree, parentNode, vtree.context);
+    var node = vtree.init(parentNode, vtree.context);
     node.cache = node.cache || {};
     node.cache[id] = component;
     cache.vtree = vtree;
     cache.node = node;
     cache.isMounted = true;
     pendingComponents.push(component);
-    attachRef(vcomponent, component);
+    attachRef(this, component);
     return node;
 };
 
-var updateVcomponent = function updateVcomponent(vcomponent, newVcomponent, node, parentNode, parentContext) {
-    var id = vcomponent.id;
+var updateVcomponent = function updateVcomponent(newVcomponent, node, parentNode, parentContext) {
+    var id = this.id;
     var component = node.cache[id];
     var updater = component.$updater;
     var cache = component.$cache;
@@ -950,21 +914,21 @@ var updateVcomponent = function updateVcomponent(vcomponent, newVcomponent, node
         updater.isPending = false;
     }
     updater.emitUpdate(nextProps, componentContext);
-    updateRef(vcomponent, newVcomponent, component);
+    updateRef(this, newVcomponent, component);
     return cache.node;
 };
 
-var destroyVcomponent = function destroyVcomponent(vcomponent, node) {
-    var id = vcomponent.id;
+var destroyVcomponent = function destroyVcomponent(node) {
+    var id = this.id;
     var component = node.cache[id];
     var cache = component.$cache;
     delete node.cache[id];
-    detachRef(vcomponent);
+    detachRef(this);
     component.setState = component.forceUpdate = noop$1;
     if (component.componentWillUnmount) {
         component.componentWillUnmount();
     }
-    destroyTree(cache.vtree, node);
+    cache.vtree.destroy(node);
     delete component.setState;
     cache.isMounted = false;
     cache.node = cache.parentContext = cache.vtree = component.refs = component.context = null;
@@ -1028,19 +992,19 @@ function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
     var diffType = diff(vtree, newVtree);
 
     if (diffType === DIFF_TYPE.UPDATE) {
-        newNode = updateTree(vtree, newVtree, node, parentNode, parentContext);
+        newNode = vtree.update(newVtree, node, parentNode, parentContext);
     } else if (diffType === DIFF_TYPE.REMOVE) {
-        destroyTree(vtree, node);
+        vtree.destroy(node);
     } else if (diffType === DIFF_TYPE.REPLACE) {
         var $removeNode = removeNode;
         removeNode = noop$1;
-        destroyTree(vtree, node);
+        vtree.destroy(node);
         removeNode = $removeNode;
-        newNode = initTree(newVtree, function (nextNode) {
+        newNode = newVtree.init(function (nextNode) {
             return parentNode.replaceChild(nextNode, node);
         }, parentContext);
     } else if (diffType === DIFF_TYPE.CREATE) {
-        newNode = initTree(newVtree, parentNode, parentContext);
+        newNode = newVtree.init(parentNode, parentContext);
     }
 
     return newNode;
@@ -1466,7 +1430,7 @@ var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container,
 		compareTwoTrees(vtreeStore[id], vtree, container.firstChild, container, parentContext);
 	} else {
 		container.innerHTML = '';
-		initTree(vtree, container, parentContext);
+		vtree.init(container, parentContext);
 	}
 	vtreeStore[id] = vtree;
 	var isPending = updateQueue.isPending;
@@ -1511,7 +1475,7 @@ var unmountComponentAtNode = function unmountComponentAtNode(container) {
 	}
 	var id = container[COMPONENT_ID];
 	if (vtreeStore[id]) {
-		destroyTree(vtreeStore[id], container.firstChild);
+		vtreeStore[id].destroy(container.firstChild);
 		delete vtreeStore[id];
 		return true;
 	}
