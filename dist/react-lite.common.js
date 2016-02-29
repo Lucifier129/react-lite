@@ -765,7 +765,16 @@ var initVelem = function initVelem(velem, parentNode, parentContext) {
     } else {
         node = document.createElement(type);
     }
-    var children = props.children = getFlattenChildren(props.children, getVnode);
+    var children = props.children;
+
+    if (isArr(children)) {
+        children = props.children = flattenChildren(children, getVnode);
+    } else if (children !== undefined && !isBln(children)) {
+        children = props.children = [getVnode(children)];
+    } else {
+        children = props.children = undefined;
+    }
+
     if (children) {
         var len = children.length;
         var i = -1;
@@ -785,9 +794,18 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentNode, parent
     var newProps = newVelem.props;
     var oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html;
     var children = props.children;
+    var newChildren = newProps.children;
+
+    if (isArr(newChildren)) {
+        newChildren = newProps.children = flattenChildren(newChildren, getVnode);
+    } else if (newChildren !== undefined && !isBln(newChildren)) {
+        newChildren = newProps.children = [getVnode(newChildren)];
+    } else {
+        newChildren = newProps.children = undefined;
+    }
+
     if (oldHtml == null && children) {
         var childNodes = node.childNodes;
-        var newChildren = newProps.children = getFlattenChildren(newProps.children, getVnode);
         if (newChildren) {
             var len = newChildren.length;
             var i = -1;
@@ -803,6 +821,7 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentNode, parent
         }
         var childrenLen = children.length;
         var newChildrenLen = newChildren && newChildren.length || 0;
+
         // destroy old children not in the newChildren
         while (childrenLen > newChildrenLen) {
             childrenLen -= 1;
@@ -810,8 +829,8 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentNode, parent
         }
         patchProps(node, props, newProps);
     } else {
+        // should patch props first, make sure innerHTML was cleared
         patchProps(node, props, newProps);
-        var newChildren = newProps.children = getFlattenChildren(newProps.children, getVnode);
         if (newChildren) {
             var len = newChildren.length;
             var i = -1;
@@ -840,14 +859,6 @@ var destroyVelem = function destroyVelem(velem, node) {
     }
     detachRef(velem);
     removeNode(node);
-};
-
-var getFlattenChildren = function getFlattenChildren(children, iteratee) {
-    if (isArr(children)) {
-        return flattenChildren(children, iteratee);
-    } else if (!isUndefined(children) && !isBln(children)) {
-        return [iteratee(children, 0)];
-    }
 };
 
 var createVstatelessComponent = function createVstatelessComponent(type, props) {

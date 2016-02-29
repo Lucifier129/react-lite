@@ -87,7 +87,16 @@ let initVelem = (velem, parentNode, parentContext) => {
     } else {
         node = document.createElement(type)
     }
-    let children = props.children = getFlattenChildren(props.children, getVnode)
+    let children = props.children
+    
+    if (_.isArr(children)) {
+        children = props.children = _.flattenChildren(children, getVnode)
+    } else if (children !== undefined && !_.isBln(children)) {
+        children = props.children = [getVnode(children)]
+    } else {
+        children = props.children = undefined
+    }
+
     if (children) {
         var len = children.length
         var i = -1
@@ -106,9 +115,18 @@ let updateVelem = (velem, newVelem, node, parentNode, parentContext) => {
     let newProps = newVelem.props
     let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
     let children = props.children
+    var newChildren = newProps.children
+
+    if (_.isArr(newChildren)) {
+        newChildren = newProps.children = _.flattenChildren(newChildren, getVnode)
+    } else if (newChildren !== undefined && !_.isBln(newChildren)) {
+        newChildren = newProps.children = [getVnode(newChildren)]
+    } else {
+        newChildren = newProps.children = undefined
+    }
+
     if (oldHtml == null && children) {
         var childNodes = node.childNodes
-        var newChildren = newProps.children = getFlattenChildren(newProps.children, getVnode)
         if (newChildren) {
             var len = newChildren.length
             var i = -1
@@ -134,7 +152,6 @@ let updateVelem = (velem, newVelem, node, parentNode, parentContext) => {
     } else {
         // should patch props first, make sure innerHTML was cleared 
         _.patchProps(node, props, newProps)
-        var newChildren = newProps.children = getFlattenChildren(newProps.children, getVnode)
         if (newChildren) {
             var len = newChildren.length
             var i = -1
@@ -162,14 +179,6 @@ let destroyVelem = (velem, node) => {
     }
     detachRef(velem)
     removeNode(node)
-}
-
-let getFlattenChildren = (children, iteratee) => {
-    if (_.isArr(children)) {
-        return _.flattenChildren(children, iteratee)
-    } else if (!_.isUndefined(children) && !_.isBln(children)) {
-        return [iteratee(children, 0)]
-    }
 }
 
 export let createVstatelessComponent = (type, props) => ({
