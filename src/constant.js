@@ -2,25 +2,11 @@
   key/value configs
 */
 
-const TRUE = true
+export const TRUE = true
 const xlink = 'http://www.w3.org/1999/xlink'
 const xml = 'http://www.w3.org/XML/1998/namespace'
 
 export const SVGNamespaceURI = 'http://www.w3.org/2000/svg'
-
-export const VNODE_TYPE = {
-    ELEMENT: 1,
-    COMPONENT: 2,
-    STATELESS_COMPONENT: 3,
-    TEXT: 4
-}
-export const DIFF_TYPE = {
-    CREATE: 1,
-    REMOVE: 2,
-    REPLACE: 3,
-    UPDATE: 4
-}
-
 export const COMPONENT_ID = 'liteid'
 
 export const propAlias = {
@@ -81,6 +67,7 @@ export const attributesNS = {
 
 // those key must use be attributes
 export const attrbutesConfigs = {
+    children: TRUE,
     type: TRUE,
     clipPath: TRUE,
     cx: TRUE,
@@ -278,12 +265,6 @@ export const isUnitlessNumber = {
     strokeDashoffset: TRUE,
     strokeOpacity: TRUE,
     strokeWidth: TRUE
-}
-
-export const ignoreKeys = {
-    key: TRUE,
-    ref: TRUE,
-    children: TRUE
 }
 
 // use dom prop to compare new prop

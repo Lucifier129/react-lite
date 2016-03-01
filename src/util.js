@@ -7,7 +7,6 @@ import {
 	attrbutesConfigs,
 	readOnlyProps,
 	isUnitlessNumber,
-	ignoreKeys,
 	shouldUseDOMProp
 } from './constant'
 let $ = jQuery
@@ -21,6 +20,7 @@ export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
 export let isStatelessComponent = obj => isFn(obj) && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
+export let hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
 export let noop = () => {}
 export let identity = obj => obj
 
@@ -32,16 +32,19 @@ export let pipe = (fn1, fn2) => {
 }
 
 export let flattenChildren = (list, iteratee, record) => {
-	record = record || { index: 0 }
-	for (let i = 0, len = list.length; i < len; i++) {
-		let item = list[i]
-		if (isArr(item)) {
-			flattenChildren(item, iteratee, record)
-		} else if (!isUndefined(item) && !isBln(item)) {
-			iteratee(item, record.index)
-			record.index += 1
-		}
-	}
+    let len = list.length
+    let i = -1
+    record = record || []
+
+    while (len--) {
+        let item = list[++i]
+        if (isArr(item)) {
+            flattenChildren(item, iteratee, record)
+        } else if (!isUndefined(item) && !isBln(item)) {
+            record.push(iteratee(item, record.length) || item)
+        }
+    }
+    return record
 }
 
 export let eachItem = (list, iteratee) => {
@@ -52,59 +55,51 @@ export let eachItem = (list, iteratee) => {
 
 export let mapValue = (obj, iteratee) => {
 	for (let key in obj) {
-		if (obj.hasOwnProperty(key)) {
+		if (hasOwn(obj, key)) {
 			iteratee(obj[key], key)
 		}
 	}
 }
 
 export let mapKey = (oldObj, newObj, iteratee) => {
-	var keyMap = {}
-	var key
-	for (key in oldObj) {
-		if (oldObj.hasOwnProperty(key)) {
+	let keyMap = {}
+	for (let key in oldObj) {
+		if (hasOwn(oldObj, key)) {
 			keyMap[key] = true
 			iteratee(key)
 		}
 	}
-	for (key in newObj) {
-		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
+	for (let key in newObj) {
+		if (hasOwn(newObj, key) && keyMap[key] !== true) {
 			iteratee(key)
 		}
 	}
 }
 
-export let extend = function(target) {
-    for (let i = 1, len = arguments.length; i < len; i++) {
-        let source = arguments[i]
-        if (source != null) {
-            for (let key in source) {
-            	if (source.hasOwnProperty(key) && source[key] !== undefined) {
-            		target[key] = source[key]
-            	}
-            }
+export function extend(to, from) {
+    if (!from) {
+        return to
+    }
+    var keys = Object.keys(from)
+    var i = keys.length
+    while (i--) {
+        if (from[keys[i]] !== undefined) {
+            to[keys[i]] = from[keys[i]]
         }
     }
-    return target
+    return to
 }
 
 
 let uid = 0
 export let getUid = () => ++uid
 
-let getChildren = children => {
-	let childrenLen = children.length
-	if (childrenLen > 0) {
-		if (childrenLen === 1) {
-			children = children[0]
-		}
-		return children
-	}
-}
 export let mergeProps = (props, children, defaultProps) => {
-	let result = extend({}, defaultProps, props)
-	children = getChildren(children)
-	if (!isUndefined(children)) {
+	let result = extend(extend({}, defaultProps), props)
+	let childrenLen = children.length
+	if (childrenLen === 1) {
+		result.children = children[0]
+	} else if (childrenLen > 1) {
 		result.children = children
 	}
 	return result
@@ -115,82 +110,110 @@ let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
 
 export let setProp = (elem, key, value) => {
+
+	if (key === 'children') {
+		return
+	}
+
 	let originalKey = key
 	key = propAlias[key] || key
-	switch (true) {
-		case ignoreKeys[key] === true:
-			break
-		case EVENT_KEYS.test(key):
-			addEvent(elem, key, value)
-			break
-		case isStyleKey(key):
-			setStyle(elem, value)
-			break
-		case isInnerHTMLKey(key):
-			value && isStr(value.__html) && ($(elem).html(value.__html))
-			break
-		case (key in elem) && attrbutesConfigs[originalKey] !== true:
-			if (readOnlyProps[key] !== true) {
-				if (key === 'title' && value == null) {
-					value = ''
-				}
-				$.prop(elem, key, value)
+
+	if (EVENT_KEYS.test(key)) {
+		addEvent(elem, key, value)
+	} else if (isStyleKey(key)) {
+		setStyle(elem, value)
+	} else if (isInnerHTMLKey(key)) {
+		value && isStr(value.__html) && ($(elem).html(value.__html))
+	} else if ((key in elem) && attrbutesConfigs[originalKey] !== true) {
+		if (readOnlyProps[key] !== true) {
+			if (key === 'title' && value == null) {
+				value = ''
 			}
-			break
-		default:
-			if (value == null) {
-				elem.removeAttribute(key)
-			} else if (attributesNS[originalKey] === true) {
-				elem.setAttributeNS(key, value)
-			} else {
-				$.attr(elem, key, value)
-			}
+			$.prop(elem, key, value)
+		}
+	} else {
+		if (value == null) {
+		    $.removeAttr(elem, key)
+		} else if (attributesNS[originalKey] === true) {
+		    elem.setAttributeNS(key, value)
+		} else {
+		    $.attr(elem, key, value)
+		}
 	}
 }
 export let setProps = (elem, props) => {
-	mapValue(props, (value, key) => {
-		setProp(elem, key, value)
-	})
+	for (let key in props) {
+		if (hasOwn(props, key)) {
+			setProp(elem, key, props[key])
+		}
+	}
 }
-export let removeProps = (elem, oldProps) => {
-	mapValue(oldProps, (oldValue, key) => {
-		removeProp(elem, key, oldValue)
-	})
+export let removeProps = (elem, props) => {
+	for (let key in props) {
+		if (hasOwn(props, key)) {
+			removeProp(elem, key, props[key])
+		}
+	}
 }
 export let removeProp = (elem, key, oldValue) => {
-	key = propAlias[key] || key
-	switch (true) {
-		case ignoreKeys[key] === true:
-			break
-		case EVENT_KEYS.test(key):
-			removeEvent(elem, key)
-			break
-		case isStyleKey(key):
-			removeStyle(elem, oldValue)
-			break
-		case isInnerHTMLKey(key):
-			$(elem).html('')
-			break
-		case attrbutesConfigs[key] === true || !(key in elem):
-			$.removeAttr(elem, key)
-			break
-		case isFn(oldValue):
-			elem[key] = null
-			break
-		case isStr(oldValue):
-			elem[key] = ''
-			break
-		case isBln(oldValue):
-			elem[key] = false
-			break
-		default:
-			try {
-				elem[key] = undefined
-				delete elem[key]
-			} catch(e) {
-				//pass
-			}
+	if (key === 'children') {
+		return
 	}
+
+	key = propAlias[key] || key
+	if (EVENT_KEYS.test(key)) {
+		removeEvent(elem, key)
+	} else if (isStyleKey(key)) {
+		removeStyle(elem, oldValue)
+	} else if (isInnerHTMLKey(key)) {
+		$(elem).html('')
+	} else if (attrbutesConfigs[key] === true || !(key in elem)) {
+		$.removeAttr(elem, key)
+	} else if (isFn(oldValue)) {
+		elem[key] = null
+	} else if (isStr(oldValue)) {
+		elem[key] = ''
+	} else if (isBln(oldValue)) {
+		elem[key] = false
+	} else {
+		try {
+		    elem[key] = undefined
+		    delete elem[key]
+		} catch (e) {
+		    //pass
+		}
+	}
+}
+
+let $props = null
+let $newProps = null
+let $elem = null
+let $patchProps = key => {
+    if (key === 'children') {
+        return
+    }
+    let value = $newProps[key]
+    let oldValue = shouldUseDOMProp[key] == true
+    ? $elem[key]
+    : $props[key]
+    if (value === oldValue) {
+        return
+    }
+    if (isUndefined(value)) {
+        removeProp($elem, key, oldValue)
+        return
+    }
+    if (isStyleKey(key)) {
+        patchStyle($elem, oldValue, value)
+    } else if (isInnerHTMLKey(key)) {
+        let oldHtml = oldValue && oldValue.__html
+        let html = value && value.__html
+        if (html != null && html !== oldHtml) {
+            $(elem).html(html)
+        }
+    } else {
+        setProp($elem, key, value)
+    }
 }
 
 export let patchProps = (elem, props, newProps) => {
@@ -204,52 +227,47 @@ export let patchProps = (elem, props, newProps) => {
 		removeProps(elem, props)
 		return
 	}
-
-	mapKey(props, newProps, key => {
-		if (ignoreKeys[key] === true) {
-			return
-		}
-		let value = newProps[key]
-		let oldValue = shouldUseDOMProp[key] == true ? elem[key] : props[key]
-		if (value === oldValue) {
-			return
-		}
-		if (isUndefined(value)) {
-			removeProp(elem, key, oldValue)
-			return
-		}
-		if (isStyleKey(key)) {
-			patchStyle(elem, oldValue, value)
-		} else if (isInnerHTMLKey(key)) {
-			let oldHtml = oldValue && oldValue.__html
-			let html = value && value.__html
-			if (html != null && html !== oldHtml) {
-				$(elem).html(html)
-			}
-		} else {
-			setProp(elem, key, value)
-		}
-	})
+	$elem = elem
+	$props = props
+	$newProps = newProps
+	mapKey(props, newProps, $patchProps)
+	$elem = $props = $newProps = null
 }
 
 export let removeStyle = (elem, style) => {
-	if (!isObj(style)) {
+	if (!style) {
 		return
 	}
 	let elemStyle = elem.style
-	mapValue(style, (_, key) => {
-		elemStyle[key] = ''
-	})
+	for (let key in style) {
+		if (hasOwn(style, key)) {
+			elemStyle[key] = ''
+		}
+	}
 }
 export let setStyle = (elem, style) => {
-	if (!isObj(style)) {
+	if (!style) {
 		return
 	}
 	let elemStyle = elem.style
-	mapValue(style, (value, key) => {
-		setStyleValue(elemStyle, key, value)
-	})
+	for (let key in style) {
+		if (hasOwn(style, key)) {
+			setStyleValue(elemStyle, key, style[key])
+		}
+	}
 }
+
+let $elemStyle = null
+let $style = null
+let $newStyle = null
+let $patchStyle = key => {
+    let value = $newStyle[key]
+    let oldValue = $style[key]
+    if (value !== oldValue) {
+        setStyleValue($elemStyle, key, value)
+    }
+}
+
 export let patchStyle = (elem, style, newStyle) => {
 	if (style === newStyle) {
 		return
@@ -259,14 +277,11 @@ export let patchStyle = (elem, style, newStyle) => {
 	} else if (newStyle && !style) {
 		setStyle(elem, newStyle)
 	} else {
-		var elemStyle = elem.style
-		mapKey(style, newStyle, key => {
-			let value = newStyle[key]
-			let oldValue = style[key]
-			if (value !== oldValue) {
-				setStyleValue(elemStyle, key, value)
-			}
-		})
+		$elemStyle = elem.style
+		$style = style
+		$newStyle = newStyle
+		mapKey(style, newStyle, $patchStyle)
+		$elemStyle = $style = $newStyle = null
 	}
 }
 

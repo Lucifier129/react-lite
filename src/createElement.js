@@ -1,12 +1,12 @@
 import * as _ from './util'
-import { Velem, Vcomponent, VstatelessComponent, handleVnodeWithRef } from './virtual-dom'
+import { Velem, Vcomponent, VstatelessComponent } from './virtual-dom'
 
-export let isValidElement = obj => obj != null && !!obj.vtype
+export let isValidElement = obj => obj != null && !!obj.isVdom
 
 export let cloneElement = (originElem, props, ...children) => {
 	let { type, key, ref } = originElem
-	props = _.extend({ key, ref }, originElem.props, props)
-	let vnode = createElement(type, props, ...children)
+	let newProps = _.extend(_.extend({ key, ref }, originElem.props), props)
+	let vnode = createElement(type, newProps, ...children)
 	if (vnode.ref === originElem.ref) {
 		vnode.refs = originElem.refs
 	}
@@ -20,40 +20,34 @@ export let createFactory = type => {
 }
 
 let createElement = (type, props, ...children) => {
-	let Vnode
-	switch (true) {
-		case _.isStr(type):
-			Vnode = Velem
-			break
-		case _.isComponent(type):
-			Vnode = Vcomponent
-			break
-		case _.isStatelessComponent(type):
-			Vnode = VstatelessComponent
-			break
-		default:
-			throw new Error(`React.createElement: unexpect type [ ${type} ]`)
+	let Vnode = null
+
+	if (_.isStr(type)) {
+		Vnode = Velem
+	} else if (_.isComponent(type)) {
+		Vnode = Vcomponent
+	} else if (_.isStatelessComponent(type)) {
+		Vnode = VstatelessComponent
+	} else {
+		throw new Error(`React.createElement: unexpect type [ ${type} ]`)
 	}
+
 	let key = null
 	let ref = null
-	let hasRef = false
 	if (props != null) {
-		if (!_.isUndefined(props.key)) {
+		if (props.key !== undefined) {
 			key = '' + props.key
 			delete props.key
 		}
-		if (!_.isUndefined(props.ref)) {
+		if (props.ref !== undefined) {
 			ref = props.ref
 			delete props.ref
-			hasRef = true
 		}
 	}
+
 	let vnode = new Vnode(type, _.mergeProps(props, children, type.defaultProps))
 	vnode.key = key
 	vnode.ref = ref
-	if (hasRef && Vnode !== VstatelessComponent) {
-		handleVnodeWithRef(vnode)
-	}
 	return vnode
 }
 

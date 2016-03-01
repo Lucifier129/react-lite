@@ -1,32 +1,32 @@
 import * as _ from './util'
-import { renderComponent, clearDidMount } from './virtual-dom'
+import { renderComponent, clearPendingComponents, compareTwoTrees } from './virtual-dom'
 
 export let updateQueue = {
 	updaters: [],
 	isPending: false,
 	add(updater) {
+		this.updaters.push(updater)
+	},
+	batchUpdate() {
+		if (this.isPending) {
+			return
+		}
+		this.isPending = true
 		/*
+		 each updater.update may add new updater to updateQueue
+		 clear them with a loop
 		 event bubbles from bottom-level to top-level
 		 reverse the updater order can merge some props and state and reduce the refresh times
 		 see Updater.update method below to know why
 		*/
-		this.updaters.splice(0, 0, updater)
-	},
-	batchUpdate() {
-		this.isPending = true
-		/*
-		  each updater.update may add new updater to updateQueue
-		  clear them with a loop
-		*/
-		while (this.updaters.length) {
-			let { updaters } = this
-			this.updaters = []
-			_.eachItem(updaters, triggerUpdate)
+		let { updaters } = this
+		let updater
+		while (updater = updaters.pop()) {
+			updater.updateComponent()
 		}
 		this.isPending = false
 	}
 }
-let triggerUpdate = updater => updater.update()
 
 function Updater(instance) {
 	this.instance = instance
@@ -43,10 +43,10 @@ Updater.prototype = {
 		this.nextContext = nextContext
 		// receive nextProps!! should update immediately
 		nextProps || !updateQueue.isPending
-		? this.update()
+		? this.updateComponent()
 		: updateQueue.add(this)
 	},
-	update() {
+	updateComponent() {
 		let { instance, pendingStates, nextProps, nextContext } = this
 		if (nextProps || pendingStates.length > 0) {
 			nextProps = nextProps || instance.props
@@ -93,8 +93,8 @@ Updater.prototype = {
 	clearCallbacks() {
 		let { pendingCallbacks, instance } = this
 		if (pendingCallbacks.length > 0) {
+			this.pendingCallbacks = []
 			_.eachItem(pendingCallbacks, callback => callback.call(instance))
-			pendingCallbacks.length = 0
 		}
 	},
 	addCallback(callback) {
@@ -113,19 +113,18 @@ export default function Component(props, context) {
 	this.context = context || {}
 }
 
-let noop = _.noop
 Component.prototype = {
 	constructor: Component,
-	getChildContext: noop,
-	componentWillUpdate: noop,
-	componentDidUpdate: noop,
-	componentWillReceiveProps: noop,
-	componentWillMount: noop,
-	componentDidMount: noop,
-	componentWillUnmount: noop,
-	shouldComponentUpdate(nextProps, nextState) {
-		return true
-	},
+	// getChildContext: _.noop,
+	// componentWillUpdate: _.noop,
+	// componentDidUpdate: _.noop,
+	// componentWillReceiveProps: _.noop,
+	// componentWillMount: _.noop,
+	// componentDidMount: _.noop,
+	// componentWillUnmount: _.noop,
+	// shouldComponentUpdate(nextProps, nextState) {
+	// 	return true
+	// },
 	forceUpdate(callback) {
 		let { $updater, $cache, props, state, context } = this
 		if ($updater.isPending || !$cache.isMounted) {
@@ -139,20 +138,24 @@ Component.prototype = {
 		let vtree = $cache.vtree
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
-		this.componentWillUpdate(nextProps, nextState, nextContext)
+		if (this.componentWillUpdate) {
+			this.componentWillUpdate(nextProps, nextState, nextContext)
+		}
 		this.state = nextState
 		this.props = nextProps
 		this.context = nextContext
 		let nextVtree = renderComponent(this, parentContext)
-		let newNode = vtree.updateTree(node, nextVtree, node.parentNode, nextVtree.context)
+		let newNode = compareTwoTrees(vtree, nextVtree, node, node.parentNode, nextVtree.context)
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {}
 			_.extend(newNode.cache, node.cache)
 		}
 		$cache.vtree = nextVtree
 		$cache.node = newNode
-		clearDidMount()
-		this.componentDidUpdate(props, state, context)
+		clearPendingComponents()
+		if (this.componentDidUpdate) {
+			this.componentDidUpdate(props, state, context)
+		}
 		if (callback) {
 			callback.call(this)
 		}
@@ -178,18 +181,20 @@ Component.prototype = {
 	}
 }
 
-export let updatePropsAndState = (component, props, state, context) => {
-	component.state = state
-	component.props = props
-	component.context = context || {}
-}
-
-export let shouldUpdate = (component, nextProps, nextState, nextContext, callback) => {
-	let shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext)
+let shouldUpdate = (component, nextProps, nextState, nextContext, callback) => {
+	let shouldComponentUpdate = true
+	if (component.shouldComponentUpdate) {
+		shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext)
+	}
 	if (shouldComponentUpdate === false) {
-		updatePropsAndState(component, nextProps, nextState, nextContext)
+		component.props = nextProps
+		component.state = nextState
+		component.context = nextContext || {}
 		return
 	}
-	updatePropsAndState(component.$cache, nextProps, nextState, nextContext)
+	let cache = component.$cache
+	cache.props = nextProps
+	cache.state = nextState
+	cache.context = nextContext || {}
 	component.forceUpdate(callback)
 }

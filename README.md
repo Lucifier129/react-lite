@@ -3,6 +3,7 @@
 [![Travis](https://travis-ci.org/Lucifier129/react-lite.svg?branch=master)](https://travis-ci.org/Lucifier129/react-lite)
 [![npm](https://img.shields.io/npm/v/react-lite.svg)](https://www.npmjs.com/package/react-lite)
 [![Join the chat at https://gitter.im/Lucifier129/react-lite](https://badges.gitter.im/Lucifier129/react-lite.svg)](https://gitter.im/Lucifier129/react-lite?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![File Size](https://badge-size.herokuapp.com/Lucifier129/react-lite/master/dist/react-lite.min.js.svg)](https://raw.githubusercontent.com/Lucifier129/react-lite/master/dist/react-lite.min.js)
 
 ## Introduction
 React under 20k.
