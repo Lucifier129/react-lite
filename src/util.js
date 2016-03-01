@@ -209,7 +209,7 @@ let $patchProps = key => {
         let oldHtml = oldValue && oldValue.__html
         let html = value && value.__html
         if (html != null && html !== oldHtml) {
-            $(elem).html(html)
+            $($elem).html(html)
         }
     } else {
         setProp($elem, key, value)

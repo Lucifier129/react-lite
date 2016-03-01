@@ -519,7 +519,7 @@ var $patchProps = function $patchProps(key) {
 		var oldHtml = oldValue && oldValue.__html;
 		var html = value && value.__html;
 		if (html != null && html !== oldHtml) {
-			$(elem).html(html);
+			$($elem).html(html);
 		}
 	} else {
 		setProp($elem, key, value);
