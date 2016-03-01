@@ -543,7 +543,7 @@ var patchProps = function patchProps(elem, props, newProps) {
 };
 
 var removeStyle = function removeStyle(elem, style) {
-	if (!isObj(style)) {
+	if (!style) {
 		return;
 	}
 	var elemStyle = elem.style;
@@ -554,7 +554,7 @@ var removeStyle = function removeStyle(elem, style) {
 	}
 };
 var setStyle = function setStyle(elem, style) {
-	if (!isObj(style)) {
+	if (!style) {
 		return;
 	}
 	var elemStyle = elem.style;
@@ -934,33 +934,27 @@ var clearPendingComponents = function clearPendingComponents() {
 
 function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
     var newNode = node;
-    var isReplace = null;
 
     if (vtree === newVtree) {
+        // equal
         return newNode;
     } else if (newVtree === undefined) {
+        // remove
         vtree.destroy(node);
     } else if (vtree === undefined) {
+        // create
         newNode = newVtree.init(parentNode, parentContext);
-    } else if (vtree.type !== newVtree.type) {
-        isReplace = true;
-    } else if (newVtree.key !== null) {
-        if (vtree.key === null || newVtree.key !== vtree.key) {
-            isReplace = true;
-        }
-    } else if (vtree.key !== null) {
-        isReplace = true;
-    }
-
-    if (isReplace) {
+    } else if (vtree.type !== newVtree.type || newVtree.key !== vtree.key) {
+        // set removeNode to no-op, do not remove exist node, then replace it with new node
         var $removeNode = removeNode;
         removeNode = noop$1;
         vtree.destroy(node);
         removeNode = $removeNode;
-        newNode = newVtree.init(function (nextNode) {
-            return parentNode.replaceChild(nextNode, node);
-        }, parentContext);
+        $parentNode = parentNode;
+        $existNode = node;
+        newNode = newVtree.init(replaceNode, parentContext);
     } else {
+        // same type and same key -> update
         newNode = vtree.update(newVtree, node, parentNode, parentContext);
     }
 
@@ -980,6 +974,13 @@ var appendNode = function appendNode(parentNode, node) {
     } else {
         parentNode.appendChild(node);
     }
+};
+
+var $parentNode = null;
+var $existNode = null;
+var replaceNode = function replaceNode(newNode) {
+    $parentNode.replaceChild(newNode, $existNode);
+    $parentNode = $existNode = null;
 };
 
 var getVnode = function getVnode(vnode) {

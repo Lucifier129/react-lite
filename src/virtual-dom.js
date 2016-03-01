@@ -305,35 +305,25 @@ export let clearPendingComponents = () => {
 
 export function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
     let newNode = node
-    let isReplace = null
 
-    if (vtree === newVtree) {
+    if (vtree === newVtree) { // equal
         return newNode
-    } else if (newVtree === undefined) {
+    } else if (newVtree === undefined) { // remove
         vtree.destroy(node)
-    } else if (vtree === undefined) {
+    } else if (vtree === undefined) { // create
         newNode = newVtree.init(parentNode, parentContext)
-    } else if (vtree.type !== newVtree.type) {
-        isReplace = true
-    } else if (newVtree.key !== null) {
-        if (vtree.key === null || newVtree.key !== vtree.key) {
-            isReplace = true   
-        }
-    } else if (vtree.key !== null) {
-       isReplace = true   
-    }
-
-    if (isReplace) {
+    } else if (vtree.type !== newVtree.type || newVtree.key !== vtree.key) { 
+        // set removeNode to no-op, do not remove exist node, then replace it with new node
         let $removeNode = removeNode
         removeNode = noop
         vtree.destroy(node)
         removeNode = $removeNode
-        newNode = newVtree.init(
-            nextNode => parentNode.replaceChild(nextNode, node),
-            parentContext
-        )
-    } else {
-        newNode = vtree.update(newVtree, node, parentNode, parentContext)
+        $parentNode = parentNode
+        $existNode = node
+        newNode = newVtree.init(replaceNode, parentContext)
+    } else { 
+        // same type and same key -> update
+        newNode = vtree.update(newVtree, node, parentNode, parentContext) 
     }
     
     return newNode
@@ -352,6 +342,13 @@ let appendNode = (parentNode, node) => {
 	} else {
 		parentNode.appendChild(node)
 	}
+}
+
+let $parentNode = null
+let $existNode = null
+let replaceNode = newNode => {
+    $parentNode.replaceChild(newNode, $existNode)
+    $parentNode = $existNode = null
 }
 
 let getVnode = vnode => {

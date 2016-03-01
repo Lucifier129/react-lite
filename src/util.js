@@ -236,7 +236,7 @@ export let patchProps = (elem, props, newProps) => {
 }
 
 export let removeStyle = (elem, style) => {
-	if (!isObj(style)) {
+	if (!style) {
 		return
 	}
 	let elemStyle = elem.style
@@ -247,7 +247,7 @@ export let removeStyle = (elem, style) => {
 	}
 }
 export let setStyle = (elem, style) => {
-	if (!isObj(style)) {
+	if (!style) {
 		return
 	}
 	let elemStyle = elem.style
