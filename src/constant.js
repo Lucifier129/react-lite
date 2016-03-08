@@ -293,5 +293,6 @@ export const notBubbleEvents = {
     ondragexit: TRUE,
     ondraggesture: TRUE,
     ondragover: TRUE,
-    oncontextmenu: TRUE
+    oncontextmenu: TRUE,
+    onpropertychange: TRUE
 }

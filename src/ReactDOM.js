@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { COMPONENT_ID, VNODE_TYPE, TRUE } from './constant'
+import { COMPONENT_ID} from './constant'
 import { clearPendingComponents, compareTwoTrees } from './virtual-dom'
 import { updateQueue } from './Component'
 
@@ -15,7 +15,7 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	// component lify cycle method maybe call root rendering
 	// should bundle them and render by only one time
 	if (argsCache) {
-		if (argsCache === TRUE) {
+		if (argsCache === true) {
 			pendingRendering[id] = argsCache = [vtree, callback, parentContext]
 		} else {
 			argsCache[0] = vtree
@@ -27,7 +27,7 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 		return
 	}
 
-	pendingRendering[id] = TRUE
+	pendingRendering[id] = true
 	if (vtreeStore[id]) {
 		compareTwoTrees(vtreeStore[id], vtree, container.firstChild, container, parentContext)
 	} else {

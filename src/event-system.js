@@ -1,8 +1,10 @@
 import jQuery from 'jquery'
 import { updateQueue } from './Component'
 import { eventNameAlias, notBubbleEvents } from './constant'
+
 let $ = jQuery
-let getEventName = key => {
+
+export let getEventName = key => {
 	key = eventNameAlias[key] || key
 	return key.toLowerCase()
 }

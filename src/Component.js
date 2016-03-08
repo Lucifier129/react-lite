@@ -174,7 +174,7 @@ Component.prototype = {
 	},
 	getDOMNode() {
 		let node = this.$cache.node
-		return node && (node.tagName === 'NOSCRIPT') ? null : node
+		return node && (node.nodeName === '#comment') ? null : node
 	},
 	isMounted() {
 		return this.$cache.isMounted
