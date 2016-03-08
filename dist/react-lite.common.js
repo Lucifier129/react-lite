@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.0.29
+ * react-lite.js v0.15.0
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -334,20 +334,19 @@ var pipe = function pipe(fn1, fn2) {
 	};
 };
 
-var flattenChildren = function flattenChildren(list, iteratee, record) {
+var flattenChildren = function flattenChildren(list, iteratee, index) {
 	var len = list.length;
 	var i = -1;
-	record = record || [];
+	index = index || 0;
 
 	while (len--) {
 		var item = list[++i];
 		if (isArr(item)) {
-			flattenChildren(item, iteratee, record);
-		} else if (!isUndefined(item) && !isBln(item)) {
-			record.push(iteratee(item, record.length) || item);
+			flattenChildren(item, iteratee, index);
+		} else {
+			iteratee(item, index++);
 		}
 	}
-	return record;
 };
 
 var eachItem = function eachItem(list, iteratee) {
@@ -633,7 +632,7 @@ var VtextPrototype = Vtext.prototype;
 VtextPrototype.isVdom = true;
 VtextPrototype.init = function (parentNode) {
     var textNode = document.createTextNode(this.text);
-    appendNode(parentNode, textNode);
+    parentNode.appendChild(textNode);
     return textNode;
 };
 VtextPrototype.update = function (newVtext, textNode) {
@@ -645,6 +644,22 @@ VtextPrototype.update = function (newVtext, textNode) {
 VtextPrototype.destroy = function (textNode) {
     removeNode(textNode);
 };
+
+function Vcomment(comment) {
+    this.comment = comment;
+}
+
+var VcommentPrototype = Vcomment.prototype;
+VcommentPrototype.isVdom = true;
+VcommentPrototype.init = function (parentNode) {
+    var commentNode = document.createComment(this.comment);
+    parentNode.appendChild(commentNode);
+    return commentNode;
+};
+VcommentPrototype.update = function (newVcomment, commentNode) {
+    return commentNode;
+};
+VcommentPrototype.destroy = VtextPrototype.destroy;
 
 function Velem(type, props) {
     this.type = type;
@@ -666,15 +681,15 @@ VelemPrototype.init = function (parentNode, parentContext) {
     }
     var children = props.children;
 
-    if (isArr(children)) {
-        children = props.children = flattenChildren(children, getVnode);
-    } else if (children !== undefined && !isBln(children)) {
-        children = props.children = [getVnode(children)];
-    } else {
-        children = props.children = undefined;
+    if (!isArr(children) && children != null && !isBln(children)) {
+        children = [children];
     }
 
     if (children) {
+        $children = [];
+        flattenChildren(children, getVnode);
+        children = props.children = $children;
+        $children = null;
         var len = children.length;
         var i = -1;
         while (len--) {
@@ -682,7 +697,7 @@ VelemPrototype.init = function (parentNode, parentContext) {
         }
     }
     setProps(node, props);
-    appendNode(parentNode, node);
+    parentNode.appendChild(node);
     attachRef(this, node);
     return node;
 };
@@ -694,17 +709,17 @@ VelemPrototype.update = function (newVelem, node, parentNode, parentContext) {
     var children = props.children;
     var newChildren = newProps.children;
 
-    if (isArr(newChildren)) {
-        newChildren = newProps.children = flattenChildren(newChildren, getVnode);
-    } else if (newChildren !== undefined && !isBln(newChildren)) {
-        newChildren = newProps.children = [getVnode(newChildren)];
-    } else {
-        newChildren = newProps.children = undefined;
+    if (!isArr(newChildren) && newChildren != null && !isBln(newChildren)) {
+        newChildren = [newChildren];
     }
 
     if (oldHtml == null && children) {
         var childNodes = node.childNodes;
         if (newChildren) {
+            $children = [];
+            flattenChildren(newChildren, getVnode);
+            newChildren = newProps.children = $children;
+            $children = null;
             var len = newChildren.length;
             var i = -1;
             while (len--) {
@@ -730,6 +745,10 @@ VelemPrototype.update = function (newVelem, node, parentNode, parentContext) {
         // should patch props first, make sure innerHTML was cleared
         patchProps(node, props, newProps);
         if (newChildren) {
+            $children = [];
+            flattenChildren(newChildren, getVnode);
+            newChildren = newProps.children = $children;
+            $children = null;
             var len = newChildren.length;
             var i = -1;
             while (len--) {
@@ -756,6 +775,7 @@ VelemPrototype.destroy = function (node) {
     }
     detachRef(this);
     removeNode(node);
+    detachNode(node);
 };
 
 function VstatelessComponent(type, props) {
@@ -802,7 +822,12 @@ var renderVstatelessComponent = function renderVstatelessComponent(vstatelessCom
     if (vtree && vtree.render) {
         vtree = vtree.render();
     }
-    return getVnode(vtree);
+    if (vtree === null || vtree === false) {
+        vtree = new Vcomment('react-empty: ' + getUid());
+    } else if (!vtree || !vtree.isVdom) {
+        throw new Error('@' + factory.name + '#render:You may have returned undefined, an array or some other invalid object');
+    }
+    return vtree;
 };
 
 function Vcomponent(type, props) {
@@ -895,10 +920,13 @@ var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
 var renderComponent = function renderComponent(component, parentContext) {
     refs = component.refs;
     var vtree = component.render();
-    if (isUndefined(vtree)) {
-        throw new Error('component can not render undefined');
+
+    if (vtree === null || vtree === false) {
+        vtree = new Vcomment('react-empty: ' + getUid());
+    } else if (!vtree || !vtree.isVdom) {
+        throw new Error('@' + component.constructor.name + '#render:You may have returned undefined, an array or some other invalid object');
     }
-    vtree = getVnode(vtree);
+
     var curContext = refs = null;
     if (component.getChildContext) {
         curContext = component.getChildContext();
@@ -945,14 +973,15 @@ function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
         // create
         newNode = newVtree.init(parentNode, parentContext);
     } else if (vtree.type !== newVtree.type || newVtree.key !== vtree.key) {
+        // replace
         // set removeNode to no-op, do not remove exist node, then replace it with new node
         var $removeNode = removeNode;
         removeNode = noop$1;
         vtree.destroy(node);
         removeNode = $removeNode;
-        $parentNode = parentNode;
-        $existNode = node;
-        newNode = newVtree.init(replaceNode, parentContext);
+        syntheticParentNode.namespaceURI = parentNode.namespaceURI;
+        newNode = newVtree.init(syntheticParentNode, parentContext);
+        parentNode.replaceChild(newNode, node);
     } else {
         // same type and same key -> update
         newNode = vtree.update(newVtree, node, parentNode, parentContext);
@@ -961,35 +990,33 @@ function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext) {
     return newNode;
 }
 
+var syntheticParentNode = {
+    appendChild: noop$1
+};
+
 var removeNode = function removeNode(node) {
-    // if node.parentNode had set innerHTML, do nothing
     if (node && node.parentNode) {
         node.parentNode.removeChild(node);
     }
 };
-var appendNode = function appendNode(parentNode, node) {
-    // for replacing node
-    if (isFn(parentNode)) {
-        parentNode(node);
-    } else {
-        parentNode.appendChild(node);
-    }
-};
 
-var $parentNode = null;
-var $existNode = null;
-var replaceNode = function replaceNode(newNode) {
-    $parentNode.replaceChild(newNode, $existNode);
-    $parentNode = $existNode = null;
-};
-
+var $children = null;
 var getVnode = function getVnode(vnode) {
-    if (vnode === null) {
-        vnode = new Velem('noscript', {});
-    } else if (!vnode || !vnode.isVdom) {
-        vnode = new Vtext('' + vnode);
+    if (vnode != null && !isBln(vnode)) {
+        $children.push(vnode.isVdom ? vnode : new Vtext('' + vnode));
     }
-    return vnode;
+};
+
+var detachNode = function detachNode(node, props) {
+    node.eventStore = null;
+    for (var key in props) {
+        if (props.hasOwnProperty(key) && EVENT_KEYS.test(key)) {
+            key = getEventName(key);
+            if (notBubbleEvents[key] === true) {
+                node[key] = null;
+            }
+        }
+    }
 };
 
 var getDOMNode = function getDOMNode() {
@@ -1225,7 +1252,7 @@ Component.prototype = {
 	},
 	getDOMNode: function getDOMNode() {
 		var node = this.$cache.node;
-		return node && node.tagName === 'NOSCRIPT' ? null : node;
+		return node && node.nodeName === '#comment' ? null : node;
 	},
 	isMounted: function isMounted() {
 		return this.$cache.isMounted;
@@ -1353,7 +1380,7 @@ var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container,
 	// component lify cycle method maybe call root rendering
 	// should bundle them and render by only one time
 	if (argsCache) {
-		if (argsCache === TRUE) {
+		if (argsCache === true) {
 			pendingRendering[id] = argsCache = [vtree, callback, parentContext];
 		} else {
 			argsCache[0] = vtree;
@@ -1365,7 +1392,7 @@ var renderTreeIntoContainer = function renderTreeIntoContainer(vtree, container,
 		return;
 	}
 
-	pendingRendering[id] = TRUE;
+	pendingRendering[id] = true;
 	if (vtreeStore[id]) {
 		compareTwoTrees(vtreeStore[id], vtree, container.firstChild, container, parentContext);
 	} else {
@@ -1738,7 +1765,7 @@ var createClass = function createClass(spec) {
 };
 
 var React = extend({
-    version: '0.14.7',
+    version: '15.0-rc1',
     cloneElement: cloneElement,
     isValidElement: isValidElement,
     createElement: createElement,
