@@ -1,5 +1,6 @@
 import * as _ from './util'
-import { DIFF_TYPE, SVGNamespaceURI } from './constant'
+import { SVGNamespaceURI, notBubbleEvents } from './constant'
+import { getEventName } from './event-system'
 
 let noop = _.noop
 let refs = null
@@ -12,7 +13,7 @@ let VtextPrototype = Vtext.prototype
 VtextPrototype.isVdom = true
 VtextPrototype.init = function(parentNode) {
     let textNode = document.createTextNode(this.text)
-    appendNode(parentNode, textNode)
+    parentNode.appendChild(textNode)
     return textNode
 }
 VtextPrototype.update = function(newVtext, textNode) {
@@ -24,6 +25,22 @@ VtextPrototype.update = function(newVtext, textNode) {
 VtextPrototype.destroy = function(textNode) {
     removeNode(textNode)
 }
+
+function Vcomment(comment) {
+    this.comment = comment
+}
+
+let VcommentPrototype = Vcomment.prototype
+VcommentPrototype.isVdom = true
+VcommentPrototype.init = function(parentNode) {
+    let commentNode = document.createComment(this.comment)
+    parentNode.appendChild(commentNode)
+    return commentNode
+}
+VcommentPrototype.update = function(newVcomment, commentNode) {
+    return commentNode
+}
+VcommentPrototype.destroy = VtextPrototype.destroy
 
 export function Velem(type, props) {
     this.type = type
@@ -42,16 +59,16 @@ VelemPrototype.init = function(parentNode, parentContext) {
         node = document.createElement(type)
     }
     let children = props.children
-    
-    if (_.isArr(children)) {
-        children = props.children = _.flattenChildren(children, getVnode)
-    } else if (children !== undefined && !_.isBln(children)) {
-        children = props.children = [getVnode(children)]
-    } else {
-        children = props.children = undefined
+
+    if (!_.isArr(children) && children != null && !_.isBln(children)) {
+        children = [children]
     }
 
     if (children) {
+        $children = []
+        _.flattenChildren(children, getVnode)
+        children = props.children = $children
+        $children = null
         var len = children.length
         var i = -1
         while (len--) {
@@ -59,7 +76,7 @@ VelemPrototype.init = function(parentNode, parentContext) {
         }
     }
     _.setProps(node, props)
-    appendNode(parentNode, node)
+    parentNode.appendChild(node)
     attachRef(this, node)
     return node
 }
@@ -70,17 +87,17 @@ VelemPrototype.update = function(newVelem, node, parentNode, parentContext) {
     let children = props.children
     var newChildren = newProps.children
 
-    if (_.isArr(newChildren)) {
-        newChildren = newProps.children = _.flattenChildren(newChildren, getVnode)
-    } else if (newChildren !== undefined && !_.isBln(newChildren)) {
-        newChildren = newProps.children = [getVnode(newChildren)]
-    } else {
-        newChildren = newProps.children = undefined
+    if (!_.isArr(newChildren) && newChildren != null && !_.isBln(newChildren)) {
+        newChildren = [newChildren]
     }
 
     if (oldHtml == null && children) {
         var childNodes = node.childNodes
         if (newChildren) {
+            $children = []
+            _.flattenChildren(newChildren, getVnode)
+            newChildren = newProps.children = $children
+            $children = null
             var len = newChildren.length
             var i = -1
             while (len--) {
@@ -106,6 +123,10 @@ VelemPrototype.update = function(newVelem, node, parentNode, parentContext) {
         // should patch props first, make sure innerHTML was cleared 
         _.patchProps(node, props, newProps)
         if (newChildren) {
+            $children = []
+            _.flattenChildren(newChildren, getVnode)
+            newChildren = newProps.children = $children
+            $children = null
             var len = newChildren.length
             var i = -1
             while (len--) {
@@ -131,6 +152,7 @@ VelemPrototype.destroy = function(node) {
     }
     detachRef(this)
     removeNode(node)
+    detachNode(node)
 }
 
 export function VstatelessComponent(type, props) {
@@ -175,7 +197,12 @@ let renderVstatelessComponent = (vstatelessComponent, parentContext) => {
     if (vtree && vtree.render) {
         vtree = vtree.render()
     }
-    return getVnode(vtree)
+    if (vtree === null || vtree === false) {
+        vtree = new Vcomment(`react-empty: ${_.getUid()}`)
+    } else if (!vtree || !vtree.isVdom) {
+        throw new Error(`@${factory.name}#render:You may have returned undefined, an array or some other invalid object`)
+    }
+    return vtree
 }
 
 export function Vcomponent(type, props) {
@@ -266,10 +293,13 @@ let getContextByTypes = (curContext, contextTypes) => {
 export let renderComponent = (component, parentContext) => {
     refs = component.refs
 	let vtree = component.render()
-	if (_.isUndefined(vtree)) {
-		throw new Error('component can not render undefined')
-	}
-	vtree = getVnode(vtree)
+
+    if (vtree === null || vtree === false) {
+        vtree = new Vcomment(`react-empty: ${_.getUid()}`)
+    } else if (!vtree || !vtree.isVdom) {
+        throw new Error(`@${component.constructor.name}#render:You may have returned undefined, an array or some other invalid object`)
+    }
+    
 	let curContext = refs = null
     if (component.getChildContext) {
         curContext = component.getChildContext()
@@ -312,15 +342,15 @@ export function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext
         vtree.destroy(node)
     } else if (vtree === undefined) { // create
         newNode = newVtree.init(parentNode, parentContext)
-    } else if (vtree.type !== newVtree.type || newVtree.key !== vtree.key) { 
+    } else if (vtree.type !== newVtree.type || newVtree.key !== vtree.key) {  // replace
         // set removeNode to no-op, do not remove exist node, then replace it with new node
         let $removeNode = removeNode
         removeNode = noop
         vtree.destroy(node)
         removeNode = $removeNode
-        $parentNode = parentNode
-        $existNode = node
-        newNode = newVtree.init(replaceNode, parentContext)
+        syntheticParentNode.namespaceURI = parentNode.namespaceURI
+        newNode = newVtree.init(syntheticParentNode, parentContext)
+        parentNode.replaceChild(newNode, node)
     } else { 
         // same type and same key -> update
         newNode = vtree.update(newVtree, node, parentNode, parentContext) 
@@ -329,35 +359,33 @@ export function compareTwoTrees(vtree, newVtree, node, parentNode, parentContext
     return newNode
 }
 
+let syntheticParentNode = {
+    appendChild: noop
+}
+
 let removeNode = node => {
-	// if node.parentNode had set innerHTML, do nothing
 	if (node && node.parentNode) {
 		node.parentNode.removeChild(node)
 	}
 }
-let appendNode = (parentNode, node) => {
-	// for replacing node
-	if (_.isFn(parentNode)) {
-		parentNode(node)
-	} else {
-		parentNode.appendChild(node)
-	}
-}
 
-let $parentNode = null
-let $existNode = null
-let replaceNode = newNode => {
-    $parentNode.replaceChild(newNode, $existNode)
-    $parentNode = $existNode = null
-}
-
+let $children = null
 let getVnode = vnode => {
-	if (vnode === null) {
-		vnode = new Velem('noscript', {})
-	} else if (!vnode || !vnode.isVdom) {
-		vnode = new Vtext('' + vnode)
-	}
-	return vnode
+    if (vnode != null && !_.isBln(vnode)) {
+        $children.push(vnode.isVdom ? vnode : new Vtext('' + vnode))
+    }
+}
+
+let detachNode = (node, props) => {
+    node.eventStore = null
+    for (let key in props) {
+        if (props.hasOwnProperty(key) && _.EVENT_KEYS.test(key)) {
+            key = getEventName(key)
+            if (notBubbleEvents[key] === true) {
+                node[key] = null
+            }
+        }
+    }
 }
 
 let getDOMNode = function() { return this }

@@ -29,20 +29,19 @@ export let pipe = (fn1, fn2) => {
 	}
 }
 
-export let flattenChildren = (list, iteratee, record) => {
+export let flattenChildren = (list, iteratee, index) => {
     let len = list.length
     let i = -1
-    record = record || []
+    index = index || 0
 
     while (len--) {
         let item = list[++i]
         if (isArr(item)) {
-            flattenChildren(item, iteratee, record)
-        } else if (!isUndefined(item) && !isBln(item)) {
-            record.push(iteratee(item, record.length) || item)
+            flattenChildren(item, iteratee, index)
+        } else {
+        	iteratee(item, index++)
         }
     }
-    return record
 }
 
 export let eachItem = (list, iteratee) => {
@@ -103,7 +102,7 @@ export let mergeProps = (props, children, defaultProps) => {
 	return result
 }
 
-let EVENT_KEYS = /^on/i
+export let EVENT_KEYS = /^on/i
 let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
 

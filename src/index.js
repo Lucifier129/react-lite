@@ -8,7 +8,7 @@ import DOM from './DOM'
 import * as _ from './util'
 
 let React = _.extend({
-    version: '0.14.7',
+    version: '15.0-rc1',
     cloneElement,
     isValidElement,
     createElement,

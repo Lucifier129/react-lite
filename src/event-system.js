@@ -1,7 +1,7 @@
 import { updateQueue } from './Component'
 import { eventNameAlias, notBubbleEvents } from './constant'
 
-let getEventName = key => {
+export let getEventName = key => {
 	key = eventNameAlias[key] || key
 	return key.toLowerCase()
 }
