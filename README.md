@@ -70,7 +70,7 @@ just the same as what react does, see some demos below(I just add the alias to w
 - works with react-motion: [demos](http://lucifier129.github.io/react-motion-with-react-lite/index.html)
 - works with react-d3-components: [demos](http://lucifier129.github.io/react-d3-components-demos/)
 - works with react-d3: [demos](http://lucifier129.github.io/react-d3-demos/)
-- react-lite [vdom-benchmark](http://lucifier129.github.io/vdom-benchmark/)
+- react-lite [vdom-benchmark](http://vdom-benchmark.github.io/vdom-benchmark/)
 - js-repaint-perf:
 	* [react](http://lucifier129.github.io/react-lite-repaint-perf/react/index.html)
 	* [react-lite](http://lucifier129.github.io/react-lite-repaint-perf/react/lite.html)
