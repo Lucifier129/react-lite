@@ -18,7 +18,7 @@ react-lite is an implementation of React that optimizes for small script size.
 | React                  | 0.14.3     | 136.0kb       |
 | Web Components Polyfill| 0.7.19     | 118.0kb       |
 | Riot                   | 2.3.11     | 20kb          |
-| React-lite             | 0.0.23     | 20kb        |
+| React-lite             | 0.15.0     | 20kb          |
 
 It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no `React.renderToString` & `React.renderToStaticMarkup`).
@@ -43,7 +43,7 @@ Note: feel free to try react-lite, if something happen and we can't fixed in tim
 you can install react-lite from npm
 
 ```shell
-npm install --save react-lite
+npm install react-lite --save
 ```
 
 ## Browser compatibility
@@ -70,7 +70,7 @@ just the same as what react does, see some demos below(I just add the alias to w
 - works with react-motion: [demos](http://lucifier129.github.io/react-motion-with-react-lite/index.html)
 - works with react-d3-components: [demos](http://lucifier129.github.io/react-d3-components-demos/)
 - works with react-d3: [demos](http://lucifier129.github.io/react-d3-demos/)
-- react-lite [vdom-benchmark](http://lucifier129.github.io/vdom-benchmark/)
+- react-lite [vdom-benchmark](http://vdom-benchmark.github.io/vdom-benchmark/)
 - js-repaint-perf:
 	* [react](http://lucifier129.github.io/react-lite-repaint-perf/react/index.html)
 	* [react-lite](http://lucifier129.github.io/react-lite-repaint-perf/react/lite.html)
@@ -79,19 +79,14 @@ just the same as what react does, see some demos below(I just add the alias to w
 
 via react-lite:
 - In browser, virtual-dom can not render to string(no `React.renderToString` and `React.renderToStaticMarkup`)
-- event system is base on delegation pattern(since v0.0.19)
-- all of React.PropTypes method is noop(empty function)
-- Do not support React-addons(for example ReactCSSTransitionGroup)
+- all of React.PropTypes method is no-op(empty function)
 - use React in server side rendering, and use React-lite in browser
 	* react-lite will replace the dom tree with new dom tree
 	* you had better avoid `script|head|link` tag in client side
-- the rule about setting props
-	* if `propName in dom` is `true` then `dom[propName]=propValue`
-	* else: `dom.setAttribute(propName, propValue)`
 - can not use react-dev-tool inspect react-lite, should switch to regular react for debugging
 
 ## Test
-react-lite reuses react's unitest(168), you can see them in `__test__`, and run the tests with:
+react-lite reuses react's unitest(170), you can see them in `__test__`, and run the tests with:
 
 ```shell
 npm test

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -10,7 +10,7 @@
  */
 
 'use strict';
- jest.dontMock('../src');
+jest.dontMock('../src');
 var React;
 var ReactDOM;
 var ReactTestUtils;
@@ -108,19 +108,19 @@ describe('ReactStatelessComponent', function() {
     expect(el.textContent).toBe('mest');
   });
 
-  it('should support module pattern components', function() {
-    function Child({test}) {
-      return {
-        render() {
-          return <div>{test}</div>;
-        },
-      };
+  it('should warn when stateless component returns array', function() {
+    spyOn(console, 'error');
+    function NotAComponent() {
+      return [<div />, <div />];
     }
-
-    var el = document.createElement('div');
-    ReactDOM.render(<Child test="test" />, el);
-
-    expect(el.textContent).toBe('test');
+    expect(function() {
+      ReactTestUtils.renderIntoDocument(<div><NotAComponent /></div>);
+    }).toThrow();
+    // expect(console.error.calls.length).toBe(1);
+    // expect(console.error.argsForCall[0][0]).toContain(
+    //   'NotAComponent(...): A valid React element (or null) must be returned. '+
+    //   'You may have returned undefined, an array or some other invalid object.'
+    // );
   });
 
   // it('should throw on string refs in pure functions', function() {
@@ -131,7 +131,7 @@ describe('ReactStatelessComponent', function() {
   //   expect(function() {
   //     ReactTestUtils.renderIntoDocument(<Child test="test" />);
   //   }).toThrow(
-  //     'Invariant Violation: Stateless function components cannot have refs.'
+  //     'Stateless function components cannot have refs.'
   //   );
   // });
 
@@ -148,7 +148,10 @@ describe('ReactStatelessComponent', function() {
 
   //   expect(console.error.argsForCall.length).toBe(1);
   //   expect(console.error.argsForCall[0][0]).toContain(
-  //     'Stateless function components cannot be given refs');
+  //     'Stateless function components cannot be given refs ' +
+  //     '(See ref "stateless" in StatelessComponent created by Parent). ' +
+  //     'Attempts to access this ref will fail.'
+  //   );
   // });
 
   it('should provide a null ref', function() {
@@ -172,14 +175,21 @@ describe('ReactStatelessComponent', function() {
   //   expect(console.error.argsForCall[0][0]).toContain('Child');
   // });
 
-  it('should support default props', function() {
-    function Child(props) {
-      expect(props.test).toBe(2)
-      return <div>{props.test}</div>;
-    }
-    Child.defaultProps = {test: 2};
-    ReactTestUtils.renderIntoDocument(<Child />);
-  });
+  // it('should support default props and prop types', function() {
+  //   function Child(props) {
+  //     return <div>{props.test}</div>;
+  //   }
+  //   Child.defaultProps = {test: 2};
+  //   Child.propTypes = {test: React.PropTypes.string};
+
+  //   spyOn(console, 'error');
+  //   ReactTestUtils.renderIntoDocument(<Child />);
+  //   expect(console.error.argsForCall.length).toBe(1);
+  //   expect(console.error.argsForCall[0][0]).toBe(
+  //     'Warning: Failed propType: Invalid prop `test` of type `number` ' +
+  //     'supplied to `Child`, expected `string`.'
+  //   );
+  // });
 
   it('should receive context', function() {
     var Parent = React.createClass({
@@ -204,10 +214,6 @@ describe('ReactStatelessComponent', function() {
   });
 
   it('should work with arrow functions', function() {
-    // TODO: actually use arrow functions, probably need node v4 and maybe
-    // a separate file that we blacklist from the arrow function transform.
-    // We can't actually test this without native arrow functions since the
-    // issues (non-newable) don't apply to any other functions.
     var Child = function() {
       return <div />;
     };
@@ -217,4 +223,33 @@ describe('ReactStatelessComponent', function() {
 
     expect(() => ReactTestUtils.renderIntoDocument(<Child />)).not.toThrow();
   });
+
+  it('should allow simple functions to return null', function() {
+    var Child = function() {
+      return null;
+    };
+    expect(() => ReactTestUtils.renderIntoDocument(<Child />)).not.toThrow();
+  });
+
+  it('should allow simple functions to return false', function() {
+    function Child() {
+      return false;
+    }
+    expect(() => ReactTestUtils.renderIntoDocument(<Child />)).not.toThrow();
+  });
+
+  // it('should warn when using non-React functions in JSX', function() {
+  //   spyOn(console, 'error');
+  //   function NotAComponent() {
+  //     return [<div />, <div />];
+  //   }
+  //   expect(function() {
+  //     ReactTestUtils.renderIntoDocument(<div><NotAComponent /></div>);
+  //   }).toThrow();  // has no method 'render'
+  //   expect(console.error.calls.length).toBe(1);
+  //   expect(console.error.argsForCall[0][0]).toContain(
+  //     'NotAComponent(...): A valid React element (or null) must be returned. You may ' +
+  //     'have returned undefined, an array or some other invalid object.'
+  //   );
+  // });
 });
