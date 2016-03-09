@@ -138,7 +138,8 @@ VelemPrototype.update = function(newVelem, node, parentNode, parentContext) {
     return node
 }
 VelemPrototype.destroy = function(node) {
-    let { children } = this.props
+    let { props } = this
+    let { children } = props
     if (children) {
         var childNodes = node.childNodes
         var $removeNode = removeNode
@@ -152,7 +153,15 @@ VelemPrototype.destroy = function(node) {
     }
     detachRef(this)
     removeNode(node)
-    detachNode(node)
+    node.eventStore = null
+    for (let key in props) {
+        if (props.hasOwnProperty(key) && _.EVENT_KEYS.test(key)) {
+            key = getEventName(key)
+            if (notBubbleEvents[key] === true) {
+                node[key] = null
+            }
+        }
+    }
 }
 
 export function VstatelessComponent(type, props) {
@@ -373,18 +382,6 @@ let $children = null
 let getVnode = vnode => {
     if (vnode != null && !_.isBln(vnode)) {
         $children.push(vnode.isVdom ? vnode : new Vtext('' + vnode))
-    }
-}
-
-let detachNode = (node, props) => {
-    node.eventStore = null
-    for (let key in props) {
-        if (props.hasOwnProperty(key) && _.EVENT_KEYS.test(key)) {
-            key = getEventName(key)
-            if (notBubbleEvents[key] === true) {
-                node[key] = null
-            }
-        }
     }
 }
 

@@ -91,17 +91,6 @@ export function extend(to, from) {
 let uid = 0
 export let getUid = () => ++uid
 
-export let mergeProps = (props, children, defaultProps) => {
-	let result = extend(extend({}, defaultProps), props)
-	let childrenLen = children.length
-	if (childrenLen === 1) {
-		result.children = children[0]
-	} else if (childrenLen > 1) {
-		result.children = children
-	}
-	return result
-}
-
 export let EVENT_KEYS = /^on/i
 let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
@@ -145,13 +134,7 @@ export let setProps = (elem, props) => {
 		}
 	}
 }
-export let removeProps = (elem, props) => {
-	for (let key in props) {
-		if (hasOwn(props, key)) {
-			removeProp(elem, key, props[key])
-		}
-	}
-}
+
 export let removeProp = (elem, key, oldValue) => {
 	if (key === 'children') {
 		return
@@ -216,17 +199,6 @@ let $patchProps = key => {
 
 
 export let patchProps = (elem, props, newProps) => {
-	if (props === newProps) {
-		return
-	}
-	if (!props && newProps) {
-		setProps(elem, newProps)
-		return
-	} else if (!newProps && props) {
-		removeProps(elem, props)
-		return
-	}
-
 	$elem = elem
 	$props = props
 	$newProps = newProps

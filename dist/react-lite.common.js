@@ -397,17 +397,6 @@ var getUid = function getUid() {
 	return ++uid;
 };
 
-var mergeProps = function mergeProps(props, children, defaultProps) {
-	var result = extend(extend({}, defaultProps), props);
-	var childrenLen = children.length;
-	if (childrenLen === 1) {
-		result.children = children[0];
-	} else if (childrenLen > 1) {
-		result.children = children;
-	}
-	return result;
-};
-
 var EVENT_KEYS = /^on/i;
 var isInnerHTMLKey = function isInnerHTMLKey(key) {
 	return key === 'dangerouslySetInnerHTML';
@@ -455,13 +444,7 @@ var setProps = function setProps(elem, props) {
 		}
 	}
 };
-var removeProps = function removeProps(elem, props) {
-	for (var key in props) {
-		if (hasOwn(props, key)) {
-			removeProp(elem, key, props[key]);
-		}
-	}
-};
+
 var removeProp = function removeProp(elem, key, oldValue) {
 	if (key === 'children') {
 		return;
@@ -523,17 +506,6 @@ var $patchProps = function $patchProps(key) {
 };
 
 var patchProps = function patchProps(elem, props, newProps) {
-	if (props === newProps) {
-		return;
-	}
-	if (!props && newProps) {
-		setProps(elem, newProps);
-		return;
-	} else if (!newProps && props) {
-		removeProps(elem, props);
-		return;
-	}
-
 	$elem = elem;
 	$props = props;
 	$newProps = newProps;
@@ -760,7 +732,8 @@ VelemPrototype.update = function (newVelem, node, parentNode, parentContext) {
     return node;
 };
 VelemPrototype.destroy = function (node) {
-    var children = this.props.children;
+    var props = this.props;
+    var children = props.children;
 
     if (children) {
         var childNodes = node.childNodes;
@@ -775,7 +748,15 @@ VelemPrototype.destroy = function (node) {
     }
     detachRef(this);
     removeNode(node);
-    detachNode(node);
+    node.eventStore = null;
+    for (var key in props) {
+        if (props.hasOwnProperty(key) && EVENT_KEYS.test(key)) {
+            key = getEventName(key);
+            if (notBubbleEvents[key] === true) {
+                node[key] = null;
+            }
+        }
+    }
 };
 
 function VstatelessComponent(type, props) {
@@ -1004,18 +985,6 @@ var $children = null;
 var getVnode = function getVnode(vnode) {
     if (vnode != null && !isBln(vnode)) {
         $children.push(vnode.isVdom ? vnode : new Vtext('' + vnode));
-    }
-};
-
-var detachNode = function detachNode(node, props) {
-    node.eventStore = null;
-    for (var key in props) {
-        if (props.hasOwnProperty(key) && EVENT_KEYS.test(key)) {
-            key = getEventName(key);
-            if (notBubbleEvents[key] === true) {
-                node[key] = null;
-            }
-        }
     }
 };
 
@@ -1505,12 +1474,16 @@ var createFactory = function createFactory(type) {
 	return factory;
 };
 
-var createElement = function createElement(type, props) {
-	for (var _len3 = arguments.length, children = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-		children[_key3 - 2] = arguments[_key3];
-	}
-
+var createElement = function createElement(type, props, children) {
 	var Vnode = null;
+	var argsLen = arguments.length;
+
+	if (argsLen > 3) {
+		children = [children];
+		for (var i = 3; i < argsLen; i++) {
+			children[i - 2] = arguments[i];
+		}
+	}
 
 	if (isStr(type)) {
 		Vnode = Velem;
@@ -1524,18 +1497,31 @@ var createElement = function createElement(type, props) {
 
 	var key = null;
 	var ref = null;
+	var finalProps = extend({}, type.defaultProps);
 	if (props != null) {
-		if (props.key !== undefined) {
-			key = '' + props.key;
-			delete props.key;
-		}
-		if (props.ref !== undefined) {
-			ref = props.ref;
-			delete props.ref;
+		for (var propKey in props) {
+			if (!props.hasOwnProperty(propKey)) {
+				continue;
+			}
+			if (propKey === 'key') {
+				if (props.key !== undefined) {
+					key = '' + props.key;
+				}
+			} else if (propKey === 'ref') {
+				if (props.ref !== undefined) {
+					ref = props.ref;
+				}
+			} else {
+				finalProps[propKey] = props[propKey];
+			}
 		}
 	}
 
-	var vnode = new Vnode(type, mergeProps(props, children, type.defaultProps));
+	if (children !== undefined) {
+		finalProps.children = children;
+	}
+
+	var vnode = new Vnode(type, finalProps);
 	vnode.key = key;
 	vnode.ref = ref;
 	return vnode;
@@ -1696,17 +1682,11 @@ var combineMixinToProto = function combineMixinToProto(proto, mixin) {
 };
 
 var combineMixinToClass = function combineMixinToClass(Component, mixin) {
-	if (isObj(mixin.propTypes)) {
-		extend(Component.propTypes, mixin.propTypes);
-	}
-	if (isObj(mixin.contextTypes)) {
-		extend(Component.contextTypes, mixin.contextTypes);
-	}
+	extend(Component.propTypes, mixin.propTypes);
+	extend(Component.contextTypes, mixin.contextTypes);
+	extend(Component, mixin.statics);
 	if (isFn(mixin.getDefaultProps)) {
 		extend(Component.defaultProps, mixin.getDefaultProps());
-	}
-	if (isObj(mixin.statics)) {
-		extend(Component, mixin.statics);
 	}
 };
 

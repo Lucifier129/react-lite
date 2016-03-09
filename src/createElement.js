@@ -19,8 +19,16 @@ export let createFactory = type => {
 	return factory
 }
 
-let createElement = (type, props, ...children) => {
+let createElement = function(type, props, children) {
 	let Vnode = null
+	let argsLen = arguments.length
+
+	if (argsLen > 3) {
+		children = [children]
+		for (let i = 3; i < argsLen; i++) {
+			children[i - 2] = arguments[i]
+		}
+	}
 
 	if (_.isStr(type)) {
 		Vnode = Velem
@@ -34,18 +42,31 @@ let createElement = (type, props, ...children) => {
 
 	let key = null
 	let ref = null
+	let finalProps = _.extend({}, type.defaultProps)
 	if (props != null) {
-		if (props.key !== undefined) {
-			key = '' + props.key
-			delete props.key
-		}
-		if (props.ref !== undefined) {
-			ref = props.ref
-			delete props.ref
+		for (let propKey in props) {
+			if (!props.hasOwnProperty(propKey)) {
+				continue
+			}
+			if (propKey === 'key') {
+				if (props.key !== undefined) {
+					key = '' + props.key
+				}
+			} else if (propKey === 'ref') {
+				if (props.ref !== undefined) {
+					ref = props.ref
+				}
+			} else {
+				finalProps[propKey] = props[propKey]
+			}
 		}
 	}
 
-	let vnode = new Vnode(type, _.mergeProps(props, children, type.defaultProps))
+	if (children !== undefined) {
+		finalProps.children = children
+	}
+
+	let vnode = new Vnode(type, finalProps)
 	vnode.key = key
 	vnode.ref = ref
 	return vnode
