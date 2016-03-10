@@ -8,15 +8,14 @@ import {
 	isUnitlessNumber,
 	shouldUseDOMProp
 } from './constant'
-export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
-export let isObj = isType('Object')
-export let isStr = isType('String')
-export let isFn = isType('Function')
-export let isBln = isType('Boolean')
-export let isArr = Array.isArray || isType('Array')
+
+export let isObj = obj => obj !== null && Object.prototype.toString.call(obj) === '[object Object]'
+export let isStr = obj => typeof obj === 'string'
+export let isFn = obj => typeof obj === 'function'
+export let isBln = obj => typeof obj === 'boolean'
+export let isArr = Array.isArray
 export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
-export let isStatelessComponent = obj => isFn(obj) && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
 export let hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
 export let noop = () => {}
@@ -148,7 +147,7 @@ export let removeProp = (elem, key, oldValue) => {
 		removeStyle(elem, oldValue)
 	} else if (isInnerHTMLKey(key)) {
 		elem.innerHTML = ''
-	} else if (attrbutesConfigs[key] === true || !(key in elem)) {
+	} else if (!(key in elem) || attrbutesConfigs[key] === true) {
 		elem.removeAttribute(key)
 	} else if (isFn(oldValue)) {
 		elem[key] = null
@@ -158,7 +157,6 @@ export let removeProp = (elem, key, oldValue) => {
 		elem[key] = false
 	} else {
 		try {
-		    elem[key] = undefined
 		    delete elem[key]
 		} catch (e) {
 		    //pass
@@ -270,7 +268,7 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 })
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
-export let setStyleValue = (style, key, value) => {
+let setStyleValue = (style, key, value) => {
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
 		style[key] = value + 'px'
 	} else {

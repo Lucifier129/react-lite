@@ -29,10 +29,11 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 
 	pendingRendering[id] = true
 	if (vtreeStore[id]) {
-		compareTwoTrees(vtreeStore[id], vtree, container.firstChild, container, parentContext)
+		compareTwoTrees(vtreeStore[id], vtree, container.firstChild, parentContext)
 	} else {
+		var rootNode = vtree.init(parentContext, container.namespaceURI)
 		container.innerHTML = ''
-		vtree.init(container, parentContext)
+		container.appendChild(rootNode)
 	}
 	vtreeStore[id] = vtree
 	let isPending = updateQueue.isPending
@@ -84,6 +85,7 @@ export let unmountComponentAtNode = container => {
 	let id = container[COMPONENT_ID]
 	if (vtreeStore[id]) {
 		vtreeStore[id].destroy(container.firstChild)
+		container.innerHTML = ''
 		delete vtreeStore[id]
 		return true
 	}

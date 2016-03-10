@@ -145,7 +145,7 @@ Component.prototype = {
 		this.props = nextProps
 		this.context = nextContext
 		let nextVtree = renderComponent(this, parentContext)
-		let newNode = compareTwoTrees(vtree, nextVtree, node, node.parentNode, nextVtree.context)
+		let newNode = compareTwoTrees(vtree, nextVtree, node, nextVtree.context)
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {}
 			_.extend(newNode.cache, node.cache)

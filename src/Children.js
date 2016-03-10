@@ -32,7 +32,7 @@ export let map = (children, iteratee, context) => {
 		data.child = iteratee.call(context, child, index) || child
 		data.isEqual = data.child === child
 		let key = data.key = getKey(child, index)
-		if (keyMap.hasOwnProperty(key)) {
+		if (_.hasOwn(keyMap, key)) {
 			keyMap[key] += 1
 		} else {
 			keyMap[key] = 0

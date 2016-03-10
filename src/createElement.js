@@ -30,22 +30,26 @@ let createElement = function(type, props, children) {
 		}
 	}
 
-	if (_.isStr(type)) {
+	let vtype = typeof type
+
+	if (vtype === 'string') {
 		Vnode = Velem
-	} else if (_.isComponent(type)) {
-		Vnode = Vcomponent
-	} else if (_.isStatelessComponent(type)) {
-		Vnode = VstatelessComponent
+	} else if (vtype === 'function') {
+		if (type.prototype && typeof type.prototype.forceUpdate === 'function') {
+			Vnode = Vcomponent
+		} else {
+			Vnode = VstatelessComponent
+		}
 	} else {
 		throw new Error(`React.createElement: unexpect type [ ${type} ]`)
 	}
 
 	let key = null
 	let ref = null
-	let finalProps = _.extend({}, type.defaultProps)
+	let finalProps = {}
 	if (props != null) {
 		for (let propKey in props) {
-			if (!props.hasOwnProperty(propKey)) {
+			if (!_.hasOwn(props, propKey)) {
 				continue
 			}
 			if (propKey === 'key') {
@@ -58,6 +62,16 @@ let createElement = function(type, props, children) {
 				}
 			} else {
 				finalProps[propKey] = props[propKey]
+			}
+		}
+	}
+
+	let defaultProps = type.defaultProps
+
+	if (defaultProps) {
+		for (let propKey in defaultProps) {
+			if (finalProps[propKey] === undefined) {
+				finalProps[propKey] = defaultProps[propKey]
 			}
 		}
 	}
