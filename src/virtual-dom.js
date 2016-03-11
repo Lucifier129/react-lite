@@ -11,12 +11,14 @@ export function Vtext(text) {
 
 let VtextPrototype = Vtext.prototype
 VtextPrototype.isVdom = true
+VtextPrototype.type = '#TEXT'
 VtextPrototype.init = function() {
     return document.createTextNode(this.text)
 }
 VtextPrototype.update = function(newVtext, textNode) {
     if (newVtext.text !== this.text) {
-        textNode.replaceData(0, textNode.length, newVtext.text)
+        textNode.nodeValue = newVtext.text
+        // textNode.replaceData(0, textNode.length, newVtext.text)
     }
     return textNode
 }
@@ -32,6 +34,7 @@ function Vcomment(comment) {
 
 let VcommentPrototype = Vcomment.prototype
 VcommentPrototype.isVdom = true
+VcommentPrototype.type = '#COMMENT'
 VcommentPrototype.init = function() {
     return document.createComment(this.comment)
 }
@@ -57,17 +60,15 @@ VelemPrototype.initChildren = function(node, parentContext, namespaceURI) {
     }
 
     if (children) {
-        var $children = []
         _.flattenChildren(children, vchild => {
             if (vchild == null || _.isBln(vchild)) {
                 return
             }
             vchild = vchild.isVdom ? vchild : new Vtext('' + vchild)
             let childNode = vchild.init(parentContext, namespaceURI)
+            childNode.vnode = vchild
             node.appendChild(childNode)
-            $children.push(vchild)
         })
-        props.children = $children
     }
 }
 VelemPrototype.init = function(parentContext, namespaceURI) {
@@ -96,41 +97,60 @@ VelemPrototype.update = function(newVelem, node, parentContext) {
     let newProps = newVelem.props
     let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
     let children = props.children
-    var newChildren = newProps.children
-    var namespaceURI = node.namespaceURI
+    let newChildren = newProps.children
+    let { childNodes, namespaceURI } = node
+    let newChildrenCount = 0
+
 
     if (!_.isArr(newChildren) && newChildren != null && !_.isBln(newChildren)) {
         newChildren = [newChildren]
     }
 
-    if (oldHtml == null && children) {
-        var childNodes = node.childNodes
+    if (oldHtml == null && childNodes.length) {
         if (newChildren) {
-            var $newChildren = []
             _.flattenChildren(newChildren, newVchild => {
                 if (newVchild == null || _.isBln(newVchild)) {
                     return
                 }
                 newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild)
-                let i = $newChildren.length
-                let vchild = children[i]
-                if (vchild) {
-                    compareTwoTrees(vchild, newVchild, childNodes[i], parentContext)
+                let { type, key } = newVchild
+                let newChildNode = null
+
+                for (let i = newChildrenCount; i < childNodes.length; i++) {
+                    let childNode = childNodes[i]
+                    let vnode = childNode.vnode
+                    if (vnode.type === type && vnode.key === key) {
+                        newChildNode = vnode.update(newVchild, childNode, parentContext)
+                        break
+                    }
+                }
+
+                if (!newChildNode) {
+                    newChildNode = newVchild.init(parentContext, namespaceURI)
+                }
+
+                let currentNode = childNodes[newChildrenCount]
+                if (currentNode) {
+                    if (currentNode !== newChildNode) {
+                        node.insertBefore(newChildNode, currentNode)
+                    }
                 } else {
-                    var newChildNode = newVchild.init(parentContext, namespaceURI)
                     node.appendChild(newChildNode)
                 }
-                $newChildren.push(newVchild)
+
+                newChildNode.vnode = newVchild
+                newChildrenCount += 1
             })
-            newChildren = newProps.children = $newChildren
         }
-        var childrenLen = children.length
-        var newChildrenLen = newChildren && newChildren.length || 0
         
+        var childNodesLen = childNodes.length
+        if (childNodesLen == null) {
+            debugger
+        }
         // destroy old children not in the newChildren
-        while (childrenLen > newChildrenLen) {
-            childrenLen -= 1
-            children[childrenLen].destroy(childNodes[childrenLen], removeNode)
+        while (childNodesLen !== newChildrenCount) {
+            let childNode = childNodes[--childNodesLen]
+            childNode.vnode.destroy(childNode, removeNode)
         }
         _.patchProps(node, props, newProps)
     } else {
@@ -151,14 +171,10 @@ VelemPrototype.update = function(newVelem, node, parentContext) {
 }
 VelemPrototype.destroy = function(node, remove) {
     let { props } = this
-    let { children } = props
-    if (children) {
-        var childNodes = node.childNodes
-        var len = children.length
-        var i = -1
-        while (len--) {
-            children[++i].destroy(childNodes[i])
-        }
+    let childNodes = node.childNodes
+    for (let i = 0, len = childNodes.length; i < len; i++) {
+        let childNode = childNodes[i]
+        childNode.vnode.destroy(childNode)
     }
     if (this.ref !== null) {
         detachRef(this.refs, this.ref)

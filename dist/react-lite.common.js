@@ -598,12 +598,14 @@ function Vtext(text) {
 
 var VtextPrototype = Vtext.prototype;
 VtextPrototype.isVdom = true;
+VtextPrototype.type = '#TEXT';
 VtextPrototype.init = function () {
     return document.createTextNode(this.text);
 };
 VtextPrototype.update = function (newVtext, textNode) {
     if (newVtext.text !== this.text) {
-        textNode.replaceData(0, textNode.length, newVtext.text);
+        textNode.nodeValue = newVtext.text;
+        // textNode.replaceData(0, textNode.length, newVtext.text)
     }
     return textNode;
 };
@@ -619,6 +621,7 @@ function Vcomment(comment) {
 
 var VcommentPrototype = Vcomment.prototype;
 VcommentPrototype.isVdom = true;
+VcommentPrototype.type = '#COMMENT';
 VcommentPrototype.init = function () {
     return document.createComment(this.comment);
 };
@@ -645,17 +648,15 @@ VelemPrototype.initChildren = function (node, parentContext, namespaceURI) {
     }
 
     if (children) {
-        var $children = [];
         flattenChildren(children, function (vchild) {
             if (vchild == null || isBln(vchild)) {
                 return;
             }
             vchild = vchild.isVdom ? vchild : new Vtext('' + vchild);
             var childNode = vchild.init(parentContext, namespaceURI);
+            childNode.vnode = vchild;
             node.appendChild(childNode);
-            $children.push(vchild);
         });
-        props.children = $children;
     }
 };
 VelemPrototype.init = function (parentContext, namespaceURI) {
@@ -663,6 +664,7 @@ VelemPrototype.init = function (parentContext, namespaceURI) {
     var props = this.props;
 
     var node = null;
+
     if (type === 'svg' || namespaceURI === SVGNamespaceURI) {
         node = document.createElementNS(SVGNamespaceURI, type);
         namespaceURI = SVGNamespaceURI;
@@ -671,11 +673,12 @@ VelemPrototype.init = function (parentContext, namespaceURI) {
     }
 
     this.initChildren(node, parentContext, namespaceURI);
-
     setProps(node, props);
+
     if (this.ref !== null) {
         attachRef(this.refs, this.ref, node);
     }
+
     return node;
 };
 
@@ -686,40 +689,63 @@ VelemPrototype.update = function (newVelem, node, parentContext) {
     var oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html;
     var children = props.children;
     var newChildren = newProps.children;
+    var childNodes = node.childNodes;
     var namespaceURI = node.namespaceURI;
+
+    var newChildrenCount = 0;
 
     if (!isArr(newChildren) && newChildren != null && !isBln(newChildren)) {
         newChildren = [newChildren];
     }
 
-    if (oldHtml == null && children) {
-        var childNodes = node.childNodes;
+    if (oldHtml == null && childNodes.length) {
         if (newChildren) {
-            var $newChildren = [];
             flattenChildren(newChildren, function (newVchild) {
                 if (newVchild == null || isBln(newVchild)) {
                     return;
                 }
                 newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild);
-                var i = $newChildren.length;
-                var vchild = children[i];
-                if (vchild) {
-                    compareTwoTrees(vchild, newVchild, childNodes[i], parentContext);
+                var _newVchild = newVchild;
+                var type = _newVchild.type;
+                var key = _newVchild.key;
+
+                var newChildNode = null;
+
+                for (var i = newChildrenCount; i < childNodes.length; i++) {
+                    var childNode = childNodes[i];
+                    var vnode = childNode.vnode;
+                    if (vnode.type === type && vnode.key === key) {
+                        newChildNode = vnode.update(newVchild, childNode, parentContext);
+                        break;
+                    }
+                }
+
+                if (!newChildNode) {
+                    newChildNode = newVchild.init(parentContext, namespaceURI);
+                }
+
+                var currentNode = childNodes[newChildrenCount];
+                if (currentNode) {
+                    if (currentNode !== newChildNode) {
+                        node.insertBefore(newChildNode, currentNode);
+                    }
                 } else {
-                    var newChildNode = newVchild.init(parentContext, namespaceURI);
                     node.appendChild(newChildNode);
                 }
-                $newChildren.push(newVchild);
-            });
-            newChildren = newProps.children = $newChildren;
-        }
-        var childrenLen = children.length;
-        var newChildrenLen = newChildren && newChildren.length || 0;
 
+                newChildNode.vnode = newVchild;
+                newChildrenCount += 1;
+            });
+        }
+
+        var childNodesLen = childNodes.length;
+        if (childNodesLen == null) {
+            debugger;
+        }
         // destroy old children not in the newChildren
-        while (childrenLen > newChildrenLen) {
-            childrenLen -= 1;
-            children[childrenLen].destroy(childNodes[childrenLen], removeNode);
+        while (childNodesLen !== newChildrenCount) {
+            var childNode = childNodes[--childNodesLen];
+            childNode.vnode.destroy(childNode, removeNode);
         }
         patchProps(node, props, newProps);
     } else {
@@ -740,15 +766,11 @@ VelemPrototype.update = function (newVelem, node, parentContext) {
 };
 VelemPrototype.destroy = function (node, remove) {
     var props = this.props;
-    var children = props.children;
 
-    if (children) {
-        var childNodes = node.childNodes;
-        var len = children.length;
-        var i = -1;
-        while (len--) {
-            children[++i].destroy(childNodes[i]);
-        }
+    var childNodes = node.childNodes;
+    for (var i = 0, len = childNodes.length; i < len; i++) {
+        var childNode = childNodes[i];
+        childNode.vnode.destroy(childNode);
     }
     if (this.ref !== null) {
         detachRef(this.refs, this.ref);
