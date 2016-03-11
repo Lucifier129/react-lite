@@ -30,11 +30,11 @@ let createElement = function(type, props, children) {
 		}
 	}
 
-	let vtype = typeof type
+	let vType = typeof type
 
-	if (vtype === 'string') {
+	if (vType === 'string') {
 		Vnode = Velem
-	} else if (vtype === 'function') {
+	} else if (vType === 'function') {
 		if (type.prototype && typeof type.prototype.forceUpdate === 'function') {
 			Vnode = Vcomponent
 		} else {

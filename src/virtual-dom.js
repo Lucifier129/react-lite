@@ -48,15 +48,8 @@ export function Velem(type, props) {
 
 let VelemPrototype = Velem.prototype
 VelemPrototype.isVdom = true
-VelemPrototype.init = function(parentContext, namespaceURI) {
-    let { type, props } = this
-    let node
-    if (type === 'svg' || namespaceURI === SVGNamespaceURI) {
-        node = document.createElementNS(SVGNamespaceURI, type)
-        namespaceURI = SVGNamespaceURI
-    } else {
-        node = document.createElement(type)
-    }
+VelemPrototype.initChildren = function(node, parentContext, namespaceURI) {
+    let { props } = this
     let children = props.children
 
     if (!_.isArr(children) && children != null && !_.isBln(children)) {
@@ -64,23 +57,40 @@ VelemPrototype.init = function(parentContext, namespaceURI) {
     }
 
     if (children) {
-        $children = []
-        _.flattenChildren(children, getVnode)
-        children = props.children = $children
-        $children = null
-        var len = children.length
-        var i = -1
-        while (len--) {
-            let childNode = children[++i].init(parentContext, namespaceURI)
+        var $children = []
+        _.flattenChildren(children, vchild => {
+            if (vchild == null || _.isBln(vchild)) {
+                return
+            }
+            vchild = vchild.isVdom ? vchild : new Vtext('' + vchild)
+            let childNode = vchild.init(parentContext, namespaceURI)
             node.appendChild(childNode)
-        }
+            $children.push(vchild)
+        })
+        props.children = $children
     }
+}
+VelemPrototype.init = function(parentContext, namespaceURI) {
+    let { type, props } = this
+    let node = null
+    
+    if (type === 'svg' || namespaceURI === SVGNamespaceURI) {
+        node = document.createElementNS(SVGNamespaceURI, type)
+        namespaceURI = SVGNamespaceURI
+    } else {
+        node = document.createElement(type)
+    }
+
+    this.initChildren(node, parentContext, namespaceURI)
     _.setProps(node, props)
+
     if (this.ref !== null) {
         attachRef(this.refs, this.ref, node)
     }
+
     return node
 }
+
 VelemPrototype.update = function(newVelem, node, parentContext) {
     let { props } = this
     let newProps = newVelem.props
@@ -96,22 +106,23 @@ VelemPrototype.update = function(newVelem, node, parentContext) {
     if (oldHtml == null && children) {
         var childNodes = node.childNodes
         if (newChildren) {
-            $children = []
-            _.flattenChildren(newChildren, getVnode)
-            newChildren = newProps.children = $children
-            $children = null
-            var len = newChildren.length
-            var i = -1
-            while (len--) {
-                var newVchild = newChildren[++i]
-                var vchild = children[i]
+            var $newChildren = []
+            _.flattenChildren(newChildren, newVchild => {
+                if (newVchild == null || _.isBln(newVchild)) {
+                    return
+                }
+                newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild)
+                let i = $newChildren.length
+                let vchild = children[i]
                 if (vchild) {
                     compareTwoTrees(vchild, newVchild, childNodes[i], parentContext)
                 } else {
                     var newChildNode = newVchild.init(parentContext, namespaceURI)
                     node.appendChild(newChildNode)
                 }
-            }
+                $newChildren.push(newVchild)
+            })
+            newChildren = newProps.children = $newChildren
         }
         var childrenLen = children.length
         var newChildrenLen = newChildren && newChildren.length || 0
@@ -125,18 +136,7 @@ VelemPrototype.update = function(newVelem, node, parentContext) {
     } else {
         // should patch props first, make sure innerHTML was cleared 
         _.patchProps(node, props, newProps)
-        if (newChildren) {
-            $children = []
-            _.flattenChildren(newChildren, getVnode)
-            newChildren = newProps.children = $children
-            $children = null
-            var len = newChildren.length
-            var i = -1
-            while (len--) {
-                var newChildNode = newChildren[++i].init(parentContext, namespaceURI)
-                node.appendChild(newChildNode)
-            }
-        }
+        newVelem.initChildren(node, parentContext, namespaceURI)
     }
     if (this.ref !== null) {
         if (newVelem.ref !== null) {
@@ -389,13 +389,6 @@ export function compareTwoTrees(vtree, newVtree, node, parentContext) {
 
 let removeNode = node => {
 	node.parentNode.removeChild(node)
-}
-
-let $children = null
-let getVnode = vnode => {
-    if (vnode != null && !_.isBln(vnode)) {
-        $children.push(vnode.isVdom ? vnode : new Vtext('' + vnode))
-    }
 }
 
 let getDOMNode = function() { return this }

@@ -639,17 +639,9 @@
 
   var VelemPrototype = Velem.prototype;
   VelemPrototype.isVdom = true;
-  VelemPrototype.init = function (parentContext, namespaceURI) {
-      var type = this.type;
+  VelemPrototype.initChildren = function (node, parentContext, namespaceURI) {
       var props = this.props;
 
-      var node = undefined;
-      if (type === 'svg' || namespaceURI === SVGNamespaceURI) {
-          node = document.createElementNS(SVGNamespaceURI, type);
-          namespaceURI = SVGNamespaceURI;
-      } else {
-          node = document.createElement(type);
-      }
       var children = props.children;
 
       if (!isArr(children) && children != null && !isBln(children)) {
@@ -657,23 +649,40 @@
       }
 
       if (children) {
-          $children = [];
-          flattenChildren(children, getVnode);
-          children = props.children = $children;
-          $children = null;
-          var len = children.length;
-          var i = -1;
-          while (len--) {
-              var childNode = children[++i].init(parentContext, namespaceURI);
+          var $children = [];
+          flattenChildren(children, function (vchild) {
+              if (vchild == null || isBln(vchild)) {
+                  return;
+              }
+              vchild = vchild.isVdom ? vchild : new Vtext('' + vchild);
+              var childNode = vchild.init(parentContext, namespaceURI);
               node.appendChild(childNode);
-          }
+              $children.push(vchild);
+          });
+          props.children = $children;
       }
+  };
+  VelemPrototype.init = function (parentContext, namespaceURI) {
+      var type = this.type;
+      var props = this.props;
+
+      var node = null;
+      if (type === 'svg' || namespaceURI === SVGNamespaceURI) {
+          node = document.createElementNS(SVGNamespaceURI, type);
+          namespaceURI = SVGNamespaceURI;
+      } else {
+          node = document.createElement(type);
+      }
+
+      this.initChildren(node, parentContext, namespaceURI);
+
       setProps(node, props);
       if (this.ref !== null) {
           attachRef(this.refs, this.ref, node);
       }
       return node;
   };
+
   VelemPrototype.update = function (newVelem, node, parentContext) {
       var props = this.props;
 
@@ -690,14 +699,13 @@
       if (oldHtml == null && children) {
           var childNodes = node.childNodes;
           if (newChildren) {
-              $children = [];
-              flattenChildren(newChildren, getVnode);
-              newChildren = newProps.children = $children;
-              $children = null;
-              var len = newChildren.length;
-              var i = -1;
-              while (len--) {
-                  var newVchild = newChildren[++i];
+              var $newChildren = [];
+              flattenChildren(newChildren, function (newVchild) {
+                  if (newVchild == null || isBln(newVchild)) {
+                      return;
+                  }
+                  newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild);
+                  var i = $newChildren.length;
                   var vchild = children[i];
                   if (vchild) {
                       compareTwoTrees(vchild, newVchild, childNodes[i], parentContext);
@@ -705,7 +713,9 @@
                       var newChildNode = newVchild.init(parentContext, namespaceURI);
                       node.appendChild(newChildNode);
                   }
-              }
+                  $newChildren.push(newVchild);
+              });
+              newChildren = newProps.children = $newChildren;
           }
           var childrenLen = children.length;
           var newChildrenLen = newChildren && newChildren.length || 0;
@@ -719,18 +729,7 @@
       } else {
           // should patch props first, make sure innerHTML was cleared
           patchProps(node, props, newProps);
-          if (newChildren) {
-              $children = [];
-              flattenChildren(newChildren, getVnode);
-              newChildren = newProps.children = $children;
-              $children = null;
-              var len = newChildren.length;
-              var i = -1;
-              while (len--) {
-                  var newChildNode = newChildren[++i].init(parentContext, namespaceURI);
-                  node.appendChild(newChildNode);
-              }
-          }
+          newVelem.initChildren(node, parentContext, namespaceURI);
       }
       if (this.ref !== null) {
           if (newVelem.ref !== null) {
@@ -992,13 +991,6 @@
 
   var removeNode = function removeNode(node) {
       node.parentNode.removeChild(node);
-  };
-
-  var $children = null;
-  var getVnode = function getVnode(vnode) {
-      if (vnode != null && !isBln(vnode)) {
-          $children.push(vnode.isVdom ? vnode : new Vtext('' + vnode));
-      }
   };
 
   var getDOMNode = function getDOMNode() {
@@ -1487,11 +1479,11 @@
   		}
   	}
 
-  	var vtype = typeof type;
+  	var vType = typeof type;
 
-  	if (vtype === 'string') {
+  	if (vType === 'string') {
   		Vnode = Velem;
-  	} else if (vtype === 'function') {
+  	} else if (vType === 'function') {
   		if (type.prototype && typeof type.prototype.forceUpdate === 'function') {
   			Vnode = Vcomponent;
   		} else {
