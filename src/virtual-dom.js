@@ -76,7 +76,7 @@ export let updateVnode = (vnode, newVnode, node, parentContext) => {
     return newNode
 }
 
-export let destroyVnode = (vnode, node, remove) => {
+export let destroyVnode = (vnode, node) => {
     let { vtype } = vnode
 
     if (vtype === VELEMENT) {
@@ -86,10 +86,7 @@ export let destroyVnode = (vnode, node, remove) => {
     } else if (vtype === VSTATELESS) {
         destroyVstateless(vnode, node)
     }
-
-    if (remove) {
-        remove(node)
-    }
+    node.vnode = null
 }
 
 
@@ -107,12 +104,12 @@ let initVelem = (velem, parentContext, namespaceURI) => {
     let { children } = props
 
     if (_.isArr(children)) {
-        _.flattenChildren(children, initChild, node, parentContext, namespaceURI)
+        _.flattenChildren(children, initChild, node, parentContext)
     } else {
-        initChild(children, 0, node, parentContext, namespaceURI)
+        initChild(children, 0, node, parentContext)
     }
 
-    _.setProps(node, props)
+    attachProps(node, props)
 
     if (velem.ref !== null) {
         attachRef(velem.refs, velem.ref, node)
@@ -122,12 +119,12 @@ let initVelem = (velem, parentContext, namespaceURI) => {
 }
 
 
-let initChild = (vchild, index, node, parentContext, namespaceURI) => {
+let initChild = (vchild, index, node, parentContext) => {
     if (vchild == null || _.isBln(vchild)) {
         return false
     }
     vchild = vchild.vtype ? vchild : ('' + vchild)
-    let childNode = initVnode(vchild, parentContext, namespaceURI)
+    let childNode = initVnode(vchild, parentContext, node.namespaceURI)
     childNode.vnode = vchild
     node.appendChild(childNode)
 }
@@ -139,32 +136,34 @@ let updateVelem = (velem, newVelem, node, parentContext) => {
     let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
     let children = props.children
     let newChildren = newProps.children
-    let { childNodes, namespaceURI } = node
+    let { childNodes } = node
+
+    node.vcount = 0
 
     if (oldHtml == null && childNodes.length) {
 
-        var newChildrenCount = 0
-
         if (_.isArr(newChildren)) {
-            newChildrenCount = _.flattenChildren(newChildren, updateChild, node, parentContext, namespaceURI)
-        } else if (updateChild(newChildren, 0, node, parentContext, namespaceURI) !== false) {
-            newChildrenCount += 1
+            _.flattenChildren(newChildren, updateChild, node, parentContext)
+        } else {
+            updateChild(newChildren, 0, node, parentContext)
         }
         
+        var newChildrenCount = node.vcount
         var childNodesLen = childNodes.length
         // destroy old children not in the newChildren
-        while (childNodesLen !== newChildrenCount) {
+        while (childNodesLen > newChildrenCount) {
             let childNode = childNodes[--childNodesLen]
-            destroyVnode(childNode.vnode, childNode, removeNode)
+            destroyVnode(childNode.vnode, childNode)
+            node.removeChild(childNode)
         }
-        _.patchProps(node, props, newProps)
+        attachProps(node, props, newProps)
     } else {
         // should patch props first, make sure innerHTML was cleared 
         _.patchProps(node, props, newProps)
         if (_.isArr(newChildren)) {
-            _.flattenChildren(newChildren, initChild, node, parentContext, namespaceURI)
+            _.flattenChildren(newChildren, initChild, node, parentContext)
         } else {
-            initChild(newChildren, 0, node, parentContext, namespaceURI)
+            initChild(newChildren, 0, node, parentContext)
         }
     }
     if (velem.ref !== null) {
@@ -179,16 +178,18 @@ let updateVelem = (velem, newVelem, node, parentContext) => {
     return node
 }
 
-let updateChild = (newVchild, index, node, parentContext, namespaceURI) => {
+let updateChild = (newVchild, index, node, parentContext) => {
     if (newVchild == null || _.isBln(newVchild)) {
         return false
     }
     newVchild = newVchild.vtype ? newVchild : ('' + newVchild)
     let { type, key, refs } = newVchild
     let { childNodes } = node
+    let childNodesLen = childNodes.length
     let newChildNode = null
+    index = node.vcount
 
-    for (let i = index; i < childNodes.length; i++) {
+    for (let i = index; i < childNodesLen; i++) {
         let childNode = childNodes[i]
         let vchild = childNode.vnode
         if (vchild.refs === refs && vchild.type === type && vchild.key === key) {
@@ -202,34 +203,42 @@ let updateChild = (newVchild, index, node, parentContext, namespaceURI) => {
     }
 
     if (!newChildNode) {
-        newChildNode = initVnode(newVchild, parentContext, namespaceURI)
+        newChildNode = initVnode(newVchild, parentContext, node.namespaceURI)
     }
 
-    let currentNode = childNodes[index]
-    if (currentNode) {
+    if (index < childNodesLen) {
+        let currentNode = childNodes[index]
         if (currentNode !== newChildNode) {
             node.insertBefore(newChildNode, currentNode)
+            node.appendChild(currentNode)
         }
     } else {
         node.appendChild(newChildNode)
     }
 
     newChildNode.vnode = newVchild
+    node.vcount += 1
 }
 
-let destroyVelem = (velem, node, remove) => {
+let destroyVelem = (velem, node) => {
     let { props } = velem
-    let childNodes = node.childNodes
-    for (let i = 0, len = childNodes.length; i < len; i++) {
-        let childNode = childNodes[i]
+    let { children } = props
+
+    if (_.isArr(children)) {
+        var childNodes = node.childNodes
+        for (var i = 0, len = childNodes.length; i < len; i++) {
+            var childNode = childNodes[i]
+            destroyVnode(childNode.vnode, childNode)
+        }
+    } else if (children != null && !_.isBln(children)) {
+        var childNode = node.firstChild
         destroyVnode(childNode.vnode, childNode)
     }
+    
     if (velem.ref !== null) {
         detachRef(velem.refs, velem.ref)
     }
-    if (remove) {
-        remove(node)
-    }
+
     node.eventStore = null
     for (let key in props) {
         if (_.hasOwn(props, key) && _.EVENT_KEYS.test(key)) {
@@ -261,11 +270,11 @@ let updateVstateless = (vstateless, newVstateless, node, parentContext) => {
     }
     return newNode
 }
-let destroyVstateless = (vstateless, node, remove) => {
+let destroyVstateless = (vstateless, node) => {
     let id = vstateless.id
     let vnode = node.cache[id]
     delete node.cache[id]
-    destroyVnode(vnode, node, remove)
+    destroyVnode(vnode, node)
 }
 
 let renderVstateless = (vstateless, parentContext) => {
@@ -335,7 +344,7 @@ let updateVcomponent = (vcomponent, newVcomponent, node, parentContext) => {
     }
     return cache.node
 }
-let destroyVcomponent = (vcomponent, node, remove) => {
+let destroyVcomponent = (vcomponent, node) => {
     let id = vcomponent.id
     let component = node.cache[id]
     let cache = component.$cache
@@ -347,7 +356,7 @@ let destroyVcomponent = (vcomponent, node, remove) => {
     if (component.componentWillUnmount) {
         component.componentWillUnmount()
     }
-    destroyVnode(cache.vnode, node, remove)
+    destroyVnode(cache.vnode, node)
     delete component.setState
     cache.isMounted = false
     cache.node = cache.parentContext = cache.vnode = component.refs = component.context = null
@@ -393,6 +402,7 @@ let pendingComponents = []
 export let clearPendingComponents = () => {
 	let components = pendingComponents
 	let len = components.length
+    clearPendingProps()
 	if (!len) {
 		return
 	}
@@ -413,10 +423,11 @@ export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
     let newNode = node
 
     if (newVnode == null) { // remove
-        destroyVnode(vnode, node, removeNode)
+        destroyVnode(vnode, node)
+        node.parentNode.removeChild(node)
     } else if (vnode.type !== newVnode.type || newVnode.key !== vnode.key) {  // replace
         destroyVnode(vnode, node)
-        newNode = initVnode(vnode, parentContext, node.namespaceURI)
+        newNode = initVnode(newVnode, parentContext, node.namespaceURI)
         node.parentNode.replaceChild(newNode, node)
     } else if (vnode !== newVnode) { 
         // same type and same key -> update
@@ -426,8 +437,19 @@ export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
     return newNode
 }
 
-let removeNode = node => {
-	node.parentNode.removeChild(node)
+let pendingProps = []
+let attachProps = (node, props, newProps) => {
+    pendingProps.push({ node, props, newProps })
+}
+let clearPendingProps = () => {
+    let item = null
+    while (item = pendingProps.pop()) {
+        if (item.newProps) {
+            _.patchProps(item.node, item.props, item.newProps)
+        } else {
+            _.setProps(item.node, item.props)
+        }
+    }
 }
 
 let getDOMNode = function() { return this }

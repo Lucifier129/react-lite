@@ -28,10 +28,12 @@ let renderTreeIntoContainer = (vnode, container, callback, parentContext) => {
 	}
 
 	pendingRendering[id] = true
-	if (vnodeStore[id]) {
-		compareTwoVnodes(vnodeStore[id], vnode, container.firstChild, parentContext)
+	let oldVnode = null
+	let rootNode = null
+	if (oldVnode = vnodeStore[id]) {
+		rootNode = compareTwoVnodes(oldVnode, vnode, container.firstChild, parentContext)
 	} else {
-		var rootNode = initVnode(vnode, parentContext, container.namespaceURI)
+		rootNode = initVnode(vnode, parentContext, container.namespaceURI)
 		var childNode = null
 		while (childNode = container.lastChild) {
 			container.removeChild(childNode)
@@ -41,7 +43,7 @@ let renderTreeIntoContainer = (vnode, container, callback, parentContext) => {
 	vnodeStore[id] = vnode
 	let isPending = updateQueue.isPending
 	updateQueue.isPending = true
-	clearPendingComponents(true)
+	clearPendingComponents()
 	argsCache = pendingRendering[id]
 	delete pendingRendering[id]
 
@@ -49,9 +51,9 @@ let renderTreeIntoContainer = (vnode, container, callback, parentContext) => {
 	if (_.isArr(argsCache)) {
 		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2])
 	} else if (vnode.vtype === VELEMENT) {
-		result = container.firstChild
+		result = rootNode
 	} else if (vnode.vtype === VCOMPONENT) {
-		result = container.firstChild.cache[vnode.id]
+		result = rootNode.cache[vnode.id]
 	}
 	
 	if (!isPending) {
@@ -82,12 +84,10 @@ export let unmountComponentAtNode = container => {
 		throw new Error('expect node')
 	}
 	let id = container[COMPONENT_ID]
-	if (vnodeStore[id]) {
-		destroyVnode(vnodeStore[id], container.firstChild)
-		let childNode = null
-		while (childNode = container.lastChild) {
-			container.removeChild(childNode)
-		}
+	let vnode = null
+	if (vnode = vnodeStore[id]) {
+		destroyVnode(vnode, container.firstChild)
+		container.removeChild(container.firstChild)
 		delete vnodeStore[id]
 		return true
 	}

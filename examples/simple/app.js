@@ -46,14 +46,6 @@
 
 	'use strict';
 
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 	if (typeof requestAnimationFrame === 'undefined') {
 		window.requestAnimationFrame = function (fn) {
 			return setTimeout(fn, 100 / 6);
@@ -163,6 +155,7 @@
 			return React.createElement(
 				'div',
 				{ id: 'abc' },
+				Math.random() > 0.5 && img,
 				React.createElement(
 					'span',
 					{ ref: Math.random() > 0.5 ? '' : 'test-ref', 'data-test': 'abaasdf' },
@@ -216,8 +209,7 @@
 					{ href: 'adbadfasdf' },
 					'test link'
 				),
-				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } }),
-				Math.random() > 0.5 && img
+				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } })
 			);
 		}
 	});
@@ -344,6 +336,58 @@
 	var num = 10;
 	// update()
 
+	var log;
+	var logger = function logger(msg) {
+		return function () {
+			// return true for shouldComponentUpdate
+			log.push(msg);
+			return true;
+		};
+	};
+	var Outer = React.createClass({
+		displayName: 'Outer',
+
+		render: function render() {
+			return React.createElement(
+				'div',
+				null,
+				React.createElement(Inner, { x: this.props.x })
+			);
+		},
+		componentWillMount: logger('outer componentWillMount'),
+		componentDidMount: logger('outer componentDidMount'),
+		componentWillReceiveProps: logger('outer componentWillReceiveProps'),
+		shouldComponentUpdate: logger('outer shouldComponentUpdate'),
+		componentWillUpdate: logger('outer componentWillUpdate'),
+		componentDidUpdate: logger('outer componentDidUpdate'),
+		componentWillUnmount: logger('outer componentWillUnmount')
+	});
+	var Inner = React.createClass({
+		displayName: 'Inner',
+
+		render: function render() {
+			return React.createElement(
+				'span',
+				null,
+				this.props.x
+			);
+		},
+		componentWillMount: logger('inner componentWillMount'),
+		componentDidMount: logger('inner componentDidMount'),
+		componentWillReceiveProps: logger('inner componentWillReceiveProps'),
+		shouldComponentUpdate: logger('inner shouldComponentUpdate'),
+		componentWillUpdate: logger('inner componentWillUpdate'),
+		componentDidUpdate: logger('inner componentDidUpdate'),
+		componentWillUnmount: logger('inner componentWillUnmount')
+	});
+
+	var container = document.createElement('root');
+	log = [];
+	React.render(React.createElement(Outer, { x: 17 }), container);
+	log = [];
+	React.unmountComponentAtNode(container);
+	console.log(log);
+
 	// class TestRootUpdateAtDidMount extends React.Component {
 	// 	componentDidMount() {
 	// 		console.log('TestRootUpdateAtDidMount didMount')
@@ -413,55 +457,31 @@
 	// updateName('init')
 	// updateName('update')
 
-	var Test = (function (_React$Component) {
-		_inherits(Test, _React$Component);
+	// class Test extends React.Component {
+	// 	componentWillMount() {
+	// 		console.log(this.props.index, 'willMount')
+	// 		debugger
+	// 	}
+	// 	componentDidMount() {
+	// 		console.log(this.props.index, 'didMount')
+	// 		debugger
+	// 	}
+	// 	componentWillUnmount() {
+	// 		console.log(this.props.index, 'willUnmount')
+	// 	}
+	// 	render() {
+	// 		return <div>{this.props.index}</div>
+	// 	}
+	// }
 
-		function Test() {
-			_classCallCheck(this, Test);
+	// var root = (
+	// 	<div>
+	// 		<Test index={0} />
+	// 		<Test index={1} />
+	// 		<Test index={2} />
+	// 	</div>)
 
-			_get(Object.getPrototypeOf(Test.prototype), 'constructor', this).apply(this, arguments);
-		}
-
-		_createClass(Test, [{
-			key: 'componentWillMount',
-			value: function componentWillMount() {
-				console.log(this.props.index, 'willMount');
-				debugger;
-			}
-		}, {
-			key: 'componentDidMount',
-			value: function componentDidMount() {
-				console.log(this.props.index, 'didMount');
-				debugger;
-			}
-		}, {
-			key: 'componentWillUnmount',
-			value: function componentWillUnmount() {
-				console.log(this.props.index, 'willUnmount');
-			}
-		}, {
-			key: 'render',
-			value: function render() {
-				return React.createElement(
-					'div',
-					null,
-					this.props.index
-				);
-			}
-		}]);
-
-		return Test;
-	})(React.Component);
-
-	var root = React.createElement(
-		'div',
-		null,
-		React.createElement(Test, { index: 0 }),
-		React.createElement(Test, { index: 1 }),
-		React.createElement(Test, { index: 2 })
-	);
-
-	React.render(root, document.getElementById('container'));
+	// React.render(root, document.getElementById('container'))
 
 /***/ }
 /******/ ]);

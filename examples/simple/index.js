@@ -94,6 +94,7 @@ const Counter = React.createClass({
 		 />
 		return (
 			<div id="abc">
+			{ Math.random() > 0.5 && img }
 				<span ref={Math.random() > 0.5 ? '' : 'test-ref'} data-test="abaasdf">count: { props.count }</span>
 				{' '}
 				<button onClick={ () => COUNT('INCREMENT') }>+</button>
@@ -114,7 +115,6 @@ const Counter = React.createClass({
 				<button onClick={ this.getNum }>run</button>
 				<a href="adbadfasdf">test link</a>
 				<p dangerouslySetInnerHTML={{ __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2)}}></p>
-				{ Math.random() > 0.5 && img }
 			</div>
 		)
 	}
@@ -234,6 +234,47 @@ let update = count => {
 let num = 10
 // update()
 
+var log;
+    var logger = function(msg) {
+      return function() {
+        // return true for shouldComponentUpdate
+        log.push(msg);
+        return true;
+      };
+    };
+    var Outer = React.createClass({
+      render: function() {
+        return <div><Inner x={this.props.x} /></div>;
+      },
+      componentWillMount: logger('outer componentWillMount'),
+      componentDidMount: logger('outer componentDidMount'),
+      componentWillReceiveProps: logger('outer componentWillReceiveProps'),
+      shouldComponentUpdate: logger('outer shouldComponentUpdate'),
+      componentWillUpdate: logger('outer componentWillUpdate'),
+      componentDidUpdate: logger('outer componentDidUpdate'),
+      componentWillUnmount: logger('outer componentWillUnmount'),
+    });
+    var Inner = React.createClass({
+      render: function() {
+        return <span>{this.props.x}</span>;
+      },
+      componentWillMount: logger('inner componentWillMount'),
+      componentDidMount: logger('inner componentDidMount'),
+      componentWillReceiveProps: logger('inner componentWillReceiveProps'),
+      shouldComponentUpdate: logger('inner shouldComponentUpdate'),
+      componentWillUpdate: logger('inner componentWillUpdate'),
+      componentDidUpdate: logger('inner componentDidUpdate'),
+      componentWillUnmount: logger('inner componentWillUnmount'),
+    });
+
+
+    var container = document.createElement('root');
+    log = [];
+    React.render(<Outer x={17} />, container);
+    log = [];
+    React.unmountComponentAtNode(container);
+    console.log(log)
+
 
 // class TestRootUpdateAtDidMount extends React.Component {
 // 	componentDidMount() {
@@ -309,31 +350,31 @@ let num = 10
 
 
 
-class Test extends React.Component {
-	componentWillMount() {
-		console.log(this.props.index, 'willMount')
-		debugger
-	}
-	componentDidMount() {
-		console.log(this.props.index, 'didMount')
-		debugger
-	}
-	componentWillUnmount() {
-		console.log(this.props.index, 'willUnmount')
-	}
-	render() {
-		return <div>{this.props.index}</div>
-	}
-}
+// class Test extends React.Component {
+// 	componentWillMount() {
+// 		console.log(this.props.index, 'willMount')
+// 		debugger
+// 	}
+// 	componentDidMount() {
+// 		console.log(this.props.index, 'didMount')
+// 		debugger
+// 	}
+// 	componentWillUnmount() {
+// 		console.log(this.props.index, 'willUnmount')
+// 	}
+// 	render() {
+// 		return <div>{this.props.index}</div>
+// 	}
+// }
 
-var root = (
-	<div>
-		<Test index={0} />
-		<Test index={1} />
-		<Test index={2} />
-	</div>)
+// var root = (
+// 	<div>
+// 		<Test index={0} />
+// 		<Test index={1} />
+// 		<Test index={2} />
+// 	</div>)
 
-React.render(root, document.getElementById('container'))
+// React.render(root, document.getElementById('container'))
 
 
 
