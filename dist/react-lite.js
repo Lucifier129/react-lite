@@ -666,6 +666,7 @@
       var _newVchild = newVchild;
       var type = _newVchild.type;
       var key = _newVchild.key;
+      var refs = _newVchild.refs;
       var childNodes = node.childNodes;
 
       var newChildNode = null;
@@ -673,8 +674,12 @@
       for (var i = index; i < childNodes.length; i++) {
           var childNode = childNodes[i];
           var vnode = childNode.vnode;
-          if (vnode.type === type && vnode.key === key) {
-              newChildNode = vnode.update(newVchild, childNode, parentContext);
+          if (vnode.refs === refs && vnode.type === type && vnode.key === key) {
+              if (vnode === newVchild) {
+                  newChildNode = childNode;
+              } else {
+                  newChildNode = vnode.update(newVchild, childNode, parentContext);
+              }
               break;
           }
       }

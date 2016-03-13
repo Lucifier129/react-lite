@@ -67,15 +67,19 @@ let updateChild = (newVchild, index, node, parentContext, namespaceURI) => {
         return false
     }
     newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild)
-    let { type, key } = newVchild
+    let { type, key, refs } = newVchild
     let { childNodes } = node
     let newChildNode = null
 
     for (let i = index; i < childNodes.length; i++) {
         let childNode = childNodes[i]
         let vnode = childNode.vnode
-        if (vnode.type === type && vnode.key === key) {
-            newChildNode = vnode.update(newVchild, childNode, parentContext)
+        if (vnode.refs === refs && vnode.type === type && vnode.key === key) {
+            if (vnode === newVchild) {
+                newChildNode = childNode
+            } else {
+                newChildNode = vnode.update(newVchild, childNode, parentContext)
+            }
             break
         }
     }

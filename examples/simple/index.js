@@ -232,7 +232,7 @@ let update = count => {
 }
 
 let num = 10
-update()
+// update()
 
 
 // class TestRootUpdateAtDidMount extends React.Component {
@@ -304,3 +304,38 @@ update()
 
 // updateName('init')
 // updateName('update')
+
+
+
+
+
+class Test extends React.Component {
+	componentWillMount() {
+		console.log(this.props.index, 'willMount')
+		debugger
+	}
+	componentDidMount() {
+		console.log(this.props.index, 'didMount')
+		debugger
+	}
+	componentWillUnmount() {
+		console.log(this.props.index, 'willUnmount')
+	}
+	render() {
+		return <div>{this.props.index}</div>
+	}
+}
+
+var root = (
+	<div>
+		<Test index={0} />
+		<Test index={1} />
+		<Test index={2} />
+	</div>)
+
+React.render(root, document.getElementById('container'))
+
+
+
+
+
