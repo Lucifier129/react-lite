@@ -331,19 +331,24 @@ var pipe = function pipe(fn1, fn2) {
 	};
 };
 
-var flattenChildren = function flattenChildren(list, iteratee, index) {
+var flattenChildren = function flattenChildren(list, iteratee, a, b, c) {
+	return flat(list, iteratee, 0, a, b, c);
+};
+
+var flat = function flat(list, iteratee, index, a, b, c) {
 	var len = list.length;
 	var i = -1;
-	index = index || 0;
 
 	while (len--) {
 		var item = list[++i];
 		if (isArr(item)) {
-			flattenChildren(item, iteratee, index);
+			index = flat(item, iteratee, index, a, b, c);
 		} else {
-			iteratee(item, index++);
+			iteratee(item, index++, a, b, c);
 		}
 	}
+
+	return index;
 };
 
 var eachItem = function eachItem(list, iteratee) {
@@ -638,27 +643,54 @@ function Velem(type, props) {
 
 var VelemPrototype = Velem.prototype;
 VelemPrototype.isVdom = true;
-VelemPrototype.initChildren = function (node, parentContext, namespaceURI) {
-    var props = this.props;
 
-    var children = props.children;
-
-    if (!isArr(children) && children != null && !isBln(children)) {
-        children = [children];
+var initChild = function initChild(vchild, index, node, parentContext, namespaceURI) {
+    if (vchild == null || isBln(vchild)) {
+        return false;
     }
-
-    if (children) {
-        flattenChildren(children, function (vchild) {
-            if (vchild == null || isBln(vchild)) {
-                return;
-            }
-            vchild = vchild.isVdom ? vchild : new Vtext('' + vchild);
-            var childNode = vchild.init(parentContext, namespaceURI);
-            childNode.vnode = vchild;
-            node.appendChild(childNode);
-        });
-    }
+    vchild = vchild.isVdom ? vchild : new Vtext('' + vchild);
+    var childNode = vchild.init(parentContext, namespaceURI);
+    childNode.vnode = vchild;
+    node.appendChild(childNode);
 };
+
+var updateChild = function updateChild(newVchild, index, node, parentContext, namespaceURI) {
+    if (newVchild == null || isBln(newVchild)) {
+        return false;
+    }
+    newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild);
+    var _newVchild = newVchild;
+    var type = _newVchild.type;
+    var key = _newVchild.key;
+    var childNodes = node.childNodes;
+
+    var newChildNode = null;
+
+    for (var i = index; i < childNodes.length; i++) {
+        var childNode = childNodes[i];
+        var vnode = childNode.vnode;
+        if (vnode.type === type && vnode.key === key) {
+            newChildNode = vnode.update(newVchild, childNode, parentContext);
+            break;
+        }
+    }
+
+    if (!newChildNode) {
+        newChildNode = newVchild.init(parentContext, namespaceURI);
+    }
+
+    var currentNode = childNodes[index];
+    if (currentNode) {
+        if (currentNode !== newChildNode) {
+            node.insertBefore(newChildNode, currentNode);
+        }
+    } else {
+        node.appendChild(newChildNode);
+    }
+
+    newChildNode.vnode = newVchild;
+};
+
 VelemPrototype.init = function (parentContext, namespaceURI) {
     var type = this.type;
     var props = this.props;
@@ -672,7 +704,14 @@ VelemPrototype.init = function (parentContext, namespaceURI) {
         node = document.createElement(type);
     }
 
-    this.initChildren(node, parentContext, namespaceURI);
+    var children = props.children;
+
+    if (isArr(children)) {
+        flattenChildren(children, initChild, node, parentContext, namespaceURI);
+    } else {
+        initChild(children, 0, node, parentContext, namespaceURI);
+    }
+
     setProps(node, props);
 
     if (this.ref !== null) {
@@ -692,56 +731,17 @@ VelemPrototype.update = function (newVelem, node, parentContext) {
     var childNodes = node.childNodes;
     var namespaceURI = node.namespaceURI;
 
-    var newChildrenCount = 0;
-
-    if (!isArr(newChildren) && newChildren != null && !isBln(newChildren)) {
-        newChildren = [newChildren];
-    }
-
     if (oldHtml == null && childNodes.length) {
-        if (newChildren) {
-            flattenChildren(newChildren, function (newVchild) {
-                if (newVchild == null || isBln(newVchild)) {
-                    return;
-                }
-                newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild);
-                var _newVchild = newVchild;
-                var type = _newVchild.type;
-                var key = _newVchild.key;
 
-                var newChildNode = null;
+        var newChildrenCount = 0;
 
-                for (var i = newChildrenCount; i < childNodes.length; i++) {
-                    var childNode = childNodes[i];
-                    var vnode = childNode.vnode;
-                    if (vnode.type === type && vnode.key === key) {
-                        newChildNode = vnode.update(newVchild, childNode, parentContext);
-                        break;
-                    }
-                }
-
-                if (!newChildNode) {
-                    newChildNode = newVchild.init(parentContext, namespaceURI);
-                }
-
-                var currentNode = childNodes[newChildrenCount];
-                if (currentNode) {
-                    if (currentNode !== newChildNode) {
-                        node.insertBefore(newChildNode, currentNode);
-                    }
-                } else {
-                    node.appendChild(newChildNode);
-                }
-
-                newChildNode.vnode = newVchild;
-                newChildrenCount += 1;
-            });
+        if (isArr(newChildren)) {
+            newChildrenCount = flattenChildren(newChildren, updateChild, node, parentContext, namespaceURI);
+        } else if (updateChild(newChildren, 0, node, parentContext, namespaceURI) !== false) {
+            newChildrenCount += 1;
         }
 
         var childNodesLen = childNodes.length;
-        if (childNodesLen == null) {
-            debugger;
-        }
         // destroy old children not in the newChildren
         while (childNodesLen !== newChildrenCount) {
             var childNode = childNodes[--childNodesLen];
@@ -751,7 +751,11 @@ VelemPrototype.update = function (newVelem, node, parentContext) {
     } else {
         // should patch props first, make sure innerHTML was cleared
         patchProps(node, props, newProps);
-        newVelem.initChildren(node, parentContext, namespaceURI);
+        if (isArr(newChildren)) {
+            flattenChildren(newChildren, initChild, node, parentContext, namespaceURI);
+        } else {
+            initChild(newChildren, 0, node, parentContext, namespaceURI);
+        }
     }
     if (this.ref !== null) {
         if (newVelem.ref !== null) {

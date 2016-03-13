@@ -51,26 +51,51 @@ export function Velem(type, props) {
 
 let VelemPrototype = Velem.prototype
 VelemPrototype.isVdom = true
-VelemPrototype.initChildren = function(node, parentContext, namespaceURI) {
-    let { props } = this
-    let children = props.children
 
-    if (!_.isArr(children) && children != null && !_.isBln(children)) {
-        children = [children]
+let initChild = (vchild, index, node, parentContext, namespaceURI) => {
+    if (vchild == null || _.isBln(vchild)) {
+        return false
     }
-
-    if (children) {
-        _.flattenChildren(children, vchild => {
-            if (vchild == null || _.isBln(vchild)) {
-                return
-            }
-            vchild = vchild.isVdom ? vchild : new Vtext('' + vchild)
-            let childNode = vchild.init(parentContext, namespaceURI)
-            childNode.vnode = vchild
-            node.appendChild(childNode)
-        })
-    }
+    vchild = vchild.isVdom ? vchild : new Vtext('' + vchild)
+    let childNode = vchild.init(parentContext, namespaceURI)
+    childNode.vnode = vchild
+    node.appendChild(childNode)
 }
+
+let updateChild = (newVchild, index, node, parentContext, namespaceURI) => {
+    if (newVchild == null || _.isBln(newVchild)) {
+        return false
+    }
+    newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild)
+    let { type, key } = newVchild
+    let { childNodes } = node
+    let newChildNode = null
+
+    for (let i = index; i < childNodes.length; i++) {
+        let childNode = childNodes[i]
+        let vnode = childNode.vnode
+        if (vnode.type === type && vnode.key === key) {
+            newChildNode = vnode.update(newVchild, childNode, parentContext)
+            break
+        }
+    }
+
+    if (!newChildNode) {
+        newChildNode = newVchild.init(parentContext, namespaceURI)
+    }
+
+    let currentNode = childNodes[index]
+    if (currentNode) {
+        if (currentNode !== newChildNode) {
+            node.insertBefore(newChildNode, currentNode)
+        }
+    } else {
+        node.appendChild(newChildNode)
+    }
+
+    newChildNode.vnode = newVchild
+}
+
 VelemPrototype.init = function(parentContext, namespaceURI) {
     let { type, props } = this
     let node = null
@@ -82,7 +107,14 @@ VelemPrototype.init = function(parentContext, namespaceURI) {
         node = document.createElement(type)
     }
 
-    this.initChildren(node, parentContext, namespaceURI)
+    let { children } = props
+
+    if (_.isArr(children)) {
+        _.flattenChildren(children, initChild, node, parentContext, namespaceURI)
+    } else {
+        initChild(children, 0, node, parentContext, namespaceURI)
+    }
+
     _.setProps(node, props)
 
     if (this.ref !== null) {
@@ -99,54 +131,18 @@ VelemPrototype.update = function(newVelem, node, parentContext) {
     let children = props.children
     let newChildren = newProps.children
     let { childNodes, namespaceURI } = node
-    let newChildrenCount = 0
-
-
-    if (!_.isArr(newChildren) && newChildren != null && !_.isBln(newChildren)) {
-        newChildren = [newChildren]
-    }
 
     if (oldHtml == null && childNodes.length) {
-        if (newChildren) {
-            _.flattenChildren(newChildren, newVchild => {
-                if (newVchild == null || _.isBln(newVchild)) {
-                    return
-                }
-                newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild)
-                let { type, key } = newVchild
-                let newChildNode = null
 
-                for (let i = newChildrenCount; i < childNodes.length; i++) {
-                    let childNode = childNodes[i]
-                    let vnode = childNode.vnode
-                    if (vnode.type === type && vnode.key === key) {
-                        newChildNode = vnode.update(newVchild, childNode, parentContext)
-                        break
-                    }
-                }
+        var newChildrenCount = 0
 
-                if (!newChildNode) {
-                    newChildNode = newVchild.init(parentContext, namespaceURI)
-                }
-
-                let currentNode = childNodes[newChildrenCount]
-                if (currentNode) {
-                    if (currentNode !== newChildNode) {
-                        node.insertBefore(newChildNode, currentNode)
-                    }
-                } else {
-                    node.appendChild(newChildNode)
-                }
-
-                newChildNode.vnode = newVchild
-                newChildrenCount += 1
-            })
+        if (_.isArr(newChildren)) {
+            newChildrenCount = _.flattenChildren(newChildren, updateChild, node, parentContext, namespaceURI)
+        } else if (updateChild(newChildren, 0, node, parentContext, namespaceURI) !== false) {
+            newChildrenCount += 1
         }
         
         var childNodesLen = childNodes.length
-        if (childNodesLen == null) {
-            debugger
-        }
         // destroy old children not in the newChildren
         while (childNodesLen !== newChildrenCount) {
             let childNode = childNodes[--childNodesLen]
@@ -156,7 +152,11 @@ VelemPrototype.update = function(newVelem, node, parentContext) {
     } else {
         // should patch props first, make sure innerHTML was cleared 
         _.patchProps(node, props, newProps)
-        newVelem.initChildren(node, parentContext, namespaceURI)
+        if (_.isArr(newChildren)) {
+            _.flattenChildren(newChildren, initChild, node, parentContext, namespaceURI)
+        } else {
+            initChild(newChildren, 0, node, parentContext, namespaceURI)
+        }
     }
     if (this.ref !== null) {
         if (newVelem.ref !== null) {
