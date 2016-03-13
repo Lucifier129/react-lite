@@ -1,13 +1,13 @@
 import * as _ from './util'
-import { COMPONENT_ID} from './constant'
-import { clearPendingComponents, compareTwoTrees } from './virtual-dom'
+import { COMPONENT_ID, VELEMENT, VCOMPONENT } from './constant'
+import { initVnode, destroyVnode, clearPendingComponents, compareTwoVnodes } from './virtual-dom'
 import { updateQueue } from './Component'
 
 let pendingRendering = {}
-let vtreeStore = {}
-let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
-	if (!vtree.isVdom) {
-		throw new Error(`cannot render ${ vtree } to container`)
+let vnodeStore = {}
+let renderTreeIntoContainer = (vnode, container, callback, parentContext) => {
+	if (!vnode.vtype) {
+		throw new Error(`cannot render ${ vnode } to container`)
 	}
 	let id = container[COMPONENT_ID] || (container[COMPONENT_ID] = _.getUid())
 	let argsCache = pendingRendering[id]
@@ -16,9 +16,9 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	// should bundle them and render by only one time
 	if (argsCache) {
 		if (argsCache === true) {
-			pendingRendering[id] = argsCache = [vtree, callback, parentContext]
+			pendingRendering[id] = argsCache = [vnode, callback, parentContext]
 		} else {
-			argsCache[0] = vtree
+			argsCache[0] = vnode
 			argsCache[2] = parentContext
 			if (callback) {
 				argsCache[1] = argsCache[1] ? _.pipe(argsCache[1], callback) : callback
@@ -28,14 +28,17 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	}
 
 	pendingRendering[id] = true
-	if (vtreeStore[id]) {
-		compareTwoTrees(vtreeStore[id], vtree, container.firstChild, parentContext)
+	if (vnodeStore[id]) {
+		compareTwoVnodes(vnodeStore[id], vnode, container.firstChild, parentContext)
 	} else {
-		var rootNode = vtree.init(parentContext, container.namespaceURI)
-		container.innerHTML = ''
+		var rootNode = initVnode(vnode, parentContext, container.namespaceURI)
+		var childNode = null
+		while (childNode = container.lastChild) {
+			container.removeChild(childNode)
+		}
 		container.appendChild(rootNode)
 	}
-	vtreeStore[id] = vtree
+	vnodeStore[id] = vnode
 	let isPending = updateQueue.isPending
 	updateQueue.isPending = true
 	clearPendingComponents(true)
@@ -45,10 +48,10 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	let result = null
 	if (_.isArr(argsCache)) {
 		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2])
-	} else if (_.isStr(vtree.type)) {
+	} else if (vnode.vtype === VELEMENT) {
 		result = container.firstChild
-	} else if (_.isComponent(vtree.type)) {
-		result = container.firstChild.cache[vtree.id]
+	} else if (vnode.vtype === VCOMPONENT) {
+		result = container.firstChild.cache[vnode.id]
 	}
 	
 	if (!isPending) {
@@ -63,19 +66,15 @@ let renderTreeIntoContainer = (vtree, container, callback, parentContext) => {
 	return result
 }
 
-let updateComponents = component => {
-	component.$updater.updateComponent()
+export let render = (vnode, container, callback) => {
+	return renderTreeIntoContainer(vnode, container, callback)
 }
 
-export let render = (vtree, container, callback) => {
-	return renderTreeIntoContainer(vtree, container, callback)
-}
-
-export let unstable_renderSubtreeIntoContainer = (parentComponent, subVtree, container, callback) => {
-	let context = parentComponent.vtree
-	? parentComponent.vtree.context
+export let unstable_renderSubtreeIntoContainer = (parentComponent, subVnode, container, callback) => {
+	let context = parentComponent.vnode
+	? parentComponent.vnode.context
 	: parentComponent.$cache.parentContext
-	return renderTreeIntoContainer(subVtree, container, callback, context)
+	return renderTreeIntoContainer(subVnode, container, callback, context)
 }
 
 export let unmountComponentAtNode = container => {
@@ -83,10 +82,13 @@ export let unmountComponentAtNode = container => {
 		throw new Error('expect node')
 	}
 	let id = container[COMPONENT_ID]
-	if (vtreeStore[id]) {
-		vtreeStore[id].destroy(container.firstChild)
-		container.innerHTML = ''
-		delete vtreeStore[id]
+	if (vnodeStore[id]) {
+		destroyVnode(vnodeStore[id], container.firstChild)
+		let childNode = null
+		while (childNode = container.lastChild) {
+			container.removeChild(childNode)
+		}
+		delete vnodeStore[id]
 		return true
 	}
 	return false

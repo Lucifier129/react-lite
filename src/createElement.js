@@ -1,7 +1,7 @@
 import * as _ from './util'
-import { Velem, Vcomponent, VstatelessComponent } from './virtual-dom'
+import { createVelem, createVcomponent, createVstateless } from './virtual-dom'
 
-export let isValidElement = obj => obj != null && !!obj.isVdom
+export let isValidElement = obj => obj != null && !!obj.vtype
 
 export let cloneElement = (originElem, props, ...children) => {
 	let { type, key, ref } = originElem
@@ -20,7 +20,7 @@ export let createFactory = type => {
 }
 
 let createElement = function(type, props, children) {
-	let Vnode = null
+	let createVnode = null
 	let argsLen = arguments.length
 
 	if (argsLen > 3) {
@@ -30,15 +30,15 @@ let createElement = function(type, props, children) {
 		}
 	}
 
-	let vType = typeof type
+	let varType = typeof type
 
-	if (vType === 'string') {
-		Vnode = Velem
-	} else if (vType === 'function') {
+	if (varType === 'string') {
+		createVnode = createVelem
+	} else if (varType === 'function') {
 		if (type.prototype && typeof type.prototype.forceUpdate === 'function') {
-			Vnode = Vcomponent
+			createVnode = createVcomponent
 		} else {
-			Vnode = VstatelessComponent
+			createVnode = createVstateless
 		}
 	} else {
 		throw new Error(`React.createElement: unexpect type [ ${type} ]`)
@@ -80,7 +80,7 @@ let createElement = function(type, props, children) {
 		finalProps.children = children
 	}
 
-	let vnode = new Vnode(type, finalProps)
+	let vnode = createVnode(type, finalProps)
 	vnode.key = key
 	vnode.ref = ref
 	return vnode

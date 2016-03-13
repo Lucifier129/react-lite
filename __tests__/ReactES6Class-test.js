@@ -106,6 +106,7 @@ describe('ReactES6Class', function() {
     }
     var instance = test(<Foo initialValue="foo" />, 'DIV', 'foo');
     instance.changeState();
+    console.log(instance)
     test(<Foo />, 'SPAN', 'bar');
   });
 

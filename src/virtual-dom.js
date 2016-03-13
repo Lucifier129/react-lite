@@ -1,107 +1,100 @@
 import * as _ from './util'
-import { SVGNamespaceURI, notBubbleEvents } from './constant'
+import {
+    SVGNamespaceURI,
+    notBubbleEvents,
+    VELEMENT,
+    VSTATELESS,
+    VCOMPONENT,
+    VCOMMENT
+} from './constant'
 import { getEventName } from './event-system'
 
 let noop = _.noop
 let refs = null
 
-export function Vtext(text) {
-    this.text = text
+export let createVelem = (type, props) => ({
+    vtype: VELEMENT,
+    type: type,
+    props: props,
+    refs: refs
+})
+
+export let createVstateless = (type, props) => ({
+    vtype: VSTATELESS,
+    id: _.getUid(),
+    type: type,
+    props: props
+})
+
+export let createVcomponent = (type, props) => ({
+    vtype: VCOMPONENT,
+    id: _.getUid(),
+    type: type,
+    props: props,
+    refs: refs
+})
+
+export let createVcomment = comment => ({
+    vtype: VCOMMENT,
+    comment: comment
+})
+
+
+export let initVnode = (vnode, parentContext, namespaceURI) => {
+    let { vtype } = vnode
+    let node = null
+    if (!vtype) {
+        node = document.createTextNode(vnode)
+    } else if (vtype === VELEMENT) {
+        node = initVelem(vnode, parentContext, namespaceURI)
+    } else if (vtype === VCOMPONENT) {
+        node = initVcomponent(vnode, parentContext, namespaceURI)
+    } else if (vtype === VSTATELESS) {
+        node = initVstateless(vnode, parentContext, namespaceURI)
+    } else if (vtype === VCOMMENT) {
+        node = document.createComment(vnode.comment)
+    }
+    return node
 }
 
-let VtextPrototype = Vtext.prototype
-VtextPrototype.isVdom = true
-VtextPrototype.type = '#TEXT'
-VtextPrototype.init = function() {
-    return document.createTextNode(this.text)
-}
-VtextPrototype.update = function(newVtext, textNode) {
-    if (newVtext.text !== this.text) {
-        textNode.nodeValue = newVtext.text
-        // textNode.replaceData(0, textNode.length, newVtext.text)
+export let updateVnode = (vnode, newVnode, node, parentContext) => {
+    let { vtype } = vnode
+    let newNode = node
+
+    if (!vtype) {
+        if (vnode !== newVnode) {
+            node.nodeValue = newVnode
+        }
+    } else if (vtype === VELEMENT) {
+        newNode = updateVelem(vnode, newVnode, node, parentContext)
+    } else if (vtype === VCOMPONENT) {
+        newNode = updateVcomponent(vnode, newVnode, node, parentContext)
+    } else if (vtype === VSTATELESS) {
+        newNode = updateVstateless(vnode, newVnode, node, parentContext)
     }
-    return textNode
+
+    return newNode
 }
-VtextPrototype.destroy = function(textNode, remove) {
+
+export let destroyVnode = (vnode, node, remove) => {
+    let { vtype } = vnode
+
+    if (vtype === VELEMENT) {
+        destroyVelem(vnode, node)
+    } else if (vtype === VCOMPONENT) {
+        destroyVcomponent(vnode, node)
+    } else if (vtype === VSTATELESS) {
+        destroyVstateless(vnode, node)
+    }
+
     if (remove) {
-        remove(textNode)
+        remove(node)
     }
 }
 
-function Vcomment(comment) {
-    this.comment = comment
-}
 
-let VcommentPrototype = Vcomment.prototype
-VcommentPrototype.isVdom = true
-VcommentPrototype.type = '#COMMENT'
-VcommentPrototype.init = function() {
-    return document.createComment(this.comment)
-}
-VcommentPrototype.update = function(newVcomment, commentNode) {
-    return commentNode
-}
-VcommentPrototype.destroy = VtextPrototype.destroy
-
-export function Velem(type, props) {
-    this.type = type
-    this.props = props
-    this.refs = refs
-}
-
-let VelemPrototype = Velem.prototype
-VelemPrototype.isVdom = true
-
-let initChild = (vchild, index, node, parentContext, namespaceURI) => {
-    if (vchild == null || _.isBln(vchild)) {
-        return false
-    }
-    vchild = vchild.isVdom ? vchild : new Vtext('' + vchild)
-    let childNode = vchild.init(parentContext, namespaceURI)
-    childNode.vnode = vchild
-    node.appendChild(childNode)
-}
-
-let updateChild = (newVchild, index, node, parentContext, namespaceURI) => {
-    if (newVchild == null || _.isBln(newVchild)) {
-        return false
-    }
-    newVchild = newVchild.isVdom ? newVchild : new Vtext('' + newVchild)
-    let { type, key, refs } = newVchild
-    let { childNodes } = node
-    let newChildNode = null
-
-    for (let i = index; i < childNodes.length; i++) {
-        let childNode = childNodes[i]
-        let vnode = childNode.vnode
-        if (vnode.refs === refs && vnode.type === type && vnode.key === key) {
-            if (vnode === newVchild) {
-                newChildNode = childNode
-            } else {
-                newChildNode = vnode.update(newVchild, childNode, parentContext)
-            }
-            break
-        }
-    }
-
-    if (!newChildNode) {
-        newChildNode = newVchild.init(parentContext, namespaceURI)
-    }
-
-    let currentNode = childNodes[index]
-    if (currentNode) {
-        if (currentNode !== newChildNode) {
-            node.insertBefore(newChildNode, currentNode)
-        }
-    } else {
-        node.appendChild(newChildNode)
-    }
-
-    newChildNode.vnode = newVchild
-}
-
-VelemPrototype.init = function(parentContext, namespaceURI) {
-    let { type, props } = this
+let initVelem = (velem, parentContext, namespaceURI) => {
+    let { type, props } = velem
     let node = null
     
     if (type === 'svg' || namespaceURI === SVGNamespaceURI) {
@@ -121,15 +114,27 @@ VelemPrototype.init = function(parentContext, namespaceURI) {
 
     _.setProps(node, props)
 
-    if (this.ref !== null) {
-        attachRef(this.refs, this.ref, node)
+    if (velem.ref !== null) {
+        attachRef(velem.refs, velem.ref, node)
     }
 
     return node
 }
 
-VelemPrototype.update = function(newVelem, node, parentContext) {
-    let { props } = this
+
+let initChild = (vchild, index, node, parentContext, namespaceURI) => {
+    if (vchild == null || _.isBln(vchild)) {
+        return false
+    }
+    vchild = vchild.vtype ? vchild : ('' + vchild)
+    let childNode = initVnode(vchild, parentContext, namespaceURI)
+    childNode.vnode = vchild
+    node.appendChild(childNode)
+}
+
+
+let updateVelem = (velem, newVelem, node, parentContext) => {
+    let { props } = velem
     let newProps = newVelem.props
     let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
     let children = props.children
@@ -150,7 +155,7 @@ VelemPrototype.update = function(newVelem, node, parentContext) {
         // destroy old children not in the newChildren
         while (childNodesLen !== newChildrenCount) {
             let childNode = childNodes[--childNodesLen]
-            childNode.vnode.destroy(childNode, removeNode)
+            destroyVnode(childNode.vnode, childNode, removeNode)
         }
         _.patchProps(node, props, newProps)
     } else {
@@ -162,26 +167,65 @@ VelemPrototype.update = function(newVelem, node, parentContext) {
             initChild(newChildren, 0, node, parentContext, namespaceURI)
         }
     }
-    if (this.ref !== null) {
+    if (velem.ref !== null) {
         if (newVelem.ref !== null) {
             attachRef(newVelem.refs, newVelem.ref, node)
         } else {
-            detachRef(this.refs, this.ref)
+            detachRef(velem.refs, velem.ref)
         }
     } else {
         attachRef(newVelem.refs, newVelem.ref, node)
     }
     return node
 }
-VelemPrototype.destroy = function(node, remove) {
-    let { props } = this
+
+let updateChild = (newVchild, index, node, parentContext, namespaceURI) => {
+    if (newVchild == null || _.isBln(newVchild)) {
+        return false
+    }
+    newVchild = newVchild.vtype ? newVchild : ('' + newVchild)
+    let { type, key, refs } = newVchild
+    let { childNodes } = node
+    let newChildNode = null
+
+    for (let i = index; i < childNodes.length; i++) {
+        let childNode = childNodes[i]
+        let vchild = childNode.vnode
+        if (vchild.refs === refs && vchild.type === type && vchild.key === key) {
+            if (vchild !== newVchild) {
+                newChildNode = updateVnode(vchild, newVchild, childNode, parentContext)
+            } else {
+                newChildNode = childNode
+            }
+            break
+        }
+    }
+
+    if (!newChildNode) {
+        newChildNode = initVnode(newVchild, parentContext, namespaceURI)
+    }
+
+    let currentNode = childNodes[index]
+    if (currentNode) {
+        if (currentNode !== newChildNode) {
+            node.insertBefore(newChildNode, currentNode)
+        }
+    } else {
+        node.appendChild(newChildNode)
+    }
+
+    newChildNode.vnode = newVchild
+}
+
+let destroyVelem = (velem, node, remove) => {
+    let { props } = velem
     let childNodes = node.childNodes
     for (let i = 0, len = childNodes.length; i < len; i++) {
         let childNode = childNodes[i]
-        childNode.vnode.destroy(childNode)
+        destroyVnode(childNode.vnode, childNode)
     }
-    if (this.ref !== null) {
-        detachRef(this.refs, this.ref)
+    if (velem.ref !== null) {
+        detachRef(velem.refs, velem.ref)
     }
     if (remove) {
         remove(node)
@@ -197,101 +241,79 @@ VelemPrototype.destroy = function(node, remove) {
     }
 }
 
-export function VstatelessComponent(type, props) {
-    this.id = _.getUid()
-    this.type = type
-    this.props = props
-}
-
-let VstatelessComponentPrototype = VstatelessComponent.prototype
-VstatelessComponentPrototype.isVdom = true
-VstatelessComponentPrototype.init = function(parentContext, namespaceURI) {
-    let vtree = renderVstatelessComponent(this, parentContext)
-    let node = vtree.init(parentContext, namespaceURI)
+let initVstateless = (vstateless, parentContext, namespaceURI) => {
+    let vnode = renderVstateless(vstateless, parentContext)
+    let node = initVnode(vnode, parentContext, namespaceURI)
     node.cache = node.cache || {}
-    node.cache[this.id] = vtree
+    node.cache[vstateless.id] = vnode
     return node
 }
-VstatelessComponentPrototype.update = function(newVstatelessComponent, node, parentContext) {
-    let id = this.id
-    let vtree = node.cache[id]
+let updateVstateless = (vstateless, newVstateless, node, parentContext) => {
+    let id = vstateless.id
+    let vnode = node.cache[id]
     delete node.cache[id]
-    let newVtree = renderVstatelessComponent(newVstatelessComponent, parentContext)
-    let newNode = compareTwoTrees(vtree, newVtree, node, parentContext)
+    let newVnode = renderVstateless(newVstateless, parentContext)
+    let newNode = compareTwoVnodes(vnode, newVnode, node, parentContext)
     newNode.cache = newNode.cache || {}
-    newNode.cache[newVstatelessComponent.id] = newVtree
+    newNode.cache[newVstateless.id] = newVnode
     if (newNode !== node) {
         _.extend(newNode.cache, node.cache)
     }
     return newNode
 }
-VstatelessComponentPrototype.destroy = function(node, remove) {
-    let id = this.id
-    let vtree = node.cache[id]
+let destroyVstateless = (vstateless, node, remove) => {
+    let id = vstateless.id
+    let vnode = node.cache[id]
     delete node.cache[id]
-    vtree.destroy(node, remove)
+    destroyVnode(vnode, node, remove)
 }
 
-let renderVstatelessComponent = (vstatelessComponent, parentContext) => {
-    let { type: factory, props } = vstatelessComponent
+let renderVstateless = (vstateless, parentContext) => {
+    let { type: factory, props } = vstateless
     let componentContext = getContextByTypes(parentContext, factory.contextTypes)
-    let vtree = factory(props, componentContext)
-    if (vtree && vtree.render) {
-        vtree = vtree.render()
+    let vnode = factory(props, componentContext)
+    if (vnode && vnode.render) {
+        vnode = vnode.render()
     }
-    if (vtree === null || vtree === false) {
-        vtree = new Vcomment(`react-empty: ${_.getUid()}`)
-    } else if (!vtree || !vtree.isVdom) {
+    if (vnode === null || vnode === false) {
+        vnode = createVcomment(`react-empty: ${_.getUid()}`)
+    } else if (!vnode || !vnode.vtype) {
         throw new Error(`@${factory.name}#render:You may have returned undefined, an array or some other invalid object`)
     }
-    return vtree
+    return vnode
 }
 
-export function Vcomponent(type, props) {
-    this.id = _.getUid()
-    this.type = type
-    this.props = props
-    this.refs = refs
-}
-
-let VcomponentPrototype = Vcomponent.prototype
-VcomponentPrototype.isVdom = true
-VcomponentPrototype.init = function(parentContext, namespaceURI) {
-    let { type: Component, props, id } = this
+let initVcomponent = (vcomponent, parentContext, namespaceURI) => {
+    let { type: Component, props, id } = vcomponent
     let componentContext = getContextByTypes(parentContext, Component.contextTypes)
     let component = new Component(props, componentContext)
     let { $updater: updater, $cache: cache } = component
     cache.parentContext = parentContext
     updater.isPending = true
     component.props = component.props || props
+    component.context = component.context || componentContext
     if (component.componentWillMount) {
         component.componentWillMount()
         component.state = updater.getState()
     }
-    let vtree = renderComponent(component, parentContext)
-    let node = vtree.init(vtree.context, namespaceURI)
+    let vnode = renderComponent(component, parentContext)
+    let node = initVnode(vnode, vnode.context, namespaceURI)
     node.cache = node.cache || {}
     node.cache[id] = component
-    cache.vtree = vtree
+    cache.vnode = vnode
     cache.node = node
     cache.isMounted = true
     pendingComponents.push(component)
-    if (this.ref !== null) {
-        attachRef(this.refs, this.ref, component)
+    if (vcomponent.ref !== null) {
+        attachRef(vcomponent.refs, vcomponent.ref, component)
     }
     return node
 }
-VcomponentPrototype.update = function(newVcomponent, node, parentContext) {
-    let id = this.id
+let updateVcomponent = (vcomponent, newVcomponent, node, parentContext) => {
+    let id = vcomponent.id
     let component = node.cache[id]
-    let {
-        $updater: updater,
-        $cache: cache
-    } = component
-    let {
-        type: Component,
-        props: nextProps,
-    } = newVcomponent
+    let { $updater: updater, $cache: cache } = component
+    let { type: Component, props: nextProps } = newVcomponent
     let componentContext = getContextByTypes(parentContext, Component.contextTypes)
     delete node.cache[id]
     node.cache[newVcomponent.id] = component
@@ -302,31 +324,33 @@ VcomponentPrototype.update = function(newVcomponent, node, parentContext) {
         updater.isPending = false
     }
     updater.emitUpdate(nextProps, componentContext)
-    if (this.ref !== null) {
+    if (vcomponent.ref !== null) {
         if (newVcomponent.ref !== null) {
             attachRef(newVcomponent.refs, newVcomponent.ref, component)
         } else {
-            detachRef(this.refs, this.ref)
+            detachRef(vcomponent.refs, vcomponent.ref)
         }
     } else {
         attachRef(newVcomponent.refs, newVcomponent.ref, component)
     }
     return cache.node
 }
-VcomponentPrototype.destroy = function(node, remove) {
-    let id = this.id
+let destroyVcomponent = (vcomponent, node, remove) => {
+    let id = vcomponent.id
     let component = node.cache[id]
     let cache = component.$cache
     delete node.cache[id]
-    detachRef(this)
+    if (vcomponent.ref !== null) {
+        detachRef(vcomponent.refs, vcomponent.ref)
+    }
     component.setState = component.forceUpdate = noop
     if (component.componentWillUnmount) {
         component.componentWillUnmount()
     }
-    cache.vtree.destroy(node, remove)
+    destroyVnode(cache.vnode, node, remove)
     delete component.setState
     cache.isMounted = false
-    cache.node = cache.parentContext = cache.vtree = component.refs = component.context = null
+    cache.node = cache.parentContext = cache.vnode = component.refs = component.context = null
 }
 
 let getContextByTypes = (curContext, contextTypes) => {
@@ -344,11 +368,11 @@ let getContextByTypes = (curContext, contextTypes) => {
 
 export let renderComponent = (component, parentContext) => {
     refs = component.refs
-	let vtree = component.render()
+	let vnode = component.render()
 
-    if (vtree === null || vtree === false) {
-        vtree = new Vcomment(`react-empty: ${_.getUid()}`)
-    } else if (!vtree || !vtree.isVdom) {
+    if (vnode === null || vnode === false) {
+        vnode = createVcomment(`react-empty: ${_.getUid()}`)
+    } else if (!vnode || !vnode.vtype) {
         throw new Error(`@${component.constructor.name}#render:You may have returned undefined, an array or some other invalid object`)
     }
     
@@ -361,8 +385,8 @@ export let renderComponent = (component, parentContext) => {
 	} else {
 		curContext = parentContext
 	}
-	vtree.context = curContext
-	return vtree
+	vnode.context = curContext
+	return vnode
 }
 
 let pendingComponents = []
@@ -385,23 +409,18 @@ export let clearPendingComponents = () => {
     }
 }
 
-export function compareTwoTrees(vtree, newVtree, node, parentContext) {
+export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
     let newNode = node
 
-    if (vtree === newVtree) { // equal
-        return newNode
-    } else if (newVtree === undefined) { // remove
-        vtree.destroy(node)
-        node.parentNode.removeChild(node)
-    } else if (vtree === undefined) { // create
-        newNode = newVtree.init(parentContext, node.namespaceURI)
-    } else if (vtree.type !== newVtree.type || newVtree.key !== vtree.key) {  // replace
-        vtree.destroy(node)
-        newNode = newVtree.init(parentContext, node.namespaceURI)
+    if (newVnode == null) { // remove
+        destroyVnode(vnode, node, removeNode)
+    } else if (vnode.type !== newVnode.type || newVnode.key !== vnode.key) {  // replace
+        destroyVnode(vnode, node)
+        newNode = initVnode(vnode, parentContext, node.namespaceURI)
         node.parentNode.replaceChild(newNode, node)
-    } else { 
+    } else if (vnode !== newVnode) { 
         // same type and same key -> update
-        newNode = vtree.update(newVtree, node, parentContext) 
+        newNode = updateVnode(vnode, newVnode, node, parentContext) 
     }
     
     return newNode

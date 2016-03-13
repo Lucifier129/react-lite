@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { renderComponent, clearPendingComponents, compareTwoTrees } from './virtual-dom'
+import { renderComponent, clearPendingComponents, compareTwoVnodes } from './virtual-dom'
 
 export let updateQueue = {
 	updaters: [],
@@ -135,7 +135,7 @@ Component.prototype = {
 		let nextContext = $cache.context || {}
 		let parentContext = $cache.parentContext
 		let node = $cache.node
-		let vtree = $cache.vtree
+		let vnode = $cache.vnode
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
 		if (this.componentWillUpdate) {
@@ -144,13 +144,13 @@ Component.prototype = {
 		this.state = nextState
 		this.props = nextProps
 		this.context = nextContext
-		let nextVtree = renderComponent(this, parentContext)
-		let newNode = compareTwoTrees(vtree, nextVtree, node, nextVtree.context)
+		let newVnode = renderComponent(this, parentContext)
+		let newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context)
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {}
 			_.extend(newNode.cache, node.cache)
 		}
-		$cache.vtree = nextVtree
+		$cache.vnode = newVnode
 		$cache.node = newNode
 		clearPendingComponents()
 		if (this.componentDidUpdate) {
