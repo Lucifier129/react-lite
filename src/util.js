@@ -29,20 +29,20 @@ export let pipe = (fn1, fn2) => {
 }
 
 
-export let flattenChildren = (list, iteratee, a, b, c) => {
-	return flat(list, iteratee, 0, a, b, c)
+export let flattenChildren = (list, iteratee, a, b) => {
+	return flat(list, iteratee, 0, a, b)
 }
 
-let flat = (list, iteratee, index, a, b, c) => {
+let flat = (list, iteratee, index, a, b) => {
     let len = list.length
     let i = -1
 
     while (len--) {
         let item = list[++i]
         if (isArr(item)) {
-            index = flat(item, iteratee, index, a, b, c)
+            index = flat(item, iteratee, index, a, b)
         } else {
-        	iteratee(item, index++, a, b, c)
+        	iteratee(item, index++, a, b)
         }
     }
 }

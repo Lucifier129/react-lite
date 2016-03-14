@@ -332,20 +332,20 @@ var pipe = function pipe(fn1, fn2) {
 	};
 };
 
-var flattenChildren = function flattenChildren(list, iteratee, a, b, c) {
-	return flat(list, iteratee, 0, a, b, c);
+var flattenChildren = function flattenChildren(list, iteratee, a, b) {
+	return flat(list, iteratee, 0, a, b);
 };
 
-var flat = function flat(list, iteratee, index, a, b, c) {
+var flat = function flat(list, iteratee, index, a, b) {
 	var len = list.length;
 	var i = -1;
 
 	while (len--) {
 		var item = list[++i];
 		if (isArr(item)) {
-			index = flat(item, iteratee, index, a, b, c);
+			index = flat(item, iteratee, index, a, b);
 		} else {
-			iteratee(item, index++, a, b, c);
+			iteratee(item, index++, a, b);
 		}
 	}
 };
@@ -639,7 +639,6 @@ var initVnode = function initVnode(vnode, parentContext, namespaceURI) {
         node = document.createTextNode(vnode);
     } else if (vtype === VELEMENT) {
         node = initVelem(vnode, parentContext, namespaceURI);
-        initChildren(node, vnode.props.children, parentContext);
     } else if (vtype === VCOMPONENT) {
         node = initVcomponent(vnode, parentContext, namespaceURI);
     } else if (vtype === VSTATELESS) {
@@ -696,7 +695,8 @@ var initVelem = function initVelem(velem, parentContext, namespaceURI) {
         node = document.createElement(type);
     }
 
-    attachProps(node, props);
+    initChildren(node, props.children, parentContext);
+    setProps(node, props);
 
     if (velem.ref !== null) {
         attachRef(velem.refs, velem.ref, node);
@@ -716,18 +716,48 @@ var initChildren = function initChildren(node, children, parentContext) {
 
 var updateChildren = function updateChildren(node, newChildren, parentContext) {
     var vchildren = node.vchildren;
+    var childNodes = node.childNodes;
+    var namespaceURI = node.namespaceURI;
 
     var newVchildren = node.vchildren = [];
     if (isArr(newChildren)) {
-        flattenChildren(newChildren, collectNewVchild, node, parentContext, vchildren);
+        flattenChildren(newChildren, collectNewVchild, newVchildren, vchildren);
     } else {
-        collectNewVchild(newChildren, 0, node, parentContext, vchildren);
+        collectNewVchild(newChildren, 0, newVchildren, vchildren);
     }
     node.vchildren = newVchildren;
 
     var item = null;
     while (item = vchildren.pop()) {
         destroyVnode(item.vnode, item.node);
+        node.removeChild(item.node);
+    }
+
+    var indexOffset = 0;
+    var currentNode = null;
+    for (var i = 0, len = newVchildren.length; i < len; i++) {
+        var newItem = newVchildren[i];
+        var oldItem = newItem.prev;
+        var newChildNode = null;
+        if (oldItem) {
+            newItem.prev = null;
+            if (oldItem.index !== newItem.index) {
+                attachNode(node, oldItem.node, childNodes[newItem.index]);
+            }
+            newChildNode = updateVnode(oldItem.vnode, newItem.vnode, oldItem.node, parentContext);
+        } else {
+            newChildNode = initVnode(newItem.vnode, parentContext, namespaceURI);
+            attachNode(node, newChildNode, childNodes[newItem.index]);
+        }
+        newItem.node = newChildNode;
+    }
+};
+
+var attachNode = function attachNode(node, newNode, existNode) {
+    if (!existNode) {
+        node.appendChild(newNode);
+    } else if (existNode !== newNode) {
+        node.insertBefore(newNode, existNode);
     }
 };
 
@@ -746,16 +776,13 @@ var collectVchild = function collectVchild(vchild, index, node, parentContext) {
     });
 };
 
-var collectNewVchild = function collectNewVchild(newVchild, __, node, parentContext, vchildren) {
+var collectNewVchild = function collectNewVchild(newVchild, __, newVchildren, vchildren) {
     if (newVchild == null || isBln(newVchild)) {
         return false;
     }
 
-    newVchild = newVchild.vtype ? newVchild : '' + newVchild;
-
-    var index = node.vchildren.length;
-
     var oldItem = null;
+    newVchild = newVchild.vtype ? newVchild : '' + newVchild;
 
     var _newVchild = newVchild;
     var refs = _newVchild.refs;
@@ -772,25 +799,10 @@ var collectNewVchild = function collectNewVchild(newVchild, __, node, parentCont
         }
     }
 
-    var newChildNode = null;
-    if (oldItem) {
-        newChildNode = updateVnode(oldItem.vnode, newVchild, oldItem.node, parentContext);
-        if (oldItem.index !== index) {
-            node.insertBefore(newChildNode, node.childNodes[index]);
-        }
-    } else {
-        newChildNode = initVnode(newVchild, parentContext, node.namespaceURI);
-        if (node.childNodes[index]) {
-            node.insertBefore(newChildNode, node.childNodes[index]);
-        } else {
-            node.appendChild(newChildNode);
-        }
-    }
-
-    node.vchildren.push({
+    newVchildren.push({
+        prev: oldItem,
         vnode: newVchild,
-        node: newChildNode,
-        index: node.vchildren.length
+        index: newVchildren.length
     });
 };
 
@@ -804,7 +816,7 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentContext) {
 
     if (oldHtml == null && vchildren.length) {
         updateChildren(node, newChildren, parentContext);
-        attachProps(node, props, newProps);
+        patchProps(node, props, newProps);
     } else {
         // should patch props first, make sure innerHTML was cleared
         patchProps(node, props, newProps);
@@ -828,6 +840,7 @@ var destroyVelem = function destroyVelem(velem, node) {
     var vchildren = node.vchildren;
 
     var item = null;
+
     while (item = vchildren.pop()) {
         destroyVnode(item.vnode, item.node);
     }
@@ -1008,7 +1021,6 @@ var pendingComponents = [];
 var clearPendingComponents = function clearPendingComponents() {
     var components = pendingComponents;
     var len = components.length;
-    clearPendingProps();
     if (!len) {
         return;
     }
@@ -1044,21 +1056,6 @@ function compareTwoVnodes(vnode, newVnode, node, parentContext) {
 
     return newNode;
 }
-
-var pendingProps = [];
-var attachProps = function attachProps(node, props, newProps) {
-    pendingProps.push({ node: node, props: props, newProps: newProps });
-};
-var clearPendingProps = function clearPendingProps() {
-    var item = null;
-    while (item = pendingProps.pop()) {
-        if (item.newProps) {
-            patchProps(item.node, item.props, item.newProps);
-        } else {
-            setProps(item.node, item.props);
-        }
-    }
-};
 
 var getDOMNode = function getDOMNode() {
     return this;
@@ -1569,6 +1566,7 @@ var createElement = function createElement(type, props, children) {
 	var key = null;
 	var ref = null;
 	var finalProps = {};
+	var propValue = null;
 	if (props != null) {
 		for (var propKey in props) {
 			if (!hasOwn(props, propKey)) {
@@ -1582,8 +1580,8 @@ var createElement = function createElement(type, props, children) {
 				if (props.ref !== undefined) {
 					ref = props.ref;
 				}
-			} else {
-				finalProps[propKey] = props[propKey];
+			} else if ((propValue = props[propKey]) !== undefined) {
+				finalProps[propKey] = propValue;
 			}
 		}
 	}
@@ -1826,7 +1824,7 @@ var createClass = function createClass(spec) {
 };
 
 var React = extend({
-    version: '15.0-rc1',
+    version: '0.15.1',
     cloneElement: cloneElement,
     isValidElement: isValidElement,
     createElement: createElement,

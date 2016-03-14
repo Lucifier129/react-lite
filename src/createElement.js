@@ -47,6 +47,7 @@ let createElement = function(type, props, children) {
 	let key = null
 	let ref = null
 	let finalProps = {}
+	let propValue = null
 	if (props != null) {
 		for (let propKey in props) {
 			if (!_.hasOwn(props, propKey)) {
@@ -60,8 +61,8 @@ let createElement = function(type, props, children) {
 				if (props.ref !== undefined) {
 					ref = props.ref
 				}
-			} else {
-				finalProps[propKey] = props[propKey]
+			} else if ((propValue = props[propKey]) !== undefined) {
+				finalProps[propKey] = propValue
 			}
 		}
 	}
