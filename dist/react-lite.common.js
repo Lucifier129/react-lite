@@ -332,24 +332,22 @@ var pipe = function pipe(fn1, fn2) {
 	};
 };
 
-var flattenChildren = function flattenChildren(list, iteratee, a, b) {
-	return flat(list, iteratee, 0, a, b);
+var flattenChildren = function flattenChildren(list, iteratee, a, b, c) {
+	return flat(list, iteratee, 0, a, b, c);
 };
 
-var flat = function flat(list, iteratee, index, a, b) {
+var flat = function flat(list, iteratee, index, a, b, c) {
 	var len = list.length;
 	var i = -1;
 
 	while (len--) {
 		var item = list[++i];
 		if (isArr(item)) {
-			index = flat(item, iteratee, index, a, b);
+			index = flat(item, iteratee, index, a, b, c);
 		} else {
-			iteratee(item, index++, a, b);
+			iteratee(item, index++, a, b, c);
 		}
 	}
-
-	return index;
 };
 
 var eachItem = function eachItem(list, iteratee) {
@@ -641,6 +639,7 @@ var initVnode = function initVnode(vnode, parentContext, namespaceURI) {
         node = document.createTextNode(vnode);
     } else if (vtype === VELEMENT) {
         node = initVelem(vnode, parentContext, namespaceURI);
+        initChildren(node, vnode.props.children, parentContext);
     } else if (vtype === VCOMPONENT) {
         node = initVcomponent(vnode, parentContext, namespaceURI);
     } else if (vtype === VSTATELESS) {
@@ -697,14 +696,6 @@ var initVelem = function initVelem(velem, parentContext, namespaceURI) {
         node = document.createElement(type);
     }
 
-    var children = props.children;
-
-    if (isArr(children)) {
-        flattenChildren(children, initChild, node, parentContext);
-    } else {
-        initChild(children, 0, node, parentContext);
-    }
-
     attachProps(node, props);
 
     if (velem.ref !== null) {
@@ -714,14 +705,93 @@ var initVelem = function initVelem(velem, parentContext, namespaceURI) {
     return node;
 };
 
-var initChild = function initChild(vchild, index, node, parentContext) {
+var initChildren = function initChildren(node, children, parentContext) {
+    node.vchildren = [];
+    if (isArr(children)) {
+        flattenChildren(children, collectVchild, node, parentContext);
+    } else {
+        collectVchild(children, 0, node, parentContext);
+    }
+};
+
+var updateChildren = function updateChildren(node, newChildren, parentContext) {
+    var vchildren = node.vchildren;
+
+    var newVchildren = node.vchildren = [];
+    if (isArr(newChildren)) {
+        flattenChildren(newChildren, collectNewVchild, node, parentContext, vchildren);
+    } else {
+        collectNewVchild(newChildren, 0, node, parentContext, vchildren);
+    }
+    node.vchildren = newVchildren;
+
+    var item = null;
+    while (item = vchildren.pop()) {
+        destroyVnode(item.vnode, item.node);
+    }
+};
+
+var collectVchild = function collectVchild(vchild, index, node, parentContext) {
     if (vchild == null || isBln(vchild)) {
         return false;
     }
     vchild = vchild.vtype ? vchild : '' + vchild;
+
     var childNode = initVnode(vchild, parentContext, node.namespaceURI);
-    childNode.vnode = vchild;
     node.appendChild(childNode);
+    node.vchildren.push({
+        vnode: vchild,
+        node: childNode,
+        index: node.vchildren.length
+    });
+};
+
+var collectNewVchild = function collectNewVchild(newVchild, __, node, parentContext, vchildren) {
+    if (newVchild == null || isBln(newVchild)) {
+        return false;
+    }
+
+    newVchild = newVchild.vtype ? newVchild : '' + newVchild;
+
+    var index = node.vchildren.length;
+
+    var oldItem = null;
+
+    var _newVchild = newVchild;
+    var refs = _newVchild.refs;
+    var type = _newVchild.type;
+    var key = _newVchild.key;
+
+    for (var i = 0, len = vchildren.length; i < len; i++) {
+        var item = vchildren[i];
+        var vnode = item.vnode;
+        if (vnode === newVchild || vnode.refs === refs && vnode.type === type && vnode.key === key) {
+            oldItem = item;
+            vchildren.splice(i, 1);
+            break;
+        }
+    }
+
+    var newChildNode = null;
+    if (oldItem) {
+        newChildNode = updateVnode(oldItem.vnode, newVchild, oldItem.node, parentContext);
+        if (oldItem.index !== index) {
+            node.insertBefore(newChildNode, node.childNodes[index]);
+        }
+    } else {
+        newChildNode = initVnode(newVchild, parentContext, node.namespaceURI);
+        if (node.childNodes[index]) {
+            node.insertBefore(newChildNode, node.childNodes[index]);
+        } else {
+            node.appendChild(newChildNode);
+        }
+    }
+
+    node.vchildren.push({
+        vnode: newVchild,
+        node: newChildNode,
+        index: node.vchildren.length
+    });
 };
 
 var updateVelem = function updateVelem(velem, newVelem, node, parentContext) {
@@ -729,37 +799,16 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentContext) {
 
     var newProps = newVelem.props;
     var oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html;
-    var children = props.children;
     var newChildren = newProps.children;
-    var childNodes = node.childNodes;
+    var vchildren = node.vchildren;
 
-    node.vcount = 0;
-
-    if (oldHtml == null && childNodes.length) {
-
-        if (isArr(newChildren)) {
-            flattenChildren(newChildren, updateChild, node, parentContext);
-        } else {
-            updateChild(newChildren, 0, node, parentContext);
-        }
-
-        var newChildrenCount = node.vcount;
-        var childNodesLen = childNodes.length;
-        // destroy old children not in the newChildren
-        while (childNodesLen > newChildrenCount) {
-            var childNode = childNodes[--childNodesLen];
-            destroyVnode(childNode.vnode, childNode);
-            node.removeChild(childNode);
-        }
+    if (oldHtml == null && vchildren.length) {
+        updateChildren(node, newChildren, parentContext);
         attachProps(node, props, newProps);
     } else {
         // should patch props first, make sure innerHTML was cleared
         patchProps(node, props, newProps);
-        if (isArr(newChildren)) {
-            flattenChildren(newChildren, initChild, node, parentContext);
-        } else {
-            initChild(newChildren, 0, node, parentContext);
-        }
+        initChildren(node, newChildren, parentContext);
     }
     if (velem.ref !== null) {
         if (newVelem.ref !== null) {
@@ -773,71 +822,19 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentContext) {
     return node;
 };
 
-var updateChild = function updateChild(newVchild, index, node, parentContext) {
-    if (newVchild == null || isBln(newVchild)) {
-        return false;
-    }
-    newVchild = newVchild.vtype ? newVchild : '' + newVchild;
-    var _newVchild = newVchild;
-    var type = _newVchild.type;
-    var key = _newVchild.key;
-    var refs = _newVchild.refs;
-    var childNodes = node.childNodes;
-
-    var childNodesLen = childNodes.length;
-    var newChildNode = null;
-    index = node.vcount;
-
-    for (var i = index; i < childNodesLen; i++) {
-        var childNode = childNodes[i];
-        var vchild = childNode.vnode;
-        if (vchild.refs === refs && vchild.type === type && vchild.key === key) {
-            if (vchild !== newVchild) {
-                newChildNode = updateVnode(vchild, newVchild, childNode, parentContext);
-            } else {
-                newChildNode = childNode;
-            }
-            break;
-        }
-    }
-
-    if (!newChildNode) {
-        newChildNode = initVnode(newVchild, parentContext, node.namespaceURI);
-    }
-
-    if (index < childNodesLen) {
-        var currentNode = childNodes[index];
-        if (currentNode !== newChildNode) {
-            node.insertBefore(newChildNode, currentNode);
-            node.appendChild(currentNode);
-        }
-    } else {
-        node.appendChild(newChildNode);
-    }
-
-    newChildNode.vnode = newVchild;
-    node.vcount += 1;
-};
-
 var destroyVelem = function destroyVelem(velem, node) {
     var props = velem.props;
     var children = props.children;
+    var vchildren = node.vchildren;
 
-    if (isArr(children)) {
-        var childNodes = node.childNodes;
-        for (var i = 0, len = childNodes.length; i < len; i++) {
-            var childNode = childNodes[i];
-            destroyVnode(childNode.vnode, childNode);
-        }
-    } else if (children != null && !isBln(children)) {
-        var childNode = node.firstChild;
-        destroyVnode(childNode.vnode, childNode);
+    var item = null;
+    while (item = vchildren.pop()) {
+        destroyVnode(item.vnode, item.node);
     }
 
     if (velem.ref !== null) {
         detachRef(velem.refs, velem.ref);
     }
-
     node.eventStore = null;
     for (var key in props) {
         if (hasOwn(props, key) && EVENT_KEYS.test(key)) {
