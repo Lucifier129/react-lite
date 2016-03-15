@@ -14,10 +14,7 @@ export let isStr = obj => typeof obj === 'string'
 export let isFn = obj => typeof obj === 'function'
 export let isBln = obj => typeof obj === 'boolean'
 export let isArr = Array.isArray
-export let isUndefined = obj => obj === undefined
-export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
 
-export let hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
 export let noop = () => {}
 export let identity = obj => obj
 
@@ -50,7 +47,7 @@ export let eachItem = (list, iteratee) => {
 
 export let mapValue = (obj, iteratee) => {
 	for (let key in obj) {
-		if (hasOwn(obj, key)) {
+		if (obj.hasOwnProperty(key)) {
 			iteratee(obj[key], key)
 		}
 	}
@@ -59,13 +56,13 @@ export let mapValue = (obj, iteratee) => {
 export let mapKey = (oldObj, newObj, iteratee) => {
 	let keyMap = {}
 	for (let key in oldObj) {
-		if (hasOwn(oldObj, key)) {
+		if (oldObj.hasOwnProperty(key)) {
 			keyMap[key] = true
 			iteratee(key)
 		}
 	}
 	for (let key in newObj) {
-		if (hasOwn(newObj, key) && keyMap[key] !== true) {
+		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
 			iteratee(key)
 		}
 	}
@@ -118,7 +115,7 @@ export let setProp = (elem, key, value) => {
 	} else {
 		if (value == null) {
 		    elem.removeAttribute(key)
-		} else if (hasOwn(attributesNS, originalKey)) {
+		} else if (attributesNS.hasOwnProperty(originalKey)) {
 			elem.setAttributeNS(attributesNS[originalKey], key, value)
 		} else {
 		    elem.setAttribute(key, value)
@@ -127,7 +124,7 @@ export let setProp = (elem, key, value) => {
 }
 export let setProps = (elem, props) => {
 	for (let key in props) {
-		if (hasOwn(props, key)) {
+		if (props.hasOwnProperty(key)) {
 			setProp(elem, key, props[key])
 		}
 	}
@@ -177,7 +174,7 @@ let $patchProps = key => {
     if (value === oldValue) {
         return
     }
-    if (isUndefined(value)) {
+    if (value === undefined) {
         removeProp($elem, key, oldValue)
         return
     }
@@ -209,7 +206,7 @@ export let removeStyle = (elem, style) => {
 	}
 	let elemStyle = elem.style
 	for (let key in style) {
-		if (hasOwn(style, key)) {
+		if (style.hasOwnProperty(key)) {
 			elemStyle[key] = ''
 		}
 	}
@@ -220,7 +217,7 @@ export let setStyle = (elem, style) => {
 	}
 	let elemStyle = elem.style
 	for (let key in style) {
-		if (hasOwn(style, key)) {
+		if (style.hasOwnProperty(key)) {
 			setStyleValue(elemStyle, key, style[key])
 		}
 	}
