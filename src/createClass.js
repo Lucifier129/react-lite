@@ -28,17 +28,11 @@ let combineMixinToProto = (proto, mixin) => {
 }
 
 let combineMixinToClass = (Component, mixin) => {
-	if (_.isObj(mixin.propTypes)) {
-		_.extend(Component.propTypes, mixin.propTypes)
-	}
-	if (_.isObj(mixin.contextTypes)) {
-		_.extend(Component.contextTypes, mixin.contextTypes)
-	}
+	_.extend(Component.propTypes, mixin.propTypes)
+	_.extend(Component.contextTypes, mixin.contextTypes)
+	_.extend(Component, mixin.statics)
 	if (_.isFn(mixin.getDefaultProps)) {
 		_.extend(Component.defaultProps, mixin.getDefaultProps())
-	}
-	if (_.isObj(mixin.statics)) {
-		_.extend(Component, mixin.statics)
 	}
 }
 

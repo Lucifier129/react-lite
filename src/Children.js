@@ -12,12 +12,13 @@ export let forEach = (children, iteratee, context) => {
 	if (children == null) {
 		return children
 	}
+	let index = 0
 	if (_.isArr(children)) {
-		_.flattenChildren(children, (child, index) => {
-			iteratee.call(context, child, index)
+		_.flattenChildren(children, child => {
+			iteratee.call(context, child, index++)
 		})
 	} else {
-		iteratee.call(context, children, 0)
+		iteratee.call(context, children, index)
 	}
 }
 
@@ -32,7 +33,7 @@ export let map = (children, iteratee, context) => {
 		data.child = iteratee.call(context, child, index) || child
 		data.isEqual = data.child === child
 		let key = data.key = getKey(child, index)
-		if (keyMap.hasOwnProperty(key)) {
+		if (_.hasOwn(keyMap, key)) {
 			keyMap[key] += 1
 		} else {
 			keyMap[key] = 0
