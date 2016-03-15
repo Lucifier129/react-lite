@@ -57,14 +57,16 @@ export let initVnode = (vnode, parentContext, namespaceURI) => {
     return node
 }
 
-export let updateVnode = (vnode, newVnode, node, parentContext) => {
-    let { vtype } = vnode
-    let newNode = node
+let updateVnode = (vnode, newVnode, node, parentContext) => {
+    if (vnode === newVnode) {
+        return node
+    }
 
-    if (!vtype) {
-        if (vnode !== newVnode) {
-            node.nodeValue = newVnode
-        }
+    let newNode = node
+    let { vtype } = vnode
+
+    if (!vtype) { // textNode
+        node.nodeValue = newVnode
     } else if (vtype === VELEMENT) {
         newNode = updateVelem(vnode, newVnode, node, parentContext)
     } else if (vtype === VCOMPONENT) {
@@ -116,7 +118,7 @@ let initChildren = (node, children, parentContext) => {
     if (_.isArr(children)) {
         _.flattenChildren(children, collectVchild, node, parentContext)
     } else {
-        collectVchild(children, 0, node, parentContext)
+        collectVchild(children, node, parentContext)
     }
 }
 
@@ -126,9 +128,8 @@ let updateChildren = (node, newChildren, parentContext) => {
     if (_.isArr(newChildren)) {
         _.flattenChildren(newChildren, collectNewVchild, newVchildren, vchildren)
     } else {
-        collectNewVchild(newChildren, 0, newVchildren, vchildren)
+        collectNewVchild(newChildren, newVchildren, vchildren)
     }
-    node.vchildren = newVchildren
 
     let item = null
     while (item = vchildren.pop()) {
@@ -136,8 +137,6 @@ let updateChildren = (node, newChildren, parentContext) => {
         node.removeChild(item.node)
     }
 
-    let indexOffset = 0
-    let currentNode = null
     for (let i = 0, len = newVchildren.length; i < len; i++) {
         let newItem = newVchildren[i]
         let oldItem = newItem.prev
@@ -164,7 +163,7 @@ let attachNode = (node, newNode, existNode) => {
     }
 }
 
-let collectVchild = (vchild, index, node, parentContext) => {
+let collectVchild = (vchild, node, parentContext) => {
     if (vchild == null || _.isBln(vchild)) {
         return false
     }
@@ -179,7 +178,7 @@ let collectVchild = (vchild, index, node, parentContext) => {
     })
 }
 
-let collectNewVchild = (newVchild, __, newVchildren, vchildren) => {
+let collectNewVchild = (newVchild, newVchildren, vchildren) => {
     if (newVchild == null || _.isBln(newVchild)) {
         return false
     }
@@ -211,9 +210,8 @@ let updateVelem = (velem, newVelem, node, parentContext) => {
     let newProps = newVelem.props
     let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
     let newChildren = newProps.children
-    let { vchildren } = node
 
-    if (oldHtml == null && vchildren.length) {
+    if (oldHtml == null && node.vchildren.length) {
         updateChildren(node, newChildren, parentContext)
         _.patchProps(node, props, newProps)
     } else {
@@ -235,7 +233,6 @@ let updateVelem = (velem, newVelem, node, parentContext) => {
 
 let destroyVelem = (velem, node) => {
     let { props } = velem
-    let { children } = props
     let { vchildren } = node
     let item = null
 

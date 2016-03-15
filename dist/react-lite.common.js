@@ -333,19 +333,15 @@ var pipe = function pipe(fn1, fn2) {
 };
 
 var flattenChildren = function flattenChildren(list, iteratee, a, b) {
-	return flat(list, iteratee, 0, a, b);
-};
-
-var flat = function flat(list, iteratee, index, a, b) {
 	var len = list.length;
 	var i = -1;
 
 	while (len--) {
 		var item = list[++i];
 		if (isArr(item)) {
-			index = flat(item, iteratee, index, a, b);
+			flattenChildren(item, iteratee, a, b);
 		} else {
-			iteratee(item, index++, a, b);
+			iteratee(item, a, b);
 		}
 	}
 };
@@ -650,14 +646,16 @@ var initVnode = function initVnode(vnode, parentContext, namespaceURI) {
 };
 
 var updateVnode = function updateVnode(vnode, newVnode, node, parentContext) {
-    var vtype = vnode.vtype;
+    if (vnode === newVnode) {
+        return node;
+    }
 
     var newNode = node;
+    var vtype = vnode.vtype;
 
     if (!vtype) {
-        if (vnode !== newVnode) {
-            node.nodeValue = newVnode;
-        }
+        // textNode
+        node.nodeValue = newVnode;
     } else if (vtype === VELEMENT) {
         newNode = updateVelem(vnode, newVnode, node, parentContext);
     } else if (vtype === VCOMPONENT) {
@@ -710,7 +708,7 @@ var initChildren = function initChildren(node, children, parentContext) {
     if (isArr(children)) {
         flattenChildren(children, collectVchild, node, parentContext);
     } else {
-        collectVchild(children, 0, node, parentContext);
+        collectVchild(children, node, parentContext);
     }
 };
 
@@ -723,9 +721,8 @@ var updateChildren = function updateChildren(node, newChildren, parentContext) {
     if (isArr(newChildren)) {
         flattenChildren(newChildren, collectNewVchild, newVchildren, vchildren);
     } else {
-        collectNewVchild(newChildren, 0, newVchildren, vchildren);
+        collectNewVchild(newChildren, newVchildren, vchildren);
     }
-    node.vchildren = newVchildren;
 
     var item = null;
     while (item = vchildren.pop()) {
@@ -733,8 +730,6 @@ var updateChildren = function updateChildren(node, newChildren, parentContext) {
         node.removeChild(item.node);
     }
 
-    var indexOffset = 0;
-    var currentNode = null;
     for (var i = 0, len = newVchildren.length; i < len; i++) {
         var newItem = newVchildren[i];
         var oldItem = newItem.prev;
@@ -761,7 +756,7 @@ var attachNode = function attachNode(node, newNode, existNode) {
     }
 };
 
-var collectVchild = function collectVchild(vchild, index, node, parentContext) {
+var collectVchild = function collectVchild(vchild, node, parentContext) {
     if (vchild == null || isBln(vchild)) {
         return false;
     }
@@ -776,7 +771,7 @@ var collectVchild = function collectVchild(vchild, index, node, parentContext) {
     });
 };
 
-var collectNewVchild = function collectNewVchild(newVchild, __, newVchildren, vchildren) {
+var collectNewVchild = function collectNewVchild(newVchild, newVchildren, vchildren) {
     if (newVchild == null || isBln(newVchild)) {
         return false;
     }
@@ -812,9 +807,8 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentContext) {
     var newProps = newVelem.props;
     var oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html;
     var newChildren = newProps.children;
-    var vchildren = node.vchildren;
 
-    if (oldHtml == null && vchildren.length) {
+    if (oldHtml == null && node.vchildren.length) {
         updateChildren(node, newChildren, parentContext);
         patchProps(node, props, newProps);
     } else {
@@ -836,7 +830,6 @@ var updateVelem = function updateVelem(velem, newVelem, node, parentContext) {
 
 var destroyVelem = function destroyVelem(velem, node) {
     var props = velem.props;
-    var children = props.children;
     var vchildren = node.vchildren;
 
     var item = null;
@@ -1645,12 +1638,13 @@ var forEach = function forEach(children, iteratee, context) {
 	if (children == null) {
 		return children;
 	}
+	var index = 0;
 	if (isArr(children)) {
-		flattenChildren(children, function (child, index) {
-			iteratee.call(context, child, index);
+		flattenChildren(children, function (child) {
+			iteratee.call(context, child, index++);
 		});
 	} else {
-		iteratee.call(context, children, 0);
+		iteratee.call(context, children, index);
 	}
 };
 

@@ -12,12 +12,13 @@ export let forEach = (children, iteratee, context) => {
 	if (children == null) {
 		return children
 	}
+	let index = 0
 	if (_.isArr(children)) {
-		_.flattenChildren(children, (child, index) => {
-			iteratee.call(context, child, index)
+		_.flattenChildren(children, child => {
+			iteratee.call(context, child, index++)
 		})
 	} else {
-		iteratee.call(context, children, 0)
+		iteratee.call(context, children, index)
 	}
 }
 
