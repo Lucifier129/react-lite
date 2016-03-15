@@ -1323,7 +1323,9 @@ var addEvent = function addEvent(elem, eventType, listener) {
 		eventTypes[eventType] = true;
 	}
 
-	if (eventType === 'onchange') {
+	var nodeName = elem.nodeName;
+
+	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
 		addEvent(elem, 'oninput', listener);
 	}
 };
@@ -1338,7 +1340,9 @@ var removeEvent = function removeEvent(elem, eventType) {
 	var eventStore = elem.eventStore || (elem.eventStore = {});
 	delete eventStore[eventType];
 
-	if (eventType === 'onchange') {
+	var nodeName = elem.nodeName;
+
+	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
 		delete eventStore['oninput'];
 	}
 };
