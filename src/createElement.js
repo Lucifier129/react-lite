@@ -1,7 +1,7 @@
 import * as _ from './util'
-import { Velem, Vcomponent, VstatelessComponent } from './virtual-dom'
+import { createVelem, createVcomponent, createVstateless } from './virtual-dom'
 
-export let isValidElement = obj => obj != null && !!obj.isVdom
+export let isValidElement = obj => obj != null && !!obj.vtype
 
 export let cloneElement = (originElem, props, ...children) => {
 	let { type, key, ref } = originElem
@@ -19,33 +19,69 @@ export let createFactory = type => {
 	return factory
 }
 
-let createElement = (type, props, ...children) => {
-	let Vnode = null
+let createElement = function(type, props, children) {
+	let createVnode = null
+	let argsLen = arguments.length
 
-	if (_.isStr(type)) {
-		Vnode = Velem
-	} else if (_.isComponent(type)) {
-		Vnode = Vcomponent
-	} else if (_.isStatelessComponent(type)) {
-		Vnode = VstatelessComponent
+	if (argsLen > 3) {
+		children = [children]
+		for (let i = 3; i < argsLen; i++) {
+			children[i - 2] = arguments[i]
+		}
+	}
+
+	let varType = typeof type
+
+	if (varType === 'string') {
+		createVnode = createVelem
+	} else if (varType === 'function') {
+		if (type.prototype && typeof type.prototype.forceUpdate === 'function') {
+			createVnode = createVcomponent
+		} else {
+			createVnode = createVstateless
+		}
 	} else {
 		throw new Error(`React.createElement: unexpect type [ ${type} ]`)
 	}
 
 	let key = null
 	let ref = null
+	let finalProps = {}
+	let propValue = null
 	if (props != null) {
-		if (props.key !== undefined) {
-			key = '' + props.key
-			delete props.key
-		}
-		if (props.ref !== undefined) {
-			ref = props.ref
-			delete props.ref
+		for (let propKey in props) {
+			if (!_.hasOwn(props, propKey)) {
+				continue
+			}
+			if (propKey === 'key') {
+				if (props.key !== undefined) {
+					key = '' + props.key
+				}
+			} else if (propKey === 'ref') {
+				if (props.ref !== undefined) {
+					ref = props.ref
+				}
+			} else if ((propValue = props[propKey]) !== undefined) {
+				finalProps[propKey] = propValue
+			}
 		}
 	}
 
-	let vnode = new Vnode(type, _.mergeProps(props, children, type.defaultProps))
+	let defaultProps = type.defaultProps
+
+	if (defaultProps) {
+		for (let propKey in defaultProps) {
+			if (finalProps[propKey] === undefined) {
+				finalProps[propKey] = defaultProps[propKey]
+			}
+		}
+	}
+
+	if (children !== undefined) {
+		finalProps.children = children
+	}
+
+	let vnode = createVnode(type, finalProps)
 	vnode.key = key
 	vnode.ref = ref
 	return vnode

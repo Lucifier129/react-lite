@@ -155,6 +155,7 @@
 			return React.createElement(
 				'div',
 				{ id: 'abc' },
+				Math.random() > 0.5 && img,
 				React.createElement(
 					'span',
 					{ ref: Math.random() > 0.5 ? '' : 'test-ref', 'data-test': 'abaasdf' },
@@ -208,8 +209,7 @@
 					{ href: 'adbadfasdf' },
 					'test link'
 				),
-				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } }),
-				Math.random() > 0.5 && img
+				React.createElement('p', { dangerouslySetInnerHTML: { __html: 'test dangerouslySetInnerHTML: ' + Math.random().toString(36).substr(2) } })
 			);
 		}
 	});
@@ -334,7 +334,59 @@
 	};
 
 	var num = 10;
-	update();
+	// update()
+
+	var log;
+	var logger = function logger(msg) {
+		return function () {
+			// return true for shouldComponentUpdate
+			log.push(msg);
+			return true;
+		};
+	};
+	var Outer = React.createClass({
+		displayName: 'Outer',
+
+		render: function render() {
+			return React.createElement(
+				'div',
+				null,
+				React.createElement(Inner, { x: this.props.x })
+			);
+		},
+		componentWillMount: logger('outer componentWillMount'),
+		componentDidMount: logger('outer componentDidMount'),
+		componentWillReceiveProps: logger('outer componentWillReceiveProps'),
+		shouldComponentUpdate: logger('outer shouldComponentUpdate'),
+		componentWillUpdate: logger('outer componentWillUpdate'),
+		componentDidUpdate: logger('outer componentDidUpdate'),
+		componentWillUnmount: logger('outer componentWillUnmount')
+	});
+	var Inner = React.createClass({
+		displayName: 'Inner',
+
+		render: function render() {
+			return React.createElement(
+				'span',
+				null,
+				this.props.x
+			);
+		},
+		componentWillMount: logger('inner componentWillMount'),
+		componentDidMount: logger('inner componentDidMount'),
+		componentWillReceiveProps: logger('inner componentWillReceiveProps'),
+		shouldComponentUpdate: logger('inner shouldComponentUpdate'),
+		componentWillUpdate: logger('inner componentWillUpdate'),
+		componentDidUpdate: logger('inner componentDidUpdate'),
+		componentWillUnmount: logger('inner componentWillUnmount')
+	});
+
+	var container = document.createElement('root');
+	log = [];
+	React.render(React.createElement(Outer, { x: 17 }), container);
+	log = [];
+	React.unmountComponentAtNode(container);
+	console.log(log);
 
 	// class TestRootUpdateAtDidMount extends React.Component {
 	// 	componentDidMount() {
@@ -404,6 +456,32 @@
 
 	// updateName('init')
 	// updateName('update')
+
+	// class Test extends React.Component {
+	// 	componentWillMount() {
+	// 		console.log(this.props.index, 'willMount')
+	// 		debugger
+	// 	}
+	// 	componentDidMount() {
+	// 		console.log(this.props.index, 'didMount')
+	// 		debugger
+	// 	}
+	// 	componentWillUnmount() {
+	// 		console.log(this.props.index, 'willUnmount')
+	// 	}
+	// 	render() {
+	// 		return <div>{this.props.index}</div>
+	// 	}
+	// }
+
+	// var root = (
+	// 	<div>
+	// 		<Test index={0} />
+	// 		<Test index={1} />
+	// 		<Test index={2} />
+	// 	</div>)
+
+	// React.render(root, document.getElementById('container'))
 
 /***/ }
 /******/ ]);

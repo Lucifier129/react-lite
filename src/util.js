@@ -9,16 +9,16 @@ import {
 	isUnitlessNumber,
 	shouldUseDOMProp
 } from './constant'
+
 let $ = jQuery
-export let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
-export let isObj = isType('Object')
-export let isStr = isType('String')
-export let isFn = isType('Function')
-export let isBln = isType('Boolean')
-export let isArr = Array.isArray || isType('Array')
+
+export let isObj = obj => obj !== null && Object.prototype.toString.call(obj) === '[object Object]'
+export let isStr = obj => typeof obj === 'string'
+export let isFn = obj => typeof obj === 'function'
+export let isBln = obj => typeof obj === 'boolean'
+export let isArr = Array.isArray
 export let isUndefined = obj => obj === undefined
 export let isComponent = obj => obj && obj.prototype && ('forceUpdate' in obj.prototype)
-export let isStatelessComponent = obj => isFn(obj) && (!obj.prototype || !('forceUpdate' in obj.prototype))
 
 export let hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
 export let noop = () => {}
@@ -31,17 +31,16 @@ export let pipe = (fn1, fn2) => {
 	}
 }
 
-export let flattenChildren = (list, iteratee, index) => {
+export let flattenChildren = (list, iteratee, a, b) => {
     let len = list.length
     let i = -1
-    index = index || 0
 
     while (len--) {
         let item = list[++i]
         if (isArr(item)) {
-            flattenChildren(item, iteratee, index)
+        	flattenChildren(item, iteratee, a, b)
         } else {
-        	iteratee(item, index++)
+        	iteratee(item, a, b)
         }
     }
 }
@@ -93,17 +92,6 @@ export function extend(to, from) {
 let uid = 0
 export let getUid = () => ++uid
 
-export let mergeProps = (props, children, defaultProps) => {
-	let result = extend(extend({}, defaultProps), props)
-	let childrenLen = children.length
-	if (childrenLen === 1) {
-		result.children = children[0]
-	} else if (childrenLen > 1) {
-		result.children = children
-	}
-	return result
-}
-
 export let EVENT_KEYS = /^on/i
 let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
 let isStyleKey = key => key === 'style'
@@ -133,8 +121,8 @@ export let setProp = (elem, key, value) => {
 	} else {
 		if (value == null) {
 		    $.removeAttr(elem, key)
-		} else if (attributesNS[originalKey] === true) {
-		    elem.setAttributeNS(key, value)
+		} else if (hasOwn(attributesNS, originalKey)) {
+			elem.setAttributeNS(attributesNS[originalKey], key, value)
 		} else {
 		    $.attr(elem, key, value)
 		}
@@ -147,13 +135,7 @@ export let setProps = (elem, props) => {
 		}
 	}
 }
-export let removeProps = (elem, props) => {
-	for (let key in props) {
-		if (hasOwn(props, key)) {
-			removeProp(elem, key, props[key])
-		}
-	}
-}
+
 export let removeProp = (elem, key, oldValue) => {
 	if (key === 'children') {
 		return
@@ -166,7 +148,7 @@ export let removeProp = (elem, key, oldValue) => {
 		removeStyle(elem, oldValue)
 	} else if (isInnerHTMLKey(key)) {
 		$(elem).html('')
-	} else if (attrbutesConfigs[key] === true || !(key in elem)) {
+	} else if (!(key in elem) || attrbutesConfigs[key] === true) {
 		$.removeAttr(elem, key)
 	} else if (isFn(oldValue)) {
 		elem[key] = null
@@ -176,7 +158,6 @@ export let removeProp = (elem, key, oldValue) => {
 		elem[key] = false
 	} else {
 		try {
-		    elem[key] = undefined
 		    delete elem[key]
 		} catch (e) {
 		    //pass
@@ -216,16 +197,6 @@ let $patchProps = key => {
 }
 
 export let patchProps = (elem, props, newProps) => {
-	if (props === newProps) {
-		return
-	}
-	if (!props && newProps) {
-		setProps(elem, newProps)
-		return
-	} else if (!newProps && props) {
-		removeProps(elem, props)
-		return
-	}
 	$elem = elem
 	$props = props
 	$newProps = newProps
@@ -297,7 +268,7 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 })
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
-export let setStyleValue = (style, key, value) => {
+let setStyleValue = (style, key, value) => {
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
 		style[key] = value + 'px'
 	} else {
