@@ -88,7 +88,6 @@ export let destroyVnode = (vnode, node) => {
     } else if (vtype === VSTATELESS) {
         destroyVstateless(vnode, node)
     }
-    node.vnode = null
 }
 
 
@@ -243,7 +242,7 @@ let destroyVelem = (velem, node) => {
     if (velem.ref !== null) {
         detachRef(velem.refs, velem.ref)
     }
-    node.eventStore = null
+    node.eventStore = node.vchildren = null
     for (let key in props) {
         if (_.hasOwn(props, key) && _.EVENT_KEYS.test(key)) {
             key = getEventName(key)

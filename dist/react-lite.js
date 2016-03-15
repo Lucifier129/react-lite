@@ -681,7 +681,6 @@
       } else if (vtype === VSTATELESS) {
           destroyVstateless(vnode, node);
       }
-      node.vnode = null;
   };
 
   var initVelem = function initVelem(velem, parentContext, namespaceURI) {
@@ -845,7 +844,7 @@
       if (velem.ref !== null) {
           detachRef(velem.refs, velem.ref);
       }
-      node.eventStore = null;
+      node.eventStore = node.vchildren = null;
       for (var key in props) {
           if (hasOwn(props, key) && EVENT_KEYS.test(key)) {
               key = getEventName(key);
