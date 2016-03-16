@@ -24,7 +24,9 @@ export let addEvent = (elem, eventType, listener) => {
 		eventTypes[eventType] = true
 	}
 
-	if (eventType === 'onchange') {
+	let nodeName = elem.nodeName
+
+	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
 		addEvent(elem, 'oninput', listener)
 	}
 }
@@ -39,7 +41,9 @@ export let removeEvent = (elem, eventType) => {
 	let eventStore = elem.eventStore || (elem.eventStore = {})
 	delete eventStore[eventType]
 
-	if (eventType === 'onchange') {
+	let nodeName = elem.nodeName
+
+	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
 		delete eventStore['oninput']
 	}
 }
