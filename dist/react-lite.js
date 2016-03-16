@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.2
+ * react-lite.js v0.15.3
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -741,7 +741,7 @@
               }
           } else {
               newChildNode = initVnode(newVnode, parentContext, namespaceURI);
-              attachNode(node, newChildNode, childNodes[newItem.index], vchildren);
+              attachNode(node, newChildNode, childNodes[newItem.index], vchildren, true);
           }
       }
 
@@ -752,10 +752,13 @@
       }
   };
 
-  var attachNode = function attachNode(node, newNode, existNode, vchildren) {
+  var attachNode = function attachNode(node, newNode, existNode, vchildren, isNewNode) {
       if (!existNode) {
           node.appendChild(newNode);
       } else if (existNode !== newNode) {
+          if (!isNewNode) {
+              node.removeChild(newNode);
+          }
           for (var i = 0, len = vchildren.length; i < len; i++) {
               var item = vchildren[i];
               if (item.node === existNode) {

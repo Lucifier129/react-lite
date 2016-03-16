@@ -149,7 +149,7 @@ let updateChildren = (node, newChildren, parentContext) => {
             }
         } else {
             newChildNode = initVnode(newVnode, parentContext, namespaceURI)
-            attachNode(node, newChildNode, childNodes[newItem.index], vchildren)
+            attachNode(node, newChildNode, childNodes[newItem.index], vchildren, true)
         }
     }
 
@@ -160,10 +160,13 @@ let updateChildren = (node, newChildren, parentContext) => {
     }
 }
 
-let attachNode = (node, newNode, existNode, vchildren) => {
+let attachNode = (node, newNode, existNode, vchildren, isNewNode) => {
     if (!existNode) {
         node.appendChild(newNode)
     } else if (existNode !== newNode) {
+        if (!isNewNode) {
+            node.removeChild(newNode)
+        }
         for (let i = 0, len = vchildren.length; i < len; i++) {
             let item = vchildren[i]
             if (item.node === existNode) {
