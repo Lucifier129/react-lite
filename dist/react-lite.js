@@ -709,6 +709,11 @@
       var namespaceURI = node.namespaceURI;
 
       var newVchildren = node.vchildren = [];
+
+      for (var i = 0, len = vchildren.length; i < len; i++) {
+          vchildren[i].node = childNodes[i];
+      }
+
       if (isArr(newChildren)) {
           flattenChildren(newChildren, collectNewVchild, newVchildren, vchildren);
       } else {
@@ -738,7 +743,6 @@
               newChildNode = initVnode(newVnode, parentContext, namespaceURI);
               attachNode(node, newChildNode, childNodes[newItem.index], vchildren);
           }
-          newItem.node = newChildNode;
       }
 
       for (var i = 0, len = vchildren.length; i < len; i++) {
@@ -775,7 +779,6 @@
       node.appendChild(childNode);
       node.vchildren.push({
           vnode: vchild,
-          node: childNode,
           index: node.vchildren.length
       });
   };
@@ -840,10 +843,11 @@
   var destroyVelem = function destroyVelem(velem, node) {
       var props = velem.props;
       var vchildren = node.vchildren;
+      var childNodes = node.childNodes;
 
       for (var i = 0, len = vchildren.length; i < len; i++) {
           var item = vchildren[i];
-          destroyVnode(item.vnode, item.node);
+          destroyVnode(item.vnode, childNodes[i]);
       }
 
       if (velem.ref !== null) {

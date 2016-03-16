@@ -118,6 +118,11 @@ let initChildren = (node, children, parentContext) => {
 let updateChildren = (node, newChildren, parentContext) => {
     let { vchildren, childNodes, namespaceURI } = node
     let newVchildren = node.vchildren = []
+
+    for (let i = 0, len = vchildren.length; i < len; i++) {
+        vchildren[i].node = childNodes[i]
+    }
+
     if (_.isArr(newChildren)) {
         _.flattenChildren(newChildren, collectNewVchild, newVchildren, vchildren)
     } else {
@@ -146,7 +151,6 @@ let updateChildren = (node, newChildren, parentContext) => {
             newChildNode = initVnode(newVnode, parentContext, namespaceURI)
             attachNode(node, newChildNode, childNodes[newItem.index], vchildren)
         }
-        newItem.node = newChildNode
     }
 
     for (let i = 0, len = vchildren.length; i < len; i++) {
@@ -183,7 +187,6 @@ let collectVchild = (vchild, node, parentContext) => {
     node.appendChild(childNode)
     node.vchildren.push({
         vnode: vchild,
-        node: childNode,
         index: node.vchildren.length
     })
 }
@@ -243,11 +246,11 @@ let updateVelem = (velem, newVelem, node, parentContext) => {
 
 let destroyVelem = (velem, node) => {
     let { props } = velem
-    let { vchildren } = node
+    let { vchildren, childNodes } = node
 
     for (let i = 0, len = vchildren.length; i < len; i++) {
         let item = vchildren[i]
-        destroyVnode(item.vnode, item.node)
+        destroyVnode(item.vnode, childNodes[i])
     }
 
     if (velem.ref !== null) {
