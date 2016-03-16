@@ -244,9 +244,9 @@ let updateVelem = (velem, newVelem, node, parentContext) => {
 let destroyVelem = (velem, node) => {
     let { props } = velem
     let { vchildren } = node
-    let item = null
 
-    while (item = vchildren.pop()) {
+    for (let i = 0, len = vchildren.length; i < len; i++) {
+        let item = vchildren[i]
         destroyVnode(item.vnode, item.node)
     }
 

@@ -841,9 +841,8 @@
       var props = velem.props;
       var vchildren = node.vchildren;
 
-      var item = null;
-
-      while (item = vchildren.pop()) {
+      for (var i = 0, len = vchildren.length; i < len; i++) {
+          var item = vchildren[i];
           destroyVnode(item.vnode, item.node);
       }
 
