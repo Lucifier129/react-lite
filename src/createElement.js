@@ -50,7 +50,7 @@ let createElement = function(type, props, children) {
 	let propValue = null
 	if (props != null) {
 		for (let propKey in props) {
-			if (!_.hasOwn(props, propKey)) {
+			if (!props.hasOwnProperty(propKey)) {
 				continue
 			}
 			if (propKey === 'key') {

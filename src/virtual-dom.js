@@ -58,16 +58,10 @@ export let initVnode = (vnode, parentContext, namespaceURI) => {
 }
 
 let updateVnode = (vnode, newVnode, node, parentContext) => {
-    if (vnode === newVnode) {
-        return node
-    }
-
     let newNode = node
     let { vtype } = vnode
 
-    if (!vtype) { // textNode
-        node.nodeValue = newVnode
-    } else if (vtype === VELEMENT) {
+    if (vtype === VELEMENT) {
         newNode = updateVelem(vnode, newVnode, node, parentContext)
     } else if (vtype === VCOMPONENT) {
         newNode = updateVcomponent(vnode, newVnode, node, parentContext)
@@ -130,34 +124,51 @@ let updateChildren = (node, newChildren, parentContext) => {
         collectNewVchild(newChildren, newVchildren, vchildren)
     }
 
-    let item = null
-    while (item = vchildren.pop()) {
-        destroyVnode(item.vnode, item.node)
-        node.removeChild(item.node)
-    }
-
     for (let i = 0, len = newVchildren.length; i < len; i++) {
         let newItem = newVchildren[i]
+        let newVnode = newItem.vnode
         let oldItem = newItem.prev
         let newChildNode = null
         if (oldItem) {
+            newChildNode = oldItem.node
             newItem.prev = null
             if (oldItem.index !== newItem.index) {
-                attachNode(node, oldItem.node, childNodes[newItem.index])
+                attachNode(node, newChildNode, childNodes[newItem.index], vchildren)
             }
-            newChildNode = updateVnode(oldItem.vnode, newItem.vnode, oldItem.node, parentContext)
+            if (newVnode !== oldItem.vnode) {
+                if (!newVnode.vtype) { // textNode
+                    newChildNode.nodeValue = newVnode
+                } else {
+                    newChildNode = updateVnode(oldItem.vnode, newVnode, newChildNode, parentContext)
+                }
+            }
         } else {
-            newChildNode = initVnode(newItem.vnode, parentContext, namespaceURI)
-            attachNode(node, newChildNode, childNodes[newItem.index])
+            newChildNode = initVnode(newVnode, parentContext, namespaceURI)
+            attachNode(node, newChildNode, childNodes[newItem.index], vchildren)
         }
         newItem.node = newChildNode
     }
+
+    for (let i = 0, len = vchildren.length; i < len; i++) {
+        let item = vchildren[i]
+        destroyVnode(item.vnode, item.node)
+        node.removeChild(item.node)
+    }
 }
 
-let attachNode = (node, newNode, existNode) => {
+let attachNode = (node, newNode, existNode, vchildren) => {
     if (!existNode) {
         node.appendChild(newNode)
     } else if (existNode !== newNode) {
+        for (let i = 0, len = vchildren.length; i < len; i++) {
+            let item = vchildren[i]
+            if (item.node === existNode) {
+                vchildren.splice(i, 1)
+                destroyVnode(item.vnode, item.node)
+                node.replaceChild(newNode, existNode)
+                return
+            }
+        }
         node.insertBefore(newNode, existNode)
     }
 }
@@ -233,9 +244,9 @@ let updateVelem = (velem, newVelem, node, parentContext) => {
 let destroyVelem = (velem, node) => {
     let { props } = velem
     let { vchildren } = node
-    let item = null
 
-    while (item = vchildren.pop()) {
+    for (let i = 0, len = vchildren.length; i < len; i++) {
+        let item = vchildren[i]
         destroyVnode(item.vnode, item.node)
     }
 
@@ -244,7 +255,7 @@ let destroyVelem = (velem, node) => {
     }
     node.eventStore = node.vchildren = null
     for (let key in props) {
-        if (_.hasOwn(props, key) && _.EVENT_KEYS.test(key)) {
+        if (props.hasOwnProperty(key) && _.EVENT_KEYS.test(key)) {
             key = getEventName(key)
             if (notBubbleEvents[key] === true) {
                 node[key] = null
@@ -371,7 +382,7 @@ let getContextByTypes = (curContext, contextTypes) => {
 		return context
 	}
 	for (let key in contextTypes) {
-		if (_.hasOwn(contextTypes, key)) {
+		if (contextTypes.hasOwnProperty(key)) {
 			context[key] = curContext[key]
 		}
 	}

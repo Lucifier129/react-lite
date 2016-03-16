@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.1
+ * react-lite.js v0.15.2
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -323,12 +323,7 @@
   	return typeof obj === 'boolean';
   };
   var isArr = Array.isArray;
-  var isUndefined = function isUndefined(obj) {
-  	return obj === undefined;
-  };
-  var hasOwn = function hasOwn(obj, key) {
-  	return Object.prototype.hasOwnProperty.call(obj, key);
-  };
+
   var noop = function noop() {};
   var identity = function identity(obj) {
   	return obj;
@@ -363,7 +358,7 @@
 
   var mapValue = function mapValue(obj, iteratee) {
   	for (var key in obj) {
-  		if (hasOwn(obj, key)) {
+  		if (obj.hasOwnProperty(key)) {
   			iteratee(obj[key], key);
   		}
   	}
@@ -372,13 +367,13 @@
   var mapKey = function mapKey(oldObj, newObj, iteratee) {
   	var keyMap = {};
   	for (var key in oldObj) {
-  		if (hasOwn(oldObj, key)) {
+  		if (oldObj.hasOwnProperty(key)) {
   			keyMap[key] = true;
   			iteratee(key);
   		}
   	}
   	for (var key in newObj) {
-  		if (hasOwn(newObj, key) && keyMap[key] !== true) {
+  		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
   			iteratee(key);
   		}
   	}
@@ -436,7 +431,7 @@
   	} else {
   		if (value == null) {
   			$.removeAttr(elem, key);
-  		} else if (hasOwn(attributesNS, originalKey)) {
+  		} else if (attributesNS.hasOwnProperty(originalKey)) {
   			elem.setAttributeNS(attributesNS[originalKey], key, value);
   		} else {
   			$.attr(elem, key, value);
@@ -445,7 +440,7 @@
   };
   var setProps = function setProps(elem, props) {
   	for (var key in props) {
-  		if (hasOwn(props, key)) {
+  		if (props.hasOwnProperty(key)) {
   			setProp(elem, key, props[key]);
   		}
   	}
@@ -492,7 +487,7 @@
   	if (value === oldValue) {
   		return;
   	}
-  	if (isUndefined(value)) {
+  	if (value === undefined) {
   		removeProp($elem, key, oldValue);
   		return;
   	}
@@ -523,7 +518,7 @@
   	}
   	var elemStyle = elem.style;
   	for (var key in style) {
-  		if (hasOwn(style, key)) {
+  		if (style.hasOwnProperty(key)) {
   			elemStyle[key] = '';
   		}
   	}
@@ -534,7 +529,7 @@
   	}
   	var elemStyle = elem.style;
   	for (var key in style) {
-  		if (hasOwn(style, key)) {
+  		if (style.hasOwnProperty(key)) {
   			setStyleValue(elemStyle, key, style[key]);
   		}
   	}
@@ -654,17 +649,10 @@
   };
 
   var updateVnode = function updateVnode(vnode, newVnode, node, parentContext) {
-      if (vnode === newVnode) {
-          return node;
-      }
-
       var newNode = node;
       var vtype = vnode.vtype;
 
-      if (!vtype) {
-          // textNode
-          node.nodeValue = newVnode;
-      } else if (vtype === VELEMENT) {
+      if (vtype === VELEMENT) {
           newNode = updateVelem(vnode, newVnode, node, parentContext);
       } else if (vtype === VCOMPONENT) {
           newNode = updateVcomponent(vnode, newVnode, node, parentContext);
@@ -731,34 +719,52 @@
           collectNewVchild(newChildren, newVchildren, vchildren);
       }
 
-      var item = null;
-      while (item = vchildren.pop()) {
-          destroyVnode(item.vnode, item.node);
-          node.removeChild(item.node);
-      }
-
       for (var i = 0, len = newVchildren.length; i < len; i++) {
           var newItem = newVchildren[i];
+          var newVnode = newItem.vnode;
           var oldItem = newItem.prev;
           var newChildNode = null;
           if (oldItem) {
+              newChildNode = oldItem.node;
               newItem.prev = null;
               if (oldItem.index !== newItem.index) {
-                  attachNode(node, oldItem.node, childNodes[newItem.index]);
+                  attachNode(node, newChildNode, childNodes[newItem.index], vchildren);
               }
-              newChildNode = updateVnode(oldItem.vnode, newItem.vnode, oldItem.node, parentContext);
+              if (newVnode !== oldItem.vnode) {
+                  if (!newVnode.vtype) {
+                      // textNode
+                      newChildNode.nodeValue = newVnode;
+                  } else {
+                      newChildNode = updateVnode(oldItem.vnode, newVnode, newChildNode, parentContext);
+                  }
+              }
           } else {
-              newChildNode = initVnode(newItem.vnode, parentContext, namespaceURI);
-              attachNode(node, newChildNode, childNodes[newItem.index]);
+              newChildNode = initVnode(newVnode, parentContext, namespaceURI);
+              attachNode(node, newChildNode, childNodes[newItem.index], vchildren);
           }
           newItem.node = newChildNode;
       }
+
+      for (var i = 0, len = vchildren.length; i < len; i++) {
+          var item = vchildren[i];
+          destroyVnode(item.vnode, item.node);
+          node.removeChild(item.node);
+      }
   };
 
-  var attachNode = function attachNode(node, newNode, existNode) {
+  var attachNode = function attachNode(node, newNode, existNode, vchildren) {
       if (!existNode) {
           node.appendChild(newNode);
       } else if (existNode !== newNode) {
+          for (var i = 0, len = vchildren.length; i < len; i++) {
+              var item = vchildren[i];
+              if (item.node === existNode) {
+                  vchildren.splice(i, 1);
+                  destroyVnode(item.vnode, item.node);
+                  node.replaceChild(newNode, existNode);
+                  return;
+              }
+          }
           node.insertBefore(newNode, existNode);
       }
   };
@@ -839,9 +845,8 @@
       var props = velem.props;
       var vchildren = node.vchildren;
 
-      var item = null;
-
-      while (item = vchildren.pop()) {
+      for (var i = 0, len = vchildren.length; i < len; i++) {
+          var item = vchildren[i];
           destroyVnode(item.vnode, item.node);
       }
 
@@ -850,7 +855,7 @@
       }
       node.eventStore = node.vchildren = null;
       for (var key in props) {
-          if (hasOwn(props, key) && EVENT_KEYS.test(key)) {
+          if (props.hasOwnProperty(key) && EVENT_KEYS.test(key)) {
               key = getEventName(key);
               if (notBubbleEvents[key] === true) {
                   node[key] = null;
@@ -987,7 +992,7 @@
           return context;
       }
       for (var key in contextTypes) {
-          if (hasOwn(contextTypes, key)) {
+          if (contextTypes.hasOwnProperty(key)) {
               context[key] = curContext[key];
           }
       }
@@ -1583,7 +1588,7 @@
   	var propValue = null;
   	if (props != null) {
   		for (var propKey in props) {
-  			if (!hasOwn(props, propKey)) {
+  			if (!props.hasOwnProperty(propKey)) {
   				continue;
   			}
   			if (propKey === 'key') {
@@ -1680,7 +1685,7 @@
   		data.child = iteratee.call(context, child, index) || child;
   		data.isEqual = data.child === child;
   		var key = data.key = getKey(child, index);
-  		if (hasOwn(keyMap, key)) {
+  		if (keyMap.hasOwnProperty(key)) {
   			keyMap[key] += 1;
   		} else {
   			keyMap[key] = 0;
