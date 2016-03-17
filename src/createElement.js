@@ -1,9 +1,11 @@
 import * as _ from './util'
 import { createVelem, createVcomponent, createVstateless } from './virtual-dom'
 
-export let isValidElement = obj => obj != null && !!obj.vtype
+export function isValidElement(obj) {
+	return obj != null && !!obj.vtype
+}
 
-export let cloneElement = (originElem, props, ...children) => {
+export function cloneElement(originElem, props, ...children) {
 	let { type, key, ref } = originElem
 	let newProps = _.extend(_.extend({ key, ref }, originElem.props), props)
 	let vnode = createElement(type, newProps, ...children)
@@ -13,13 +15,13 @@ export let cloneElement = (originElem, props, ...children) => {
 	return vnode
 }
 
-export let createFactory = type => {
+export function createFactory(type) {
 	let factory = (...args) => createElement(type, ...args)
 	factory.type = type
 	return factory
 }
 
-let createElement = function(type, props, children) {
+export default function createElement(type, props, children) {
 	let createVnode = null
 	let argsLen = arguments.length
 
@@ -86,5 +88,3 @@ let createElement = function(type, props, children) {
 	vnode.ref = ref
 	return vnode
 }
-
-export default createElement

@@ -1,13 +1,13 @@
 import { updateQueue } from './Component'
 import { eventNameAlias, notBubbleEvents } from './constant'
 
-export let getEventName = key => {
+export function getEventName(key) {
 	key = eventNameAlias[key] || key
 	return key.toLowerCase()
 }
 
 let eventTypes = {}
-export let addEvent = (elem, eventType, listener) => {
+export function addEvent(elem, eventType, listener) {
 	eventType = getEventName(eventType)
 
 	if (notBubbleEvents[eventType] === true) {
@@ -31,7 +31,7 @@ export let addEvent = (elem, eventType, listener) => {
 	}
 }
 
-export let removeEvent = (elem, eventType) => {
+export function removeEvent(elem, eventType) {
 	eventType = getEventName(eventType)
 	if (notBubbleEvents[eventType] === true) {
 		elem[eventType] = null
@@ -48,7 +48,7 @@ export let removeEvent = (elem, eventType) => {
 	}
 }
 
-let dispatchEvent = event => {
+function dispatchEvent(event) {
 	let { target, type } = event
 	let eventType = 'on' + type
 	let syntheticEvent
@@ -75,7 +75,7 @@ let dispatchEvent = event => {
 }
 
 
-let createSyntheticEvent = nativeEvent => {
+function createSyntheticEvent(nativeEvent) {
     let syntheticEvent = {}
     let cancalBubble = () => syntheticEvent.$cancalBubble = true
     syntheticEvent.nativeEvent = nativeEvent

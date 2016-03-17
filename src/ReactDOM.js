@@ -5,7 +5,7 @@ import { updateQueue } from './Component'
 
 let pendingRendering = {}
 let vnodeStore = {}
-let renderTreeIntoContainer = (vnode, container, callback, parentContext) => {
+function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	if (!vnode.vtype) {
 		throw new Error(`cannot render ${ vnode } to container`)
 	}
@@ -68,18 +68,18 @@ let renderTreeIntoContainer = (vnode, container, callback, parentContext) => {
 	return result
 }
 
-export let render = (vnode, container, callback) => {
+export function render(vnode, container, callback) {
 	return renderTreeIntoContainer(vnode, container, callback)
 }
 
-export let unstable_renderSubtreeIntoContainer = (parentComponent, subVnode, container, callback) => {
+export function unstable_renderSubtreeIntoContainer(parentComponent, subVnode, container, callback) {
 	let context = parentComponent.vnode
 	? parentComponent.vnode.context
 	: parentComponent.$cache.parentContext
 	return renderTreeIntoContainer(subVnode, container, callback, context)
 }
 
-export let unmountComponentAtNode = container => {
+export function unmountComponentAtNode(container) {
 	if (!container.nodeName) {
 		throw new Error('expect node')
 	}
@@ -94,7 +94,7 @@ export let unmountComponentAtNode = container => {
 	return false
 }
 
-export let findDOMNode = node => {
+export function findDOMNode(node) {
 	if (node == null) {
 		return null
 	}

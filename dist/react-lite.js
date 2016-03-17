@@ -308,30 +308,34 @@
       oncontextmenu: TRUE
   };
 
-  var isStr = function isStr(obj) {
+  function isStr(obj) {
   	return typeof obj === 'string';
-  };
-  var isFn = function isFn(obj) {
+  }
+
+  function isFn(obj) {
   	return typeof obj === 'function';
-  };
-  var isBln = function isBln(obj) {
+  }
+
+  function isBln(obj) {
   	return typeof obj === 'boolean';
-  };
+  }
+
   var isArr = Array.isArray;
 
-  var noop = function noop() {};
-  var identity = function identity(obj) {
-  	return obj;
-  };
+  function noop() {}
 
-  var pipe = function pipe(fn1, fn2) {
+  function identity(obj) {
+  	return obj;
+  }
+
+  function pipe(fn1, fn2) {
   	return function () {
   		fn1.apply(this, arguments);
   		return fn2.apply(this, arguments);
   	};
-  };
+  }
 
-  var flattenChildren = function flattenChildren(list, iteratee, a, b) {
+  function flattenChildren(list, iteratee, a, b) {
   	var len = list.length;
   	var i = -1;
 
@@ -343,23 +347,23 @@
   			iteratee(item, a, b);
   		}
   	}
-  };
+  }
 
-  var eachItem = function eachItem(list, iteratee) {
+  function eachItem(list, iteratee) {
   	for (var i = 0, len = list.length; i < len; i++) {
   		iteratee(list[i], i);
   	}
-  };
+  }
 
-  var mapValue = function mapValue(obj, iteratee) {
+  function mapValue(obj, iteratee) {
   	for (var key in obj) {
   		if (obj.hasOwnProperty(key)) {
   			iteratee(obj[key], key);
   		}
   	}
-  };
+  }
 
-  var mapKey = function mapKey(oldObj, newObj, iteratee) {
+  function mapKey(oldObj, newObj, iteratee) {
   	var keyMap = {};
   	for (var key in oldObj) {
   		if (oldObj.hasOwnProperty(key)) {
@@ -372,7 +376,7 @@
   			iteratee(key);
   		}
   	}
-  };
+  }
 
   function extend(to, from) {
   	if (!from) {
@@ -389,19 +393,20 @@
   }
 
   var uid = 0;
-  var getUid = function getUid() {
+
+  function getUid() {
   	return ++uid;
-  };
+  }
 
   var EVENT_KEYS = /^on/i;
-  var isInnerHTMLKey = function isInnerHTMLKey(key) {
+  function isInnerHTMLKey(key) {
   	return key === 'dangerouslySetInnerHTML';
-  };
-  var isStyleKey = function isStyleKey(key) {
+  }
+  function isStyleKey(key) {
   	return key === 'style';
-  };
+  }
 
-  var setProp = function setProp(elem, key, value) {
+  function setProp(elem, key, value) {
 
   	if (key === 'children') {
   		return;
@@ -432,16 +437,17 @@
   			elem.setAttribute(key, value);
   		}
   	}
-  };
-  var setProps = function setProps(elem, props) {
+  }
+
+  function setProps(elem, props) {
   	for (var key in props) {
   		if (props.hasOwnProperty(key)) {
   			setProp(elem, key, props[key]);
   		}
   	}
-  };
+  }
 
-  var removeProp = function removeProp(elem, key, oldValue) {
+  function removeProp(elem, key, oldValue) {
   	if (key === 'children') {
   		return;
   	}
@@ -469,12 +475,12 @@
   			//pass
   		}
   	}
-  };
+  }
 
   var $props = null;
   var $newProps = null;
   var $elem = null;
-  var $patchProps = function $patchProps(key) {
+  function $patchProps(key) {
   	if (key === 'children') {
   		return;
   	}
@@ -498,17 +504,17 @@
   	} else {
   		setProp($elem, key, value);
   	}
-  };
+  }
 
-  var patchProps = function patchProps(elem, props, newProps) {
+  function patchProps(elem, props, newProps) {
   	$elem = elem;
   	$props = props;
   	$newProps = newProps;
   	mapKey(props, newProps, $patchProps);
   	$elem = $props = $newProps = null;
-  };
+  }
 
-  var removeStyle = function removeStyle(elem, style) {
+  function removeStyle(elem, style) {
   	if (!style) {
   		return;
   	}
@@ -518,8 +524,8 @@
   			elemStyle[key] = '';
   		}
   	}
-  };
-  var setStyle = function setStyle(elem, style) {
+  }
+  function setStyle(elem, style) {
   	if (!style) {
   		return;
   	}
@@ -529,20 +535,20 @@
   			setStyleValue(elemStyle, key, style[key]);
   		}
   	}
-  };
+  }
 
   var $elemStyle = null;
   var $style = null;
   var $newStyle = null;
-  var $patchStyle = function $patchStyle(key) {
+  function $patchStyle(key) {
   	var value = $newStyle[key];
   	var oldValue = $style[key];
   	if (value !== oldValue) {
   		setStyleValue($elemStyle, key, value);
   	}
-  };
+  }
 
-  var patchStyle = function patchStyle(elem, style, newStyle) {
+  function patchStyle(elem, style, newStyle) {
   	if (style === newStyle) {
   		return;
   	}
@@ -557,7 +563,7 @@
   		mapKey(style, newStyle, $patchStyle);
   		$elemStyle = $style = $newStyle = null;
   	}
-  };
+  }
 
   var isUnitlessNumberWithPrefix = {};
   var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
@@ -574,7 +580,7 @@
   });
 
   var RE_NUMBER = /^-?\d+(\.\d+)?$/;
-  var setStyleValue = function setStyleValue(style, key, value) {
+  function setStyleValue(style, key, value) {
   	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
   		style[key] = value + 'px';
   	} else {
@@ -582,7 +588,7 @@
   		value = value == null || isBln(value) ? '' : value;
   		style[key] = value;
   	}
-  };
+  }
 
   if (!Object.freeze) {
   	Object.freeze = identity;
@@ -591,25 +597,25 @@
   var noop$1 = noop;
   var refs = null;
 
-  var createVelem = function createVelem(type, props) {
+  function createVelem(type, props) {
       return {
           vtype: VELEMENT,
           type: type,
           props: props,
           refs: refs
       };
-  };
+  }
 
-  var createVstateless = function createVstateless(type, props) {
+  function createVstateless(type, props) {
       return {
           vtype: VSTATELESS,
           id: getUid(),
           type: type,
           props: props
       };
-  };
+  }
 
-  var createVcomponent = function createVcomponent(type, props) {
+  function createVcomponent(type, props) {
       return {
           vtype: VCOMPONENT,
           id: getUid(),
@@ -617,16 +623,16 @@
           props: props,
           refs: refs
       };
-  };
+  }
 
-  var createVcomment = function createVcomment(comment) {
+  function createVcomment(comment) {
       return {
           vtype: VCOMMENT,
           comment: comment
       };
-  };
+  }
 
-  var initVnode = function initVnode(vnode, parentContext, namespaceURI) {
+  function initVnode(vnode, parentContext, namespaceURI) {
       var vtype = vnode.vtype;
 
       var node = null;
@@ -642,9 +648,9 @@
           node = document.createComment(vnode.comment);
       }
       return node;
-  };
+  }
 
-  var updateVnode = function updateVnode(vnode, newVnode, node, parentContext) {
+  function updateVnode(vnode, newVnode, node, parentContext) {
       var newNode = node;
       var vtype = vnode.vtype;
 
@@ -657,9 +663,9 @@
       }
 
       return newNode;
-  };
+  }
 
-  var destroyVnode = function destroyVnode(vnode, node) {
+  function destroyVnode(vnode, node) {
       var vtype = vnode.vtype;
 
       if (vtype === VELEMENT) {
@@ -669,9 +675,9 @@
       } else if (vtype === VSTATELESS) {
           destroyVstateless(vnode, node);
       }
-  };
+  }
 
-  var initVelem = function initVelem(velem, parentContext, namespaceURI) {
+  function initVelem(velem, parentContext, namespaceURI) {
       var type = velem.type;
       var props = velem.props;
 
@@ -692,18 +698,18 @@
       }
 
       return node;
-  };
+  }
 
-  var initChildren = function initChildren(node, children, parentContext) {
+  function initChildren(node, children, parentContext) {
       node.vchildren = [];
       if (isArr(children)) {
           flattenChildren(children, collectVchild, node, parentContext);
       } else {
           collectVchild(children, node, parentContext);
       }
-  };
+  }
 
-  var updateChildren = function updateChildren(node, newChildren, parentContext) {
+  function updateChildren(node, newChildren, parentContext) {
       var vchildren = node.vchildren;
       var childNodes = node.childNodes;
       var namespaceURI = node.namespaceURI;
@@ -750,9 +756,9 @@
           destroyVnode(item.vnode, item.node);
           node.removeChild(item.node);
       }
-  };
+  }
 
-  var attachNode = function attachNode(node, newNode, existNode, vchildren, isNewNode) {
+  function attachNode(node, newNode, existNode, vchildren, isNewNode) {
       if (!existNode) {
           node.appendChild(newNode);
       } else if (existNode !== newNode) {
@@ -770,9 +776,9 @@
           }
           node.insertBefore(newNode, existNode);
       }
-  };
+  }
 
-  var collectVchild = function collectVchild(vchild, node, parentContext) {
+  function collectVchild(vchild, node, parentContext) {
       if (vchild == null || isBln(vchild)) {
           return false;
       }
@@ -784,9 +790,9 @@
           vnode: vchild,
           index: node.vchildren.length
       });
-  };
+  }
 
-  var collectNewVchild = function collectNewVchild(newVchild, newVchildren, vchildren) {
+  function collectNewVchild(newVchild, newVchildren, vchildren) {
       if (newVchild == null || isBln(newVchild)) {
           return false;
       }
@@ -814,9 +820,9 @@
           vnode: newVchild,
           index: newVchildren.length
       });
-  };
+  }
 
-  var updateVelem = function updateVelem(velem, newVelem, node, parentContext) {
+  function updateVelem(velem, newVelem, node, parentContext) {
       var props = velem.props;
 
       var newProps = newVelem.props;
@@ -841,9 +847,9 @@
           attachRef(newVelem.refs, newVelem.ref, node);
       }
       return node;
-  };
+  }
 
-  var destroyVelem = function destroyVelem(velem, node) {
+  function destroyVelem(velem, node) {
       var props = velem.props;
       var vchildren = node.vchildren;
       var childNodes = node.childNodes;
@@ -865,16 +871,16 @@
               }
           }
       }
-  };
+  }
 
-  var initVstateless = function initVstateless(vstateless, parentContext, namespaceURI) {
+  function initVstateless(vstateless, parentContext, namespaceURI) {
       var vnode = renderVstateless(vstateless, parentContext);
       var node = initVnode(vnode, parentContext, namespaceURI);
       node.cache = node.cache || {};
       node.cache[vstateless.id] = vnode;
       return node;
-  };
-  var updateVstateless = function updateVstateless(vstateless, newVstateless, node, parentContext) {
+  }
+  function updateVstateless(vstateless, newVstateless, node, parentContext) {
       var id = vstateless.id;
       var vnode = node.cache[id];
       delete node.cache[id];
@@ -886,15 +892,15 @@
           extend(newNode.cache, node.cache);
       }
       return newNode;
-  };
-  var destroyVstateless = function destroyVstateless(vstateless, node) {
+  }
+  function destroyVstateless(vstateless, node) {
       var id = vstateless.id;
       var vnode = node.cache[id];
       delete node.cache[id];
       destroyVnode(vnode, node);
-  };
+  }
 
-  var renderVstateless = function renderVstateless(vstateless, parentContext) {
+  function renderVstateless(vstateless, parentContext) {
       var factory = vstateless.type;
       var props = vstateless.props;
 
@@ -909,9 +915,9 @@
           throw new Error('@' + factory.name + '#render:You may have returned undefined, an array or some other invalid object');
       }
       return vnode;
-  };
+  }
 
-  var initVcomponent = function initVcomponent(vcomponent, parentContext, namespaceURI) {
+  function initVcomponent(vcomponent, parentContext, namespaceURI) {
       var Component = vcomponent.type;
       var props = vcomponent.props;
       var id = vcomponent.id;
@@ -941,8 +947,8 @@
           attachRef(vcomponent.refs, vcomponent.ref, component);
       }
       return node;
-  };
-  var updateVcomponent = function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
+  }
+  function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
       var id = vcomponent.id;
       var component = node.cache[id];
       var updater = component.$updater;
@@ -970,8 +976,8 @@
           attachRef(newVcomponent.refs, newVcomponent.ref, component);
       }
       return cache.node;
-  };
-  var destroyVcomponent = function destroyVcomponent(vcomponent, node) {
+  }
+  function destroyVcomponent(vcomponent, node) {
       var id = vcomponent.id;
       var component = node.cache[id];
       var cache = component.$cache;
@@ -987,9 +993,9 @@
       delete component.setState;
       cache.isMounted = false;
       cache.node = cache.parentContext = cache.vnode = component.refs = component.context = null;
-  };
+  }
 
-  var getContextByTypes = function getContextByTypes(curContext, contextTypes) {
+  function getContextByTypes(curContext, contextTypes) {
       var context = {};
       if (!contextTypes || !curContext) {
           return context;
@@ -1000,9 +1006,9 @@
           }
       }
       return context;
-  };
+  }
 
-  var renderComponent = function renderComponent(component, parentContext) {
+  function renderComponent(component, parentContext) {
       refs = component.refs;
       var vnode = component.render();
 
@@ -1023,10 +1029,11 @@
       }
       vnode.context = curContext;
       return vnode;
-  };
+  }
 
   var pendingComponents = [];
-  var clearPendingComponents = function clearPendingComponents() {
+
+  function clearPendingComponents() {
       var components = pendingComponents;
       var len = components.length;
       if (!len) {
@@ -1043,7 +1050,7 @@
           updater.isPending = false;
           updater.emitUpdate();
       }
-  };
+  }
 
   function compareTwoVnodes(vnode, newVnode, node, parentContext) {
       var newNode = node;
@@ -1065,11 +1072,11 @@
       return newNode;
   }
 
-  var getDOMNode = function getDOMNode() {
+  function getDOMNode() {
       return this;
-  };
+  }
 
-  var attachRef = function attachRef(refs, refKey, refValue) {
+  function attachRef(refs, refKey, refValue) {
       if (!refs || refKey == null || !refValue) {
           return;
       }
@@ -1082,9 +1089,9 @@
       } else {
           refs[refKey] = refValue;
       }
-  };
+  }
 
-  var detachRef = function detachRef(refs, refKey) {
+  function detachRef(refs, refKey) {
       if (!refs || refKey == null) {
           return;
       }
@@ -1093,7 +1100,7 @@
       } else {
           delete refs[refKey];
       }
-  };
+  }
 
   var updateQueue = {
   	updaters: [],
@@ -1292,7 +1299,7 @@
   	}
   };
 
-  var shouldUpdate = function shouldUpdate(component, nextProps, nextState, nextContext, callback) {
+  function shouldUpdate(component, nextProps, nextState, nextContext, callback) {
   	var shouldComponentUpdate = true;
   	if (component.shouldComponentUpdate) {
   		shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext);
@@ -1308,15 +1315,16 @@
   	cache.state = nextState;
   	cache.context = nextContext || {};
   	component.forceUpdate(callback);
-  };
+  }
 
-  var getEventName = function getEventName(key) {
+  function getEventName(key) {
   	key = eventNameAlias[key] || key;
   	return key.toLowerCase();
-  };
+  }
 
   var eventTypes = {};
-  var addEvent = function addEvent(elem, eventType, listener) {
+
+  function addEvent(elem, eventType, listener) {
   	eventType = getEventName(eventType);
 
   	if (notBubbleEvents[eventType] === true) {
@@ -1338,9 +1346,9 @@
   	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
   		addEvent(elem, 'oninput', listener);
   	}
-  };
+  }
 
-  var removeEvent = function removeEvent(elem, eventType) {
+  function removeEvent(elem, eventType) {
   	eventType = getEventName(eventType);
   	if (notBubbleEvents[eventType] === true) {
   		elem[eventType] = null;
@@ -1355,9 +1363,9 @@
   	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
   		delete eventStore['oninput'];
   	}
-  };
+  }
 
-  var dispatchEvent = function dispatchEvent(event) {
+  function dispatchEvent(event) {
   	var target = event.target;
   	var type = event.type;
 
@@ -1385,9 +1393,9 @@
   	}
   	updateQueue.isPending = false;
   	updateQueue.batchUpdate();
-  };
+  }
 
-  var createSyntheticEvent = function createSyntheticEvent(nativeEvent) {
+  function createSyntheticEvent(nativeEvent) {
   	var syntheticEvent = {};
   	var cancalBubble = function cancalBubble() {
   		return syntheticEvent.$cancalBubble = true;
@@ -1403,11 +1411,11 @@
   		}
   	}
   	return syntheticEvent;
-  };
+  }
 
   var pendingRendering = {};
   var vnodeStore = {};
-  var renderTreeIntoContainer = function renderTreeIntoContainer(vnode, container, callback, parentContext) {
+  function renderTreeIntoContainer(vnode, container, callback, parentContext) {
   	if (!vnode.vtype) {
   		throw new Error('cannot render ' + vnode + ' to container');
   	}
@@ -1468,18 +1476,18 @@
   	}
 
   	return result;
-  };
+  }
 
-  var render = function render(vnode, container, callback) {
+  function render(vnode, container, callback) {
   	return renderTreeIntoContainer(vnode, container, callback);
-  };
+  }
 
-  var unstable_renderSubtreeIntoContainer = function unstable_renderSubtreeIntoContainer(parentComponent, subVnode, container, callback) {
+  function unstable_renderSubtreeIntoContainer(parentComponent, subVnode, container, callback) {
   	var context = parentComponent.vnode ? parentComponent.vnode.context : parentComponent.$cache.parentContext;
   	return renderTreeIntoContainer(subVnode, container, callback, context);
-  };
+  }
 
-  var unmountComponentAtNode = function unmountComponentAtNode(container) {
+  function unmountComponentAtNode(container) {
   	if (!container.nodeName) {
   		throw new Error('expect node');
   	}
@@ -1492,9 +1500,9 @@
   		return true;
   	}
   	return false;
-  };
+  }
 
-  var findDOMNode = function findDOMNode(node) {
+  function findDOMNode(node) {
   	if (node == null) {
   		return null;
   	}
@@ -1507,8 +1515,7 @@
   		return component.getDOMNode();
   	}
   	throw new Error('findDOMNode can not find Node');
-  };
-
+  }
 
   var ReactDOM = Object.freeze({
   	render: render,
@@ -1517,28 +1524,29 @@
   	findDOMNode: findDOMNode
   });
 
-  var isValidElement = function isValidElement(obj) {
+  function isValidElement(obj) {
   	return obj != null && !!obj.vtype;
-  };
+  }
 
-  var cloneElement = function cloneElement(originElem, props) {
-  	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-  		children[_key - 2] = arguments[_key];
-  	}
-
+  function cloneElement(originElem, props) {
   	var type = originElem.type;
   	var key = originElem.key;
   	var ref = originElem.ref;
 
   	var newProps = extend(extend({ key: key, ref: ref }, originElem.props), props);
+
+  	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+  		children[_key - 2] = arguments[_key];
+  	}
+
   	var vnode = createElement.apply(undefined, [type, newProps].concat(children));
   	if (vnode.ref === originElem.ref) {
   		vnode.refs = originElem.refs;
   	}
   	return vnode;
-  };
+  }
 
-  var createFactory = function createFactory(type) {
+  function createFactory(type) {
   	var factory = function factory() {
   		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
   			args[_key2] = arguments[_key2];
@@ -1548,9 +1556,9 @@
   	};
   	factory.type = type;
   	return factory;
-  };
+  }
 
-  var createElement = function createElement(type, props, children) {
+  function createElement(type, props, children) {
   	var createVnode = null;
   	var argsLen = arguments.length;
 
@@ -1616,7 +1624,7 @@
   	vnode.key = key;
   	vnode.ref = ref;
   	return vnode;
-  };
+  }
 
   var tagNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';
   var DOM = {};
@@ -1646,14 +1654,14 @@
       "shape": check
   };
 
-  var only = function only(children) {
+  function only(children) {
   	if (isValidElement(children)) {
   		return children;
   	}
   	throw new Error('expect only one child');
-  };
+  }
 
-  var forEach = function forEach(children, iteratee, context) {
+  function forEach(children, iteratee, context) {
   	if (children == null) {
   		return children;
   	}
@@ -1665,9 +1673,9 @@
   	} else {
   		iteratee.call(context, children, index);
   	}
-  };
+  }
 
-  var map = function map(children, iteratee, context) {
+  function map(children, iteratee, context) {
   	if (children == null) {
   		return children;
   	}
@@ -1710,21 +1718,21 @@
   		result.push(child);
   	});
   	return result;
-  };
+  }
 
-  var count = function count(children) {
+  function count(children) {
   	var count = 0;
   	forEach(children, function () {
   		count++;
   	});
   	return count;
-  };
+  }
 
-  var toArray = function toArray(children) {
+  function toArray(children) {
   	return map(children, identity) || [];
-  };
+  }
 
-  var getKey = function getKey(child, index) {
+  function getKey(child, index) {
   	var key = undefined;
   	if (isValidElement(child) && isStr(child.key)) {
   		key = '.$' + child.key;
@@ -1732,12 +1740,12 @@
   		key = '.' + index.toString(36);
   	}
   	return key;
-  };
+  }
 
   var userProvidedKeyEscapeRegex = /\/(?!\/)/g;
-  var escapeUserProvidedKey = function escapeUserProvidedKey(text) {
+  function escapeUserProvidedKey(text) {
   	return ('' + text).replace(userProvidedKeyEscapeRegex, '//');
-  };
+  }
 
   var Children = Object.freeze({
   	only: only,
@@ -1747,7 +1755,7 @@
   	toArray: toArray
   });
 
-  var eachMixin = function eachMixin(mixins, iteratee) {
+  function eachMixin(mixins, iteratee) {
   	eachItem(mixins, function (mixin) {
   		if (mixin) {
   			if (isArr(mixin.mixins)) {
@@ -1756,9 +1764,9 @@
   			iteratee(mixin);
   		}
   	});
-  };
+  }
 
-  var combineMixinToProto = function combineMixinToProto(proto, mixin) {
+  function combineMixinToProto(proto, mixin) {
   	mapValue(mixin, function (value, key) {
   		if (key === 'getInitialState') {
   			proto.$getInitialStates.push(value);
@@ -1771,29 +1779,29 @@
   			proto[key] = value;
   		}
   	});
-  };
+  }
 
-  var combineMixinToClass = function combineMixinToClass(Component, mixin) {
+  function combineMixinToClass(Component, mixin) {
   	extend(Component.propTypes, mixin.propTypes);
   	extend(Component.contextTypes, mixin.contextTypes);
   	extend(Component, mixin.statics);
   	if (isFn(mixin.getDefaultProps)) {
   		extend(Component.defaultProps, mixin.getDefaultProps());
   	}
-  };
+  }
 
-  var bindContext = function bindContext(obj, source) {
+  function bindContext(obj, source) {
   	mapValue(source, function (value, key) {
   		if (isFn(value)) {
   			obj[key] = value.bind(obj);
   		}
   	});
-  };
+  }
 
   var Facade = function Facade() {};
   Facade.prototype = Component.prototype;
 
-  var getInitialState = function getInitialState() {
+  function getInitialState() {
   	var _this = this;
 
   	var state = {};
@@ -1806,9 +1814,8 @@
   	});
   	this.setState = setState;
   	return state;
-  };
-
-  var createClass = function createClass(spec) {
+  }
+  function createClass(spec) {
   	if (!isFn(spec.render)) {
   		throw new Error('createClass: spec.render is not function');
   	}
@@ -1834,7 +1841,7 @@
   	proto.getInitialState = getInitialState;
   	spec.mixins = specMixins;
   	return Klass;
-  };
+  }
 
   var React = extend({
       version: '0.15.1',

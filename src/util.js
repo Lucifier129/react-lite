@@ -9,23 +9,32 @@ import {
 	shouldUseDOMProp
 } from './constant'
 
-export let isObj = obj => obj !== null && Object.prototype.toString.call(obj) === '[object Object]'
-export let isStr = obj => typeof obj === 'string'
-export let isFn = obj => typeof obj === 'function'
-export let isBln = obj => typeof obj === 'boolean'
+export function isObj(obj) {
+	return obj !== null && Object.prototype.toString.call(obj) === '[object Object]'
+}
+export function isStr(obj) {
+	return typeof obj === 'string'
+}
+export function isFn(obj) {
+	return typeof obj === 'function'
+}
+export function isBln(obj) {
+	return typeof obj === 'boolean'
+}
 export let isArr = Array.isArray
 
-export let noop = () => {}
-export let identity = obj => obj
-
-export let pipe = (fn1, fn2) => {
+export function noop(){}
+export function identity(obj) {
+	return obj
+}
+export function pipe(fn1, fn2) {
 	return function() {
 		fn1.apply(this, arguments)
 		return fn2.apply(this, arguments)
 	}
 }
 
-export let flattenChildren = (list, iteratee, a, b) => {
+export function flattenChildren(list, iteratee, a, b) {
     let len = list.length
     let i = -1
 
@@ -39,13 +48,13 @@ export let flattenChildren = (list, iteratee, a, b) => {
     }
 }
 
-export let eachItem = (list, iteratee) => {
+export function eachItem(list, iteratee) {
 	for (let i = 0, len = list.length; i < len; i++) {
 		iteratee(list[i], i)
 	}
 }
 
-export let mapValue = (obj, iteratee) => {
+export function mapValue(obj, iteratee) {
 	for (let key in obj) {
 		if (obj.hasOwnProperty(key)) {
 			iteratee(obj[key], key)
@@ -53,7 +62,7 @@ export let mapValue = (obj, iteratee) => {
 	}
 }
 
-export let mapKey = (oldObj, newObj, iteratee) => {
+export function mapKey(oldObj, newObj, iteratee) {
 	let keyMap = {}
 	for (let key in oldObj) {
 		if (oldObj.hasOwnProperty(key)) {
@@ -84,13 +93,19 @@ export function extend(to, from) {
 
 
 let uid = 0
-export let getUid = () => ++uid
+export function getUid() {
+	return ++uid
+}
 
 export let EVENT_KEYS = /^on/i
-let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
-let isStyleKey = key => key === 'style'
+function isInnerHTMLKey(key) {
+	return key === 'dangerouslySetInnerHTML'
+}
+function isStyleKey(key) {
+	return key === 'style'
+}
 
-export let setProp = (elem, key, value) => {
+function setProp(elem, key, value) {
 
 	if (key === 'children') {
 		return
@@ -122,7 +137,7 @@ export let setProp = (elem, key, value) => {
 		}
 	}
 }
-export let setProps = (elem, props) => {
+export function setProps(elem, props) {
 	for (let key in props) {
 		if (props.hasOwnProperty(key)) {
 			setProp(elem, key, props[key])
@@ -130,7 +145,7 @@ export let setProps = (elem, props) => {
 	}
 }
 
-export let removeProp = (elem, key, oldValue) => {
+function removeProp(elem, key, oldValue) {
 	if (key === 'children') {
 		return
 	}
@@ -163,7 +178,7 @@ export let removeProp = (elem, key, oldValue) => {
 let $props = null
 let $newProps = null
 let $elem = null
-let $patchProps = key => {
+function $patchProps(key) {
     if (key === 'children') {
         return
     }
@@ -192,7 +207,7 @@ let $patchProps = key => {
 }
 
 
-export let patchProps = (elem, props, newProps) => {
+export function patchProps(elem, props, newProps) {
 	$elem = elem
 	$props = props
 	$newProps = newProps
@@ -200,7 +215,7 @@ export let patchProps = (elem, props, newProps) => {
 	$elem = $props = $newProps = null
 }
 
-export let removeStyle = (elem, style) => {
+function removeStyle(elem, style) {
 	if (!style) {
 		return
 	}
@@ -211,7 +226,7 @@ export let removeStyle = (elem, style) => {
 		}
 	}
 }
-export let setStyle = (elem, style) => {
+function setStyle(elem, style) {
 	if (!style) {
 		return
 	}
@@ -226,7 +241,7 @@ export let setStyle = (elem, style) => {
 let $elemStyle = null
 let $style = null
 let $newStyle = null
-let $patchStyle = key => {
+function $patchStyle(key) {
     let value = $newStyle[key]
     let oldValue = $style[key]
     if (value !== oldValue) {
@@ -234,7 +249,7 @@ let $patchStyle = key => {
     }
 }
 
-export let patchStyle = (elem, style, newStyle) => {
+function patchStyle(elem, style, newStyle) {
 	if (style === newStyle) {
 		return
 	}
@@ -264,7 +279,7 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 })
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
-let setStyleValue = (style, key, value) => {
+function setStyleValue(style, key, value) {
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
 		style[key] = value + 'px'
 	} else {

@@ -12,35 +12,42 @@ import { getEventName } from './event-system'
 let noop = _.noop
 let refs = null
 
-export let createVelem = (type, props) => ({
-    vtype: VELEMENT,
-    type: type,
-    props: props,
-    refs: refs
-})
+export function createVelem(type, props) {
+    return {
+        vtype: VELEMENT,
+        type: type,
+        props: props,
+        refs: refs
+    }
+}
 
-export let createVstateless = (type, props) => ({
-    vtype: VSTATELESS,
-    id: _.getUid(),
-    type: type,
-    props: props
-})
+export function createVstateless(type, props) {
+    return {
+        vtype: VSTATELESS,
+        id: _.getUid(),
+        type: type,
+        props: props
+    }
+}
 
-export let createVcomponent = (type, props) => ({
-    vtype: VCOMPONENT,
-    id: _.getUid(),
-    type: type,
-    props: props,
-    refs: refs
-})
+export function createVcomponent(type, props) {
+    return {
+        vtype: VCOMPONENT,
+        id: _.getUid(),
+        type: type,
+        props: props,
+        refs: refs
+    }
+}
 
-export let createVcomment = comment => ({
-    vtype: VCOMMENT,
-    comment: comment
-})
+function createVcomment(comment) {
+    return {
+        vtype: VCOMMENT,
+        comment: comment
+    }
+}
 
-
-export let initVnode = (vnode, parentContext, namespaceURI) => {
+export function initVnode(vnode, parentContext, namespaceURI) {
     let { vtype } = vnode
     let node = null
     if (!vtype) {
@@ -57,7 +64,7 @@ export let initVnode = (vnode, parentContext, namespaceURI) => {
     return node
 }
 
-let updateVnode = (vnode, newVnode, node, parentContext) => {
+export function updateVnode(vnode, newVnode, node, parentContext) {
     let newNode = node
     let { vtype } = vnode
 
@@ -72,7 +79,7 @@ let updateVnode = (vnode, newVnode, node, parentContext) => {
     return newNode
 }
 
-export let destroyVnode = (vnode, node) => {
+export function destroyVnode(vnode, node) {
     let { vtype } = vnode
 
     if (vtype === VELEMENT) {
@@ -85,7 +92,7 @@ export let destroyVnode = (vnode, node) => {
 }
 
 
-let initVelem = (velem, parentContext, namespaceURI) => {
+function initVelem(velem, parentContext, namespaceURI) {
     let { type, props } = velem
     let node = null
     
@@ -106,7 +113,7 @@ let initVelem = (velem, parentContext, namespaceURI) => {
     return node
 }
 
-let initChildren = (node, children, parentContext) => {
+function initChildren(node, children, parentContext) {
     node.vchildren = []
     if (_.isArr(children)) {
         _.flattenChildren(children, collectVchild, node, parentContext)
@@ -115,7 +122,7 @@ let initChildren = (node, children, parentContext) => {
     }
 }
 
-let updateChildren = (node, newChildren, parentContext) => {
+function updateChildren(node, newChildren, parentContext) {
     let { vchildren, childNodes, namespaceURI } = node
     let newVchildren = node.vchildren = []
 
@@ -160,7 +167,7 @@ let updateChildren = (node, newChildren, parentContext) => {
     }
 }
 
-let attachNode = (node, newNode, existNode, vchildren, isNewNode) => {
+function attachNode(node, newNode, existNode, vchildren, isNewNode) {
     if (!existNode) {
         node.appendChild(newNode)
     } else if (existNode !== newNode) {
@@ -180,7 +187,7 @@ let attachNode = (node, newNode, existNode, vchildren, isNewNode) => {
     }
 }
 
-let collectVchild = (vchild, node, parentContext) => {
+function collectVchild(vchild, node, parentContext) {
     if (vchild == null || _.isBln(vchild)) {
         return false
     }
@@ -194,7 +201,7 @@ let collectVchild = (vchild, node, parentContext) => {
     })
 }
 
-let collectNewVchild = (newVchild, newVchildren, vchildren) => {
+function collectNewVchild(newVchild, newVchildren, vchildren) {
     if (newVchild == null || _.isBln(newVchild)) {
         return false
     }
@@ -221,7 +228,7 @@ let collectNewVchild = (newVchild, newVchildren, vchildren) => {
 
 }
 
-let updateVelem = (velem, newVelem, node, parentContext) => {
+function updateVelem(velem, newVelem, node, parentContext) {
     let { props } = velem
     let newProps = newVelem.props
     let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
@@ -247,7 +254,7 @@ let updateVelem = (velem, newVelem, node, parentContext) => {
     return node
 }
 
-let destroyVelem = (velem, node) => {
+function destroyVelem(velem, node) {
     let { props } = velem
     let { vchildren, childNodes } = node
 
@@ -270,14 +277,14 @@ let destroyVelem = (velem, node) => {
     }
 }
 
-let initVstateless = (vstateless, parentContext, namespaceURI) => {
+function initVstateless(vstateless, parentContext, namespaceURI) {
     let vnode = renderVstateless(vstateless, parentContext)
     let node = initVnode(vnode, parentContext, namespaceURI)
     node.cache = node.cache || {}
     node.cache[vstateless.id] = vnode
     return node
 }
-let updateVstateless = (vstateless, newVstateless, node, parentContext) => {
+function updateVstateless(vstateless, newVstateless, node, parentContext) {
     let id = vstateless.id
     let vnode = node.cache[id]
     delete node.cache[id]
@@ -290,14 +297,14 @@ let updateVstateless = (vstateless, newVstateless, node, parentContext) => {
     }
     return newNode
 }
-let destroyVstateless = (vstateless, node) => {
+function destroyVstateless(vstateless, node) {
     let id = vstateless.id
     let vnode = node.cache[id]
     delete node.cache[id]
     destroyVnode(vnode, node)
 }
 
-let renderVstateless = (vstateless, parentContext) => {
+function renderVstateless(vstateless, parentContext) {
     let { type: factory, props } = vstateless
     let componentContext = getContextByTypes(parentContext, factory.contextTypes)
     let vnode = factory(props, componentContext)
@@ -312,7 +319,7 @@ let renderVstateless = (vstateless, parentContext) => {
     return vnode
 }
 
-let initVcomponent = (vcomponent, parentContext, namespaceURI) => {
+function initVcomponent(vcomponent, parentContext, namespaceURI) {
     let { type: Component, props, id } = vcomponent
     let componentContext = getContextByTypes(parentContext, Component.contextTypes)
     let component = new Component(props, componentContext)
@@ -338,7 +345,7 @@ let initVcomponent = (vcomponent, parentContext, namespaceURI) => {
     }
     return node
 }
-let updateVcomponent = (vcomponent, newVcomponent, node, parentContext) => {
+function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
     let id = vcomponent.id
     let component = node.cache[id]
     let { $updater: updater, $cache: cache } = component
@@ -364,7 +371,7 @@ let updateVcomponent = (vcomponent, newVcomponent, node, parentContext) => {
     }
     return cache.node
 }
-let destroyVcomponent = (vcomponent, node) => {
+function destroyVcomponent(vcomponent, node) {
     let id = vcomponent.id
     let component = node.cache[id]
     let cache = component.$cache
@@ -382,7 +389,7 @@ let destroyVcomponent = (vcomponent, node) => {
     cache.node = cache.parentContext = cache.vnode = component.refs = component.context = null
 }
 
-let getContextByTypes = (curContext, contextTypes) => {
+function getContextByTypes(curContext, contextTypes) {
 	let context = {}
 	if (!contextTypes || !curContext) {
 		return context
@@ -395,7 +402,7 @@ let getContextByTypes = (curContext, contextTypes) => {
 	return context
 }
 
-export let renderComponent = (component, parentContext) => {
+export function renderComponent(component, parentContext) {
     refs = component.refs
 	let vnode = component.render()
 
@@ -419,7 +426,7 @@ export let renderComponent = (component, parentContext) => {
 }
 
 let pendingComponents = []
-export let clearPendingComponents = () => {
+export function clearPendingComponents() {
 	let components = pendingComponents
 	let len = components.length
 	if (!len) {
@@ -456,9 +463,9 @@ export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
     return newNode
 }
 
-let getDOMNode = function() { return this }
+function getDOMNode() { return this }
 
-let attachRef = (refs, refKey, refValue) => {
+function attachRef(refs, refKey, refValue) {
     if (!refs || refKey == null || !refValue) {
         return
     }
@@ -473,7 +480,7 @@ let attachRef = (refs, refKey, refValue) => {
     }
 }
 
-let detachRef = (refs, refKey) => {
+function detachRef(refs, refKey) {
     if (!refs || refKey == null) {
         return
     }
