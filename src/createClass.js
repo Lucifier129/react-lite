@@ -1,7 +1,7 @@
 import * as _ from './util'
 import Component from './Component'
 
-let eachMixin = (mixins, iteratee) => {
+function eachMixin (mixins, iteratee) {
 	_.eachItem(mixins, mixin => {
 		if (mixin) {
 			if (_.isArr(mixin.mixins)) {
@@ -12,7 +12,7 @@ let eachMixin = (mixins, iteratee) => {
 	})
 }
 
-let combineMixinToProto = (proto, mixin) => {
+function combineMixinToProto(proto, mixin) {
 	_.mapValue(mixin, (value, key) => {
 		if (key === 'getInitialState') {
 			proto.$getInitialStates.push(value)
@@ -27,7 +27,7 @@ let combineMixinToProto = (proto, mixin) => {
 	})
 }
 
-let combineMixinToClass = (Component, mixin) => {
+function combineMixinToClass(Component, mixin) {
 	_.extend(Component.propTypes, mixin.propTypes)
 	_.extend(Component.contextTypes, mixin.contextTypes)
 	_.extend(Component, mixin.statics)
@@ -36,7 +36,7 @@ let combineMixinToClass = (Component, mixin) => {
 	}
 }
 
-let bindContext = (obj, source) => {
+function bindContext(obj, source) {
 	_.mapValue(source, (value, key) => {
 		if (_.isFn(value)) {
 			obj[key] = value.bind(obj)
@@ -47,7 +47,7 @@ let bindContext = (obj, source) => {
 let Facade = function() {}
 Facade.prototype = Component.prototype
 
-let getInitialState = function() {
+function getInitialState() {
 	let state = {}
 	let setState = this.setState
 	this.setState = Facade
@@ -60,7 +60,7 @@ let getInitialState = function() {
 	return state
 }
 
-export let createClass = spec => {
+export default function createClass(spec) {
 	if (!_.isFn(spec.render)) {
 		throw new Error('createClass: spec.render is not function')
 	}
@@ -87,5 +87,3 @@ export let createClass = spec => {
 	spec.mixins = specMixins
 	return Klass
 }
-
-export default createClass
