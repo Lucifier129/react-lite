@@ -71,7 +71,7 @@ export const attributesNS = {
     xmlSpace: xml
 }
 
-// those key must use be attributes
+// those keys must use be attributes
 export const attrbutesConfigs = {
     children: TRUE,
     type: TRUE,
