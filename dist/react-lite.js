@@ -760,7 +760,8 @@
                       var vtype = newVnode.vtype;
                       if (!vtype) {
                           // textNode
-                          newChildNode.nodeValue = newVnode;
+                          // newChildNode.nodeValue = newVnode
+                          newChildNode.replaceData(0, vnode.length, newVnode);
                       } else if (vtype === VELEMENT) {
                           newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext);
                       } else if (vtype === VCOMPONENT) {
