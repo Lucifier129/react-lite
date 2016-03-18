@@ -62,21 +62,6 @@ export function mapValue(obj, iteratee) {
 	}
 }
 
-export function mapKey(oldObj, newObj, iteratee) {
-	let keyMap = {}
-	for (let key in oldObj) {
-		if (oldObj.hasOwnProperty(key)) {
-			keyMap[key] = true
-			iteratee(key)
-		}
-	}
-	for (let key in newObj) {
-		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
-			iteratee(key)
-		}
-	}
-}
-
 export function extend(to, from) {
     if (!from) {
         return to
@@ -146,17 +131,13 @@ export function setProps(elem, props) {
 }
 
 function removeProp(elem, key, oldValue) {
-	if (key === 'children') {
-		return
-	}
-
 	key = propAlias[key] || key
 
 	if (EVENT_KEYS.test(key)) {
 		removeEvent(elem, key)
-	} else if (isStyleKey(key)) {
+	} else if (key === 'style') {
 		removeStyle(elem, oldValue)
-	} else if (isInnerHTMLKey(key)) {
+	} else if (key === 'dangerouslySetInnerHTML') {
 		elem.innerHTML = ''
 	} else if (!(key in elem) || attrbutesConfigs[key] === true) {
 		elem.removeAttribute(key)
@@ -175,44 +156,45 @@ function removeProp(elem, key, oldValue) {
 	}
 }
 
-let $props = null
-let $newProps = null
-let $elem = null
-function $patchProps(key) {
-    if (key === 'children') {
-        return
+function patchProp(key, oldValue, value, elem) {
+    if (key === 'value' || key === 'checked') {
+    	oldValue = elem[key]
     }
-    let value = $newProps[key]
-    let oldValue = shouldUseDOMProp[key] == true
-    ? $elem[key]
-    : $props[key]
+
     if (value === oldValue) {
         return
     }
     if (value === undefined) {
-        removeProp($elem, key, oldValue)
+        removeProp(elem, key, oldValue)
         return
     }
-    if (isStyleKey(key)) {
-        patchStyle($elem, oldValue, value)
-    } else if (isInnerHTMLKey(key)) {
+    if (key === 'style') {
+        patchStyle(elem, oldValue, value)
+    } else if (key === 'dangerouslySetInnerHTML') {
         let oldHtml = oldValue && oldValue.__html
         let html = value && value.__html
         if (html != null && html !== oldHtml) {
-            $elem.innerHTML = html
+            elem.innerHTML = html
         }
     } else {
-        setProp($elem, key, value)
+        setProp(elem, key, value)
     }
 }
 
 
 export function patchProps(elem, props, newProps) {
-	$elem = elem
-	$props = props
-	$newProps = newProps
-	mapKey(props, newProps, $patchProps)
-	$elem = $props = $newProps = null
+	let keyMap = { children: true }
+	for (let key in props) {
+		if (props.hasOwnProperty(key) && key !== 'children') {
+			keyMap[key] = true
+			patchProp(key, props[key], newProps[key], elem)
+		}
+	}
+	for (let key in newProps) {
+		if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
+			patchProp(key, props[key], newProps[key], elem)
+		}
+	}
 }
 
 function removeStyle(elem, style) {
@@ -238,33 +220,37 @@ function setStyle(elem, style) {
 	}
 }
 
-let $elemStyle = null
-let $style = null
-let $newStyle = null
-function $patchStyle(key) {
-    let value = $newStyle[key]
-    let oldValue = $style[key]
-    if (value !== oldValue) {
-        setStyleValue($elemStyle, key, value)
+function patchStyle(elem, style, newStyle) {
+    if (style === newStyle) {
+        return
+    }
+    if (!newStyle && style) {
+        removeStyle(elem, style)
+        return
+    } else if (newStyle && !style) {
+        setStyle(elem, newStyle)
+        return
+    }
+
+    let elemStyle = elem.style
+    let keyMap = {}
+    for (let key in style) {
+        if (style.hasOwnProperty(key)) {
+            keyMap[key] = true
+            if (style[key] !== newStyle[key]) {
+                setStyleValue(elemStyle, key, newStyle[key])
+            }
+        }
+    }
+    for (let key in newStyle) {
+        if (newStyle.hasOwnProperty(key) && keyMap[key] !== true) {
+            if (style[key] !== newStyle[key]) {
+                setStyleValue(elemStyle, key, newStyle[key])
+            }
+        }
     }
 }
 
-function patchStyle(elem, style, newStyle) {
-	if (style === newStyle) {
-		return
-	}
-	if (!newStyle && style) {
-		removeStyle(elem, style)
-	} else if (newStyle && !style) {
-		setStyle(elem, newStyle)
-	} else {
-		$elemStyle = elem.style
-		$style = style
-		$newStyle = newStyle
-		mapKey(style, newStyle, $patchStyle)
-		$elemStyle = $style = $newStyle = null
-	}
-}
 
 let isUnitlessNumberWithPrefix = {}
 let prefixes = ['Webkit', 'ms', 'Moz', 'O'];

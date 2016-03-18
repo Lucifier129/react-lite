@@ -26,8 +26,8 @@ export default function createElement(type, props, children) {
 	let argsLen = arguments.length
 
 	if (argsLen > 3) {
-		children = [children]
-		for (let i = 3; i < argsLen; i++) {
+		children = Array(argsLen - 2)
+		for (let i = 2; i < argsLen; i++) {
 			children[i - 2] = arguments[i]
 		}
 	}

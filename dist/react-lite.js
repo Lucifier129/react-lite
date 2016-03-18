@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.3
+ * react-lite.js v0.15.4
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -363,21 +363,6 @@
   	}
   }
 
-  function mapKey(oldObj, newObj, iteratee) {
-  	var keyMap = {};
-  	for (var key in oldObj) {
-  		if (oldObj.hasOwnProperty(key)) {
-  			keyMap[key] = true;
-  			iteratee(key);
-  		}
-  	}
-  	for (var key in newObj) {
-  		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
-  			iteratee(key);
-  		}
-  	}
-  }
-
   function extend(to, from) {
   	if (!from) {
   		return to;
@@ -448,17 +433,13 @@
   }
 
   function removeProp(elem, key, oldValue) {
-  	if (key === 'children') {
-  		return;
-  	}
-
   	key = propAlias[key] || key;
 
   	if (EVENT_KEYS.test(key)) {
   		removeEvent(elem, key);
-  	} else if (isStyleKey(key)) {
+  	} else if (key === 'style') {
   		removeStyle(elem, oldValue);
-  	} else if (isInnerHTMLKey(key)) {
+  	} else if (key === 'dangerouslySetInnerHTML') {
   		elem.innerHTML = '';
   	} else if (!(key in elem) || attrbutesConfigs[key] === true) {
   		elem.removeAttribute(key);
@@ -477,41 +458,44 @@
   	}
   }
 
-  var $props = null;
-  var $newProps = null;
-  var $elem = null;
-  function $patchProps(key) {
-  	if (key === 'children') {
-  		return;
+  function patchProp(key, oldValue, value, elem) {
+  	if (key === 'value' || key === 'checked') {
+  		oldValue = elem[key];
   	}
-  	var value = $newProps[key];
-  	var oldValue = shouldUseDOMProp[key] == true ? $elem[key] : $props[key];
+
   	if (value === oldValue) {
   		return;
   	}
   	if (value === undefined) {
-  		removeProp($elem, key, oldValue);
+  		removeProp(elem, key, oldValue);
   		return;
   	}
-  	if (isStyleKey(key)) {
-  		patchStyle($elem, oldValue, value);
-  	} else if (isInnerHTMLKey(key)) {
+  	if (key === 'style') {
+  		patchStyle(elem, oldValue, value);
+  	} else if (key === 'dangerouslySetInnerHTML') {
   		var oldHtml = oldValue && oldValue.__html;
   		var html = value && value.__html;
   		if (html != null && html !== oldHtml) {
-  			$elem.innerHTML = html;
+  			elem.innerHTML = html;
   		}
   	} else {
-  		setProp($elem, key, value);
+  		setProp(elem, key, value);
   	}
   }
 
   function patchProps(elem, props, newProps) {
-  	$elem = elem;
-  	$props = props;
-  	$newProps = newProps;
-  	mapKey(props, newProps, $patchProps);
-  	$elem = $props = $newProps = null;
+  	var keyMap = { children: true };
+  	for (var key in props) {
+  		if (props.hasOwnProperty(key) && key !== 'children') {
+  			keyMap[key] = true;
+  			patchProp(key, props[key], newProps[key], elem);
+  		}
+  	}
+  	for (var key in newProps) {
+  		if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
+  			patchProp(key, props[key], newProps[key], elem);
+  		}
+  	}
   }
 
   function removeStyle(elem, style) {
@@ -537,31 +521,34 @@
   	}
   }
 
-  var $elemStyle = null;
-  var $style = null;
-  var $newStyle = null;
-  function $patchStyle(key) {
-  	var value = $newStyle[key];
-  	var oldValue = $style[key];
-  	if (value !== oldValue) {
-  		setStyleValue($elemStyle, key, value);
-  	}
-  }
-
   function patchStyle(elem, style, newStyle) {
   	if (style === newStyle) {
   		return;
   	}
   	if (!newStyle && style) {
   		removeStyle(elem, style);
+  		return;
   	} else if (newStyle && !style) {
   		setStyle(elem, newStyle);
-  	} else {
-  		$elemStyle = elem.style;
-  		$style = style;
-  		$newStyle = newStyle;
-  		mapKey(style, newStyle, $patchStyle);
-  		$elemStyle = $style = $newStyle = null;
+  		return;
+  	}
+
+  	var elemStyle = elem.style;
+  	var keyMap = {};
+  	for (var key in style) {
+  		if (style.hasOwnProperty(key)) {
+  			keyMap[key] = true;
+  			if (style[key] !== newStyle[key]) {
+  				setStyleValue(elemStyle, key, newStyle[key]);
+  			}
+  		}
+  	}
+  	for (var key in newStyle) {
+  		if (newStyle.hasOwnProperty(key) && keyMap[key] !== true) {
+  			if (style[key] !== newStyle[key]) {
+  				setStyleValue(elemStyle, key, newStyle[key]);
+  			}
+  		}
   	}
   }
 
@@ -692,26 +679,6 @@
       return node;
   }
 
-  function attachNode(node, newNode, existNode, vchildren, isNewNode) {
-      if (!existNode) {
-          node.appendChild(newNode);
-      } else if (existNode !== newNode) {
-          if (!isNewNode) {
-              node.removeChild(newNode);
-          }
-          for (var i = 0, len = vchildren.length; i < len; i++) {
-              var item = vchildren[i];
-              if (item.node === existNode) {
-                  vchildren.splice(i, 1);
-                  destroyVnode(item.vnode, item.node);
-                  node.replaceChild(newNode, existNode);
-                  return;
-              }
-          }
-          node.insertBefore(newNode, existNode);
-      }
-  }
-
   function collectVchild(vchild, node, parentContext) {
       if (vchild == null || isBln(vchild)) {
           return false;
@@ -720,38 +687,14 @@
 
       var childNode = initVnode(vchild, parentContext, node.namespaceURI);
       node.appendChild(childNode);
-      node.vchildren.push({
-          vnode: vchild
-      });
+      node.vchildren.push(vchild);
   }
 
   function collectNewVchild(newVchild, newVchildren, vchildren) {
       if (newVchild == null || isBln(newVchild)) {
           return false;
       }
-
-      var oldItem = null;
-      newVchild = newVchild.vtype ? newVchild : '' + newVchild;
-
-      var _newVchild = newVchild;
-      var refs = _newVchild.refs;
-      var type = _newVchild.type;
-      var key = _newVchild.key;
-
-      for (var i = 0, len = vchildren.length; i < len; i++) {
-          var item = vchildren[i];
-          var vnode = item.vnode;
-          if (vnode === newVchild || vnode.refs === refs && vnode.type === type && vnode.key === key) {
-              oldItem = item;
-              vchildren.splice(i, 1);
-              break;
-          }
-      }
-
-      newVchildren.push({
-          prev: oldItem,
-          vnode: newVchild
-      });
+      newVchildren.push(newVchild.vtype ? newVchild : '' + newVchild);
   }
 
   function updateVelem(velem, newVelem, node, parentContext) {
@@ -769,53 +712,75 @@
       if (oldHtml == null && vchildrenLen) {
           var newVchildren = node.vchildren = [];
 
-          for (var i = 0; i < vchildrenLen; i++) {
-              var vchild = vchildren[i];
-              vchild.node = childNodes[i];
-              vchild.index = i;
-          }
-
           if (isArr(newChildren)) {
-              flattenChildren(newChildren, collectNewVchild, newVchildren, vchildren);
+              flattenChildren(newChildren, collectNewVchild, newVchildren);
           } else {
-              collectNewVchild(newChildren, newVchildren, vchildren);
+              collectNewVchild(newChildren, newVchildren);
           }
 
-          for (var i = 0, len = newVchildren.length; i < len; i++) {
-              var newItem = newVchildren[i];
-              var newVnode = newItem.vnode;
-              var vtype = newVnode.vtype;
-              var oldItem = newItem.prev;
-              var newChildNode = null;
-              if (oldItem) {
-                  newChildNode = oldItem.node;
-                  newItem.prev = null;
-                  if (newVnode !== oldItem.vnode) {
+          var newVchildrenLen = newVchildren.length;
+          var shouldRemove = [];
+          var patches = Array(newVchildrenLen);
+
+          outer: for (var i = 0; i < vchildrenLen; i++) {
+              var vnode = vchildren[i];
+              var type = vnode.type;
+              var _refs = vnode.refs;
+              var key = vnode.key;
+
+              for (var j = 0; j < newVchildrenLen; j++) {
+                  if (patches[j]) {
+                      continue;
+                  }
+                  var newVnode = newVchildren[j];
+                  if (newVnode === vnode || newVnode.type === type && newVnode.key === key && newVnode.refs === _refs) {
+                      patches[j] = {
+                          fromIndex: i,
+                          vnode: vnode,
+                          node: childNodes[i]
+                      };
+                      continue outer;
+                  }
+              }
+              destroyVnode(vnode, shouldRemove[shouldRemove.length] = childNodes[i]);
+          }
+
+          for (var i = 0, len = shouldRemove.length; i < len; i++) {
+              node.removeChild(shouldRemove[i]);
+          }
+
+          for (var i = 0; i < newVchildrenLen; i++) {
+              var newVnode = newVchildren[i];
+              var patchItem = patches[i];
+              if (patchItem) {
+                  var vnode = patchItem.vnode;
+                  var newChildNode = patchItem.node;
+                  var fromIndex = patchItem.fromIndex;
+                  if (newVnode !== vnode) {
+                      var vtype = newVnode.vtype;
                       if (!vtype) {
                           // textNode
                           newChildNode.nodeValue = newVnode;
                       } else if (vtype === VELEMENT) {
-                          newChildNode = updateVelem(oldItem.vnode, newVnode, newChildNode, parentContext);
+                          newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext);
                       } else if (vtype === VCOMPONENT) {
-                          newChildNode = updateVcomponent(oldItem.vnode, newVnode, newChildNode, parentContext);
+                          newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext);
                       } else if (vtype === VSTATELESS) {
-                          newChildNode = updateVstateless(oldItem.vnode, newVnode, newChildNode, parentContext);
+                          newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext);
                       }
                   }
-                  if (oldItem.index !== i) {
-                      attachNode(node, newChildNode, childNodes[i], vchildren);
+                  if (fromIndex !== i) {
+                      var currentNode = childNodes[i];
+                      if (currentNode !== newChildNode) {
+                          // IE11/IE10/IE9 will break when call inserBefore at two exist childNodes
+                          node.removeChild(newChildNode);
+                          node.insertBefore(newChildNode, currentNode || null);
+                      }
                   }
               } else {
-                  newChildNode = initVnode(newVnode, parentContext, namespaceURI);
-                  attachNode(node, newChildNode, childNodes[i], vchildren, true);
+                  var newChildNode = initVnode(newVnode, parentContext, namespaceURI);
+                  node.insertBefore(newChildNode, childNodes[i] || null);
               }
-              newItem.index = i;
-          }
-
-          for (var i = 0, len = vchildren.length; i < len; i++) {
-              var item = vchildren[i];
-              destroyVnode(item.vnode, item.node);
-              node.removeChild(item.node);
           }
           patchProps(node, props, newProps);
       } else {
@@ -846,8 +811,7 @@
       var childNodes = node.childNodes;
 
       for (var i = 0, len = vchildren.length; i < len; i++) {
-          var item = vchildren[i];
-          destroyVnode(item.vnode, childNodes[i]);
+          destroyVnode(vchildren[i], childNodes[i]);
       }
 
       if (velem.ref !== null) {
@@ -1561,8 +1525,8 @@
   	var argsLen = arguments.length;
 
   	if (argsLen > 3) {
-  		children = [children];
-  		for (var i = 3; i < argsLen; i++) {
+  		children = Array(argsLen - 2);
+  		for (var i = 2; i < argsLen; i++) {
   			children[i - 2] = arguments[i];
   		}
   	}
