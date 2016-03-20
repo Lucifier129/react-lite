@@ -43,7 +43,7 @@ export function map(children, iteratee, context) {
 	})
 	let result = []
 	_.eachItem(store, ({ child, key, index, isEqual }) => {
-		if (child == null || _.isBln(child)) {
+		if (child == null || typeof child === 'boolean') {
 			return
 		}
 		if (!isValidElement(child) || key == null) {
@@ -76,7 +76,7 @@ export function toArray(children) {
 
 function getKey(child, index) {
 	let key
-	if (isValidElement(child) && _.isStr(child.key)) {
+	if (isValidElement(child) && typeof child.key === 'string') {
 		key = '.$' + child.key
 	} else {
 		key = '.' + index.toString(36)

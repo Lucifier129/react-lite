@@ -275,12 +275,6 @@ var isUnitlessNumber = {
     strokeWidth: TRUE
 };
 
-// use dom prop to compare new prop
-var shouldUseDOMProp = {
-    value: TRUE,
-    checked: TRUE
-};
-
 var eventNameAlias = {
     onDoubleClick: 'ondblclick'
 };
@@ -304,280 +298,6 @@ var notBubbleEvents = {
     oncontextmenu: TRUE
 };
 
-function isStr(obj) {
-	return typeof obj === 'string';
-}
-
-function isFn(obj) {
-	return typeof obj === 'function';
-}
-
-function isBln(obj) {
-	return typeof obj === 'boolean';
-}
-
-var isArr = Array.isArray;
-
-function noop() {}
-
-function identity(obj) {
-	return obj;
-}
-
-function pipe(fn1, fn2) {
-	return function () {
-		fn1.apply(this, arguments);
-		return fn2.apply(this, arguments);
-	};
-}
-
-function flattenChildren(list, iteratee, a, b) {
-	var len = list.length;
-	var i = -1;
-
-	while (len--) {
-		var item = list[++i];
-		if (isArr(item)) {
-			flattenChildren(item, iteratee, a, b);
-		} else {
-			iteratee(item, a, b);
-		}
-	}
-}
-
-function eachItem(list, iteratee) {
-	for (var i = 0, len = list.length; i < len; i++) {
-		iteratee(list[i], i);
-	}
-}
-
-function mapValue(obj, iteratee) {
-	for (var key in obj) {
-		if (obj.hasOwnProperty(key)) {
-			iteratee(obj[key], key);
-		}
-	}
-}
-
-function extend(to, from) {
-	if (!from) {
-		return to;
-	}
-	var keys = Object.keys(from);
-	var i = keys.length;
-	while (i--) {
-		if (from[keys[i]] !== undefined) {
-			to[keys[i]] = from[keys[i]];
-		}
-	}
-	return to;
-}
-
-var uid = 0;
-
-function getUid() {
-	return ++uid;
-}
-
-var EVENT_KEYS = /^on/i;
-function isInnerHTMLKey(key) {
-	return key === 'dangerouslySetInnerHTML';
-}
-function isStyleKey(key) {
-	return key === 'style';
-}
-
-function setProp(elem, key, value) {
-
-	if (key === 'children') {
-		return;
-	}
-
-	var originalKey = key;
-	key = propAlias[key] || key;
-
-	if (EVENT_KEYS.test(key)) {
-		addEvent(elem, key, value);
-	} else if (isStyleKey(key)) {
-		setStyle(elem, value);
-	} else if (isInnerHTMLKey(key)) {
-		value && value.__html != null && (elem.innerHTML = value.__html);
-	} else if (key in elem && attrbutesConfigs[originalKey] !== true) {
-		if (readOnlyProps[key] !== true) {
-			if (key === 'title' && value == null) {
-				value = '';
-			}
-			elem[key] = value;
-		}
-	} else {
-		if (value == null) {
-			elem.removeAttribute(key);
-		} else if (attributesNS.hasOwnProperty(originalKey)) {
-			elem.setAttributeNS(attributesNS[originalKey], key, value);
-		} else {
-			elem.setAttribute(key, value);
-		}
-	}
-}
-
-function setProps(elem, props) {
-	for (var key in props) {
-		if (props.hasOwnProperty(key)) {
-			setProp(elem, key, props[key]);
-		}
-	}
-}
-
-function removeProp(elem, key, oldValue) {
-	key = propAlias[key] || key;
-
-	if (EVENT_KEYS.test(key)) {
-		removeEvent(elem, key);
-	} else if (key === 'style') {
-		removeStyle(elem, oldValue);
-	} else if (key === 'dangerouslySetInnerHTML') {
-		elem.innerHTML = '';
-	} else if (!(key in elem) || attrbutesConfigs[key] === true) {
-		elem.removeAttribute(key);
-	} else if (isFn(oldValue)) {
-		elem[key] = null;
-	} else if (isStr(oldValue)) {
-		elem[key] = '';
-	} else if (isBln(oldValue)) {
-		elem[key] = false;
-	} else {
-		try {
-			delete elem[key];
-		} catch (e) {
-			//pass
-		}
-	}
-}
-
-function patchProp(key, oldValue, value, elem) {
-	if (key === 'value' || key === 'checked') {
-		oldValue = elem[key];
-	}
-
-	if (value === oldValue) {
-		return;
-	}
-	if (value === undefined) {
-		removeProp(elem, key, oldValue);
-		return;
-	}
-	if (key === 'style') {
-		patchStyle(elem, oldValue, value);
-	} else if (key === 'dangerouslySetInnerHTML') {
-		var oldHtml = oldValue && oldValue.__html;
-		var html = value && value.__html;
-		if (html != null && html !== oldHtml) {
-			elem.innerHTML = html;
-		}
-	} else {
-		setProp(elem, key, value);
-	}
-}
-
-function patchProps(elem, props, newProps) {
-	var keyMap = { children: true };
-	for (var key in props) {
-		if (props.hasOwnProperty(key) && key !== 'children') {
-			keyMap[key] = true;
-			patchProp(key, props[key], newProps[key], elem);
-		}
-	}
-	for (var key in newProps) {
-		if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
-			patchProp(key, props[key], newProps[key], elem);
-		}
-	}
-}
-
-function removeStyle(elem, style) {
-	if (!style) {
-		return;
-	}
-	var elemStyle = elem.style;
-	for (var key in style) {
-		if (style.hasOwnProperty(key)) {
-			elemStyle[key] = '';
-		}
-	}
-}
-function setStyle(elem, style) {
-	if (!style) {
-		return;
-	}
-	var elemStyle = elem.style;
-	for (var key in style) {
-		if (style.hasOwnProperty(key)) {
-			setStyleValue(elemStyle, key, style[key]);
-		}
-	}
-}
-
-function patchStyle(elem, style, newStyle) {
-	if (style === newStyle) {
-		return;
-	}
-	if (!newStyle && style) {
-		removeStyle(elem, style);
-		return;
-	} else if (newStyle && !style) {
-		setStyle(elem, newStyle);
-		return;
-	}
-
-	var elemStyle = elem.style;
-	var keyMap = {};
-	for (var key in style) {
-		if (style.hasOwnProperty(key)) {
-			keyMap[key] = true;
-			if (style[key] !== newStyle[key]) {
-				setStyleValue(elemStyle, key, newStyle[key]);
-			}
-		}
-	}
-	for (var key in newStyle) {
-		if (newStyle.hasOwnProperty(key) && keyMap[key] !== true) {
-			if (style[key] !== newStyle[key]) {
-				setStyleValue(elemStyle, key, newStyle[key]);
-			}
-		}
-	}
-}
-
-var isUnitlessNumberWithPrefix = {};
-var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
-var prefixKey = function prefixKey(prefix, key) {
-	return prefix + key.charAt(0).toUpperCase() + key.substring(1);
-};
-mapValue(isUnitlessNumber, function (_, prop) {
-	eachItem(prefixes, function (prefix) {
-		return isUnitlessNumberWithPrefix[prefixKey(prefix, prop)] = true;
-	});
-});
-mapValue(isUnitlessNumberWithPrefix, function (value, key) {
-	isUnitlessNumber[key] = value;
-});
-
-var RE_NUMBER = /^-?\d+(\.\d+)?$/;
-function setStyleValue(style, key, value) {
-	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
-		style[key] = value + 'px';
-	} else {
-		key = key === 'float' ? 'cssFloat' : key;
-		value = value == null || isBln(value) ? '' : value;
-		style[key] = value;
-	}
-}
-
-if (!Object.freeze) {
-	Object.freeze = identity;
-}
-
-var noop$1 = noop;
 var refs = null;
 
 function createVelem(type, props) {
@@ -660,12 +380,17 @@ function initVelem(velem, parentContext, namespaceURI) {
 
     var children = props.children;
 
-    node.vchildren = [];
+    var vchildren = node.vchildren = [];
     if (isArr(children)) {
-        flattenChildren(children, collectVchild, node, parentContext);
+        flattenChildren(children, collectChild, vchildren);
     } else {
-        collectVchild(children, node, parentContext);
+        collectChild(children, vchildren);
     }
+
+    for (var i = 0, len = vchildren.length; i < len; i++) {
+        node.appendChild(initVnode(vchildren[i], parentContext, namespaceURI));
+    }
+
     setProps(node, props);
 
     if (velem.ref !== null) {
@@ -675,22 +400,10 @@ function initVelem(velem, parentContext, namespaceURI) {
     return node;
 }
 
-function collectVchild(vchild, node, parentContext) {
-    if (vchild == null || isBln(vchild)) {
-        return false;
+function collectChild(child, children) {
+    if (child != null && typeof child !== 'boolean') {
+        children.push(child.vtype ? child : '' + child);
     }
-    vchild = vchild.vtype ? vchild : '' + vchild;
-
-    var childNode = initVnode(vchild, parentContext, node.namespaceURI);
-    node.appendChild(childNode);
-    node.vchildren.push(vchild);
-}
-
-function collectNewVchild(newVchild, newVchildren, vchildren) {
-    if (newVchild == null || isBln(newVchild)) {
-        return false;
-    }
-    newVchildren.push(newVchild.vtype ? newVchild : '' + newVchild);
 }
 
 function updateVelem(velem, newVelem, node, parentContext) {
@@ -704,17 +417,17 @@ function updateVelem(velem, newVelem, node, parentContext) {
     var namespaceURI = node.namespaceURI;
 
     var vchildrenLen = vchildren.length;
+    var newVchildren = node.vchildren = [];
+
+    if (isArr(newChildren)) {
+        flattenChildren(newChildren, collectChild, newVchildren);
+    } else {
+        collectChild(newChildren, newVchildren);
+    }
+
+    var newVchildrenLen = newVchildren.length;
 
     if (oldHtml == null && vchildrenLen) {
-        var newVchildren = node.vchildren = [];
-
-        if (isArr(newChildren)) {
-            flattenChildren(newChildren, collectNewVchild, newVchildren);
-        } else {
-            collectNewVchild(newChildren, newVchildren);
-        }
-
-        var newVchildrenLen = newVchildren.length;
         var shouldRemove = [];
         var patches = Array(newVchildrenLen);
 
@@ -751,7 +464,6 @@ function updateVelem(velem, newVelem, node, parentContext) {
             if (patchItem) {
                 var vnode = patchItem.vnode;
                 var newChildNode = patchItem.node;
-                var fromIndex = patchItem.fromIndex;
                 if (newVnode !== vnode) {
                     var vtype = newVnode.vtype;
                     if (!vtype) {
@@ -766,11 +478,11 @@ function updateVelem(velem, newVelem, node, parentContext) {
                         newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext);
                     }
                 }
-                if (fromIndex !== i) {
+                if (patchItem.fromIndex !== i) {
                     var currentNode = childNodes[i];
                     if (currentNode !== newChildNode) {
                         // IE11/IE10/IE9 will break when call inserBefore at two exist childNodes
-                        node.removeChild(newChildNode);
+                        // node.removeChild(newChildNode)
                         node.insertBefore(newChildNode, currentNode || null);
                     }
                 }
@@ -783,11 +495,8 @@ function updateVelem(velem, newVelem, node, parentContext) {
     } else {
         // should patch props first, make sure innerHTML was cleared
         patchProps(node, props, newProps);
-        node.vchildren = [];
-        if (isArr(newChildren)) {
-            flattenChildren(newChildren, collectVchild, node, parentContext);
-        } else {
-            collectVchild(newChildren, node, parentContext);
+        for (var i = 0; i < newVchildrenLen; i++) {
+            node.appendChild(initVnode(newVchildren[i], parentContext, namespaceURI));
         }
     }
     if (velem.ref !== null) {
@@ -796,7 +505,7 @@ function updateVelem(velem, newVelem, node, parentContext) {
         } else {
             detachRef(velem.refs, velem.ref);
         }
-    } else {
+    } else if (newVelem.ref !== null) {
         attachRef(newVelem.refs, newVelem.ref, node);
     }
     return node;
@@ -924,7 +633,7 @@ function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
         } else {
             detachRef(vcomponent.refs, vcomponent.ref);
         }
-    } else {
+    } else if (newVcomponent.ref !== null) {
         attachRef(newVcomponent.refs, newVcomponent.ref, component);
     }
     return cache.node;
@@ -937,7 +646,7 @@ function destroyVcomponent(vcomponent, node) {
     if (vcomponent.ref !== null) {
         detachRef(vcomponent.refs, vcomponent.ref);
     }
-    component.setState = component.forceUpdate = noop$1;
+    component.setState = component.forceUpdate = noop;
     if (component.componentWillUnmount) {
         component.componentWillUnmount();
     }
@@ -1372,6 +1081,258 @@ function createSyntheticEvent(nativeEvent) {
 	return syntheticEvent;
 }
 
+function isFn(obj) {
+	return typeof obj === 'function';
+}
+
+var isArr = Array.isArray;
+
+function noop() {}
+
+function identity(obj) {
+	return obj;
+}
+
+function pipe(fn1, fn2) {
+	return function () {
+		fn1.apply(this, arguments);
+		return fn2.apply(this, arguments);
+	};
+}
+
+function flattenChildren(list, iteratee, a) {
+	var len = list.length;
+	var i = -1;
+
+	while (len--) {
+		var item = list[++i];
+		if (isArr(item)) {
+			flattenChildren(item, iteratee, a);
+		} else {
+			iteratee(item, a);
+		}
+	}
+}
+
+function eachItem(list, iteratee) {
+	for (var i = 0, len = list.length; i < len; i++) {
+		iteratee(list[i], i);
+	}
+}
+
+function mapValue(obj, iteratee) {
+	for (var key in obj) {
+		if (obj.hasOwnProperty(key)) {
+			iteratee(obj[key], key);
+		}
+	}
+}
+
+function extend(to, from) {
+	if (!from) {
+		return to;
+	}
+	var keys = Object.keys(from);
+	var i = keys.length;
+	while (i--) {
+		if (from[keys[i]] !== undefined) {
+			to[keys[i]] = from[keys[i]];
+		}
+	}
+	return to;
+}
+
+var uid = 0;
+
+function getUid() {
+	return ++uid;
+}
+
+var EVENT_KEYS = /^on/i;
+function setProp(elem, key, value) {
+	var originalKey = key;
+	key = propAlias[key] || key;
+
+	if (EVENT_KEYS.test(key)) {
+		addEvent(elem, key, value);
+	} else if (key === 'style') {
+		setStyle(elem, value);
+	} else if (key === 'dangerouslySetInnerHTML') {
+		value && value.__html != null && (elem.innerHTML = value.__html);
+	} else if (key in elem && attrbutesConfigs[originalKey] !== true) {
+		if (readOnlyProps[key] !== true) {
+			if (key === 'title' && value == null) {
+				value = '';
+			}
+			elem[key] = value;
+		}
+	} else {
+		if (value == null) {
+			elem.removeAttribute(key);
+		} else if (attributesNS.hasOwnProperty(originalKey)) {
+			elem.setAttributeNS(attributesNS[originalKey], key, value);
+		} else {
+			elem.setAttribute(key, value);
+		}
+	}
+}
+
+function setProps(elem, props) {
+	for (var key in props) {
+		if (props.hasOwnProperty(key) && key !== 'children') {
+			setProp(elem, key, props[key]);
+		}
+	}
+}
+
+function removeProp(elem, key, oldValue) {
+	key = propAlias[key] || key;
+
+	if (EVENT_KEYS.test(key)) {
+		removeEvent(elem, key);
+	} else if (key === 'style') {
+		removeStyle(elem, oldValue);
+	} else if (key === 'dangerouslySetInnerHTML') {
+		elem.innerHTML = '';
+	} else if (!(key in elem) || attrbutesConfigs[key] === true) {
+		elem.removeAttribute(key);
+	} else if (isFn(oldValue)) {
+		elem[key] = null;
+	} else if (typeof oldValue === 'string') {
+		elem[key] = '';
+	} else if (typeof oldValue === 'boolean') {
+		elem[key] = false;
+	} else {
+		try {
+			delete elem[key];
+		} catch (e) {
+			//pass
+		}
+	}
+}
+
+function patchProp(key, oldValue, value, elem) {
+	if (key === 'value' || key === 'checked') {
+		oldValue = elem[key];
+	}
+
+	if (value === oldValue) {
+		return;
+	}
+	if (value === undefined) {
+		removeProp(elem, key, oldValue);
+		return;
+	}
+	if (key === 'style') {
+		patchStyle(elem, oldValue, value);
+	} else if (key === 'dangerouslySetInnerHTML') {
+		var oldHtml = oldValue && oldValue.__html;
+		var html = value && value.__html;
+		if (html != null && html !== oldHtml) {
+			elem.innerHTML = html;
+		}
+	} else {
+		setProp(elem, key, value);
+	}
+}
+
+function patchProps(elem, props, newProps) {
+	var keyMap = { children: true };
+	for (var key in props) {
+		if (props.hasOwnProperty(key) && key !== 'children') {
+			keyMap[key] = true;
+			patchProp(key, props[key], newProps[key], elem);
+		}
+	}
+	for (var key in newProps) {
+		if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
+			patchProp(key, props[key], newProps[key], elem);
+		}
+	}
+}
+
+function removeStyle(elem, style) {
+	if (!style) {
+		return;
+	}
+	var elemStyle = elem.style;
+	for (var key in style) {
+		if (style.hasOwnProperty(key)) {
+			elemStyle[key] = '';
+		}
+	}
+}
+function setStyle(elem, style) {
+	if (!style) {
+		return;
+	}
+	var elemStyle = elem.style;
+	for (var key in style) {
+		if (style.hasOwnProperty(key)) {
+			setStyleValue(elemStyle, key, style[key]);
+		}
+	}
+}
+
+function patchStyle(elem, style, newStyle) {
+	if (style === newStyle) {
+		return;
+	}
+	if (!newStyle && style) {
+		removeStyle(elem, style);
+		return;
+	} else if (newStyle && !style) {
+		setStyle(elem, newStyle);
+		return;
+	}
+
+	var elemStyle = elem.style;
+	var keyMap = {};
+	for (var key in style) {
+		if (style.hasOwnProperty(key)) {
+			keyMap[key] = true;
+			if (style[key] !== newStyle[key]) {
+				setStyleValue(elemStyle, key, newStyle[key]);
+			}
+		}
+	}
+	for (var key in newStyle) {
+		if (newStyle.hasOwnProperty(key) && keyMap[key] !== true) {
+			if (style[key] !== newStyle[key]) {
+				setStyleValue(elemStyle, key, newStyle[key]);
+			}
+		}
+	}
+}
+
+var isUnitlessNumberWithPrefix = {};
+var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
+var prefixKey = function prefixKey(prefix, key) {
+	return prefix + key.charAt(0).toUpperCase() + key.substring(1);
+};
+mapValue(isUnitlessNumber, function (_, prop) {
+	eachItem(prefixes, function (prefix) {
+		return isUnitlessNumberWithPrefix[prefixKey(prefix, prop)] = true;
+	});
+});
+mapValue(isUnitlessNumberWithPrefix, function (value, key) {
+	isUnitlessNumber[key] = value;
+});
+
+var RE_NUMBER = /^-?\d+(\.\d+)?$/;
+function setStyleValue(style, key, value) {
+	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
+		style[key] = value + 'px';
+	} else {
+		key = key === 'float' ? 'cssFloat' : key;
+		style[key] = value == null || typeof value === 'boolean' ? '' : value;
+	}
+}
+
+if (!Object.freeze) {
+	Object.freeze = identity;
+}
+
 var pendingRendering = {};
 var vnodeStore = {};
 function renderTreeIntoContainer(vnode, container, callback, parentContext) {
@@ -1660,7 +1621,7 @@ function map(children, iteratee, context) {
 		var index = _ref.index;
 		var isEqual = _ref.isEqual;
 
-		if (child == null || isBln(child)) {
+		if (child == null || typeof child === 'boolean') {
 			return;
 		}
 		if (!isValidElement(child) || key == null) {
@@ -1693,7 +1654,7 @@ function toArray(children) {
 
 function getKey(child, index) {
 	var key = undefined;
-	if (isValidElement(child) && isStr(child.key)) {
+	if (isValidElement(child) && typeof child.key === 'string') {
 		key = '.$' + child.key;
 	} else {
 		key = '.' + index.toString(36);

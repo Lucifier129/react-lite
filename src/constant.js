@@ -273,12 +273,6 @@ export const isUnitlessNumber = {
     strokeWidth: TRUE
 }
 
-// use dom prop to compare new prop
-export const shouldUseDOMProp = {
-    value: TRUE,
-    checked: TRUE
-}
-
 export const eventNameAlias = {
     onDoubleClick: 'ondblclick'
 }

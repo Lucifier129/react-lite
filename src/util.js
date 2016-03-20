@@ -5,22 +5,13 @@ import {
 	attributesNS,
 	attrbutesConfigs,
 	readOnlyProps,
-	isUnitlessNumber,
-	shouldUseDOMProp
+	isUnitlessNumber
 } from './constant'
 
-export function isObj(obj) {
-	return obj !== null && Object.prototype.toString.call(obj) === '[object Object]'
-}
-export function isStr(obj) {
-	return typeof obj === 'string'
-}
 export function isFn(obj) {
 	return typeof obj === 'function'
 }
-export function isBln(obj) {
-	return typeof obj === 'boolean'
-}
+
 export let isArr = Array.isArray
 
 export function noop(){}
@@ -34,16 +25,16 @@ export function pipe(fn1, fn2) {
 	}
 }
 
-export function flattenChildren(list, iteratee, a, b) {
+export function flattenChildren(list, iteratee, a) {
     let len = list.length
     let i = -1
 
     while (len--) {
         let item = list[++i]
         if (isArr(item)) {
-        	flattenChildren(item, iteratee, a, b)
+        	flattenChildren(item, iteratee, a)
         } else {
-        	iteratee(item, a, b)
+        	iteratee(item, a)
         }
     }
 }
@@ -91,19 +82,14 @@ function isStyleKey(key) {
 }
 
 function setProp(elem, key, value) {
-
-	if (key === 'children') {
-		return
-	}
-
 	let originalKey = key
 	key = propAlias[key] || key
 
 	if (EVENT_KEYS.test(key)) {
 		addEvent(elem, key, value)
-	} else if (isStyleKey(key)) {
+	} else if (key === 'style') {
 		setStyle(elem, value)
-	} else if (isInnerHTMLKey(key)) {
+	} else if (key === 'dangerouslySetInnerHTML') {
 		value && value.__html != null && (elem.innerHTML = value.__html)
 	} else if ((key in elem) && attrbutesConfigs[originalKey] !== true) {
 		if (readOnlyProps[key] !== true) {
@@ -124,7 +110,7 @@ function setProp(elem, key, value) {
 }
 export function setProps(elem, props) {
 	for (let key in props) {
-		if (props.hasOwnProperty(key)) {
+		if (props.hasOwnProperty(key) && key !== 'children') {
 			setProp(elem, key, props[key])
 		}
 	}
@@ -143,9 +129,9 @@ function removeProp(elem, key, oldValue) {
 		elem.removeAttribute(key)
 	} else if (isFn(oldValue)) {
 		elem[key] = null
-	} else if (isStr(oldValue)) {
+	} else if (typeof oldValue === 'string') {
 		elem[key] = ''
-	} else if (isBln(oldValue)) {
+	} else if (typeof oldValue === 'boolean') {
 		elem[key] = false
 	} else {
 		try {
@@ -270,8 +256,7 @@ function setStyleValue(style, key, value) {
 		style[key] = value + 'px'
 	} else {
 		key = key === 'float' ? 'cssFloat' : key
-		value = (value == null || isBln(value)) ? '' : value
-		style[key] = value
+		style[key] = (value == null || typeof value === 'boolean') ? '' : value
 	}
 }
 
