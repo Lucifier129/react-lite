@@ -144,7 +144,6 @@ function updateVelem(velem, newVelem, node, parentContext) {
                 let newVnode = newVchildren[j]
                 if (newVnode === vnode || newVnode.type === type && newVnode.key === key && newVnode.refs === refs) {
                     patches[j] = {
-                        fromIndex: i,
                         vnode: vnode,
                         node: childNodes[i]
                     }
@@ -177,13 +176,9 @@ function updateVelem(velem, newVelem, node, parentContext) {
                         newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext)
                     }
                 }
-                if (patchItem.fromIndex !== i) {
-                    let currentNode = childNodes[i]
-                    if (currentNode !== newChildNode) {
-                        // IE11/IE10/IE9 will break when call inserBefore at two exist childNodes
-                        // node.removeChild(newChildNode)
-                        node.insertBefore(newChildNode, currentNode || null)
-                    }
+                let currentNode = childNodes[i]
+                if (currentNode !== newChildNode) {
+                    node.insertBefore(newChildNode, currentNode || null)
                 }
             } else {
                 let newChildNode = initVnode(newVnode, parentContext, namespaceURI)

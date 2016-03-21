@@ -448,7 +448,6 @@
                   var newVnode = newVchildren[j];
                   if (newVnode === vnode || newVnode.type === type && newVnode.key === key && newVnode.refs === _refs) {
                       patches[j] = {
-                          fromIndex: i,
                           vnode: vnode,
                           node: childNodes[i]
                       };
@@ -482,13 +481,9 @@
                           newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext);
                       }
                   }
-                  if (patchItem.fromIndex !== i) {
-                      var currentNode = childNodes[i];
-                      if (currentNode !== newChildNode) {
-                          // IE11/IE10/IE9 will break when call inserBefore at two exist childNodes
-                          // node.removeChild(newChildNode)
-                          node.insertBefore(newChildNode, currentNode || null);
-                      }
+                  var currentNode = childNodes[i];
+                  if (currentNode !== newChildNode) {
+                      node.insertBefore(newChildNode, currentNode || null);
                   }
               } else {
                   var newChildNode = initVnode(newVnode, parentContext, namespaceURI);
