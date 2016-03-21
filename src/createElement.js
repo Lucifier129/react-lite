@@ -23,15 +23,6 @@ export function createFactory(type) {
 
 export default function createElement(type, props, children) {
 	let createVnode = null
-	let argsLen = arguments.length
-
-	if (argsLen > 3) {
-		children = Array(argsLen - 2)
-		for (let i = 2; i < argsLen; i++) {
-			children[i - 2] = arguments[i]
-		}
-	}
-
 	let varType = typeof type
 
 	if (varType === 'string') {
@@ -79,8 +70,18 @@ export default function createElement(type, props, children) {
 		}
 	}
 
-	if (children !== undefined) {
-		finalProps.children = children
+	let argsLen = arguments.length
+	let finalChildren = children
+
+	if (argsLen > 3) {
+		finalChildren = Array(argsLen - 2)
+		for (let i = 2; i < argsLen; i++) {
+			finalChildren[i - 2] = arguments[i]
+		}
+	}
+
+	if (finalChildren !== undefined) {
+		finalProps.children = finalChildren
 	}
 
 	let vnode = createVnode(type, finalProps)
