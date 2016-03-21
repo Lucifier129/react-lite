@@ -71,7 +71,7 @@ export const attributesNS = {
     xmlSpace: xml
 }
 
-// those key must use be attributes
+// those keys must use be attributes
 export const attrbutesConfigs = {
     children: TRUE,
     type: TRUE,
@@ -271,12 +271,6 @@ export const isUnitlessNumber = {
     strokeDashoffset: TRUE,
     strokeOpacity: TRUE,
     strokeWidth: TRUE
-}
-
-// use dom prop to compare new prop
-export const shouldUseDOMProp = {
-    value: TRUE,
-    checked: TRUE
 }
 
 export const eventNameAlias = {

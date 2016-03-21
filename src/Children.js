@@ -1,14 +1,14 @@
 import * as _ from './util'
 import { cloneElement, isValidElement } from './createElement'
 
-export let only = children => {
+export function only(children) {
 	if (isValidElement(children)) {
 		return children
 	}
 	throw new Error('expect only one child')
 }
 
-export let forEach = (children, iteratee, context) => {
+export function forEach(children, iteratee, context) {
 	if (children == null) {
 		return children
 	}
@@ -22,7 +22,7 @@ export let forEach = (children, iteratee, context) => {
 	}
 }
 
-export let map = (children, iteratee, context) => {
+export function map(children, iteratee, context) {
 	if (children == null) {
 		return children
 	}
@@ -43,7 +43,7 @@ export let map = (children, iteratee, context) => {
 	})
 	let result = []
 	_.eachItem(store, ({ child, key, index, isEqual }) => {
-		if (child == null || _.isBln(child)) {
+		if (child == null || typeof child === 'boolean') {
 			return
 		}
 		if (!isValidElement(child) || key == null) {
@@ -62,7 +62,7 @@ export let map = (children, iteratee, context) => {
 	return result
 }
 
-export let count = children => {
+export function count(children) {
 	let count = 0
 	forEach(children, () => {
 		count++
@@ -70,11 +70,13 @@ export let count = children => {
 	return count
 }
 
-export let toArray = children => map(children, _.identity) || []
+export function toArray(children) {
+	return map(children, _.identity) || []
+}
 
-let getKey = (child, index) => {
+function getKey(child, index) {
 	let key
-	if (isValidElement(child) && _.isStr(child.key)) {
+	if (isValidElement(child) && typeof child.key === 'string') {
 		key = '.$' + child.key
 	} else {
 		key = '.' + index.toString(36)
@@ -83,4 +85,6 @@ let getKey = (child, index) => {
 }
 
 let userProvidedKeyEscapeRegex = /\/(?!\/)/g;
-let escapeUserProvidedKey = text => ('' + text).replace(userProvidedKeyEscapeRegex, '//')
+function escapeUserProvidedKey(text) {
+	return ('' + text).replace(userProvidedKeyEscapeRegex, '//')
+}

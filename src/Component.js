@@ -181,7 +181,7 @@ Component.prototype = {
 	}
 }
 
-let shouldUpdate = (component, nextProps, nextState, nextContext, callback) => {
+function shouldUpdate(component, nextProps, nextState, nextContext, callback) {
 	let shouldComponentUpdate = true
 	if (component.shouldComponentUpdate) {
 		shouldComponentUpdate = component.shouldComponentUpdate(nextProps, nextState, nextContext)
