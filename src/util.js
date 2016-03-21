@@ -6,67 +6,52 @@ import {
 	attributesNS,
 	attrbutesConfigs,
 	readOnlyProps,
-	isUnitlessNumber,
-	shouldUseDOMProp
+	isUnitlessNumber
 } from './constant'
 
 let $ = jQuery
 
-export let isObj = obj => obj !== null && Object.prototype.toString.call(obj) === '[object Object]'
-export let isStr = obj => typeof obj === 'string'
-export let isFn = obj => typeof obj === 'function'
-export let isBln = obj => typeof obj === 'boolean'
+export function isFn(obj) {
+	return typeof obj === 'function'
+}
+
 export let isArr = Array.isArray
 
-export let noop = () => {}
-export let identity = obj => obj
-
-export let pipe = (fn1, fn2) => {
+export function noop(){}
+export function identity(obj) {
+	return obj
+}
+export function pipe(fn1, fn2) {
 	return function() {
 		fn1.apply(this, arguments)
 		return fn2.apply(this, arguments)
 	}
 }
 
-export let flattenChildren = (list, iteratee, a, b) => {
+export function flattenChildren(list, iteratee, a) {
     let len = list.length
     let i = -1
 
     while (len--) {
         let item = list[++i]
         if (isArr(item)) {
-        	flattenChildren(item, iteratee, a, b)
+        	flattenChildren(item, iteratee, a)
         } else {
-        	iteratee(item, a, b)
+        	iteratee(item, a)
         }
     }
 }
 
-export let eachItem = (list, iteratee) => {
+export function eachItem(list, iteratee) {
 	for (let i = 0, len = list.length; i < len; i++) {
 		iteratee(list[i], i)
 	}
 }
 
-export let mapValue = (obj, iteratee) => {
+export function mapValue(obj, iteratee) {
 	for (let key in obj) {
 		if (obj.hasOwnProperty(key)) {
 			iteratee(obj[key], key)
-		}
-	}
-}
-
-export let mapKey = (oldObj, newObj, iteratee) => {
-	let keyMap = {}
-	for (let key in oldObj) {
-		if (oldObj.hasOwnProperty(key)) {
-			keyMap[key] = true
-			iteratee(key)
-		}
-	}
-	for (let key in newObj) {
-		if (newObj.hasOwnProperty(key) && keyMap[key] !== true) {
-			iteratee(key)
 		}
 	}
 }
@@ -87,27 +72,28 @@ export function extend(to, from) {
 
 
 let uid = 0
-export let getUid = () => ++uid
+export function getUid() {
+	return ++uid
+}
 
 export let EVENT_KEYS = /^on/i
-let isInnerHTMLKey = key => key === 'dangerouslySetInnerHTML'
-let isStyleKey = key => key === 'style'
+function isInnerHTMLKey(key) {
+	return key === 'dangerouslySetInnerHTML'
+}
+function isStyleKey(key) {
+	return key === 'style'
+}
 
-export let setProp = (elem, key, value) => {
-
-	if (key === 'children') {
-		return
-	}
-
+function setProp(elem, key, value) {
 	let originalKey = key
 	key = propAlias[key] || key
 
 	if (EVENT_KEYS.test(key)) {
 		addEvent(elem, key, value)
-	} else if (isStyleKey(key)) {
+	} else if (key === 'style') {
 		setStyle(elem, value)
-	} else if (isInnerHTMLKey(key)) {
-		value && isStr(value.__html) && ($(elem).html(value.__html))
+	} else if (key === 'dangerouslySetInnerHTML') {
+		value && value.__html != null && ($(elem).html(value.__html))
 	} else if ((key in elem) && attrbutesConfigs[originalKey] !== true) {
 		if (readOnlyProps[key] !== true) {
 			if (key === 'title' && value == null) {
@@ -125,33 +111,29 @@ export let setProp = (elem, key, value) => {
 		}
 	}
 }
-export let setProps = (elem, props) => {
+export function setProps(elem, props) {
 	for (let key in props) {
-		if (props.hasOwnProperty(key)) {
+		if (props.hasOwnProperty(key) && key !== 'children') {
 			setProp(elem, key, props[key])
 		}
 	}
 }
 
-export let removeProp = (elem, key, oldValue) => {
-	if (key === 'children') {
-		return
-	}
-
+function removeProp(elem, key, oldValue) {
 	key = propAlias[key] || key
 	if (EVENT_KEYS.test(key)) {
 		removeEvent(elem, key)
-	} else if (isStyleKey(key)) {
+	} else if (key === 'style') {
 		removeStyle(elem, oldValue)
-	} else if (isInnerHTMLKey(key)) {
+	} else if (key === 'dangerouslySetInnerHTML') {
 		$(elem).html('')
 	} else if (!(key in elem) || attrbutesConfigs[key] === true) {
 		$.removeAttr(elem, key)
 	} else if (isFn(oldValue)) {
 		elem[key] = null
-	} else if (isStr(oldValue)) {
+	} else if (typeof oldValue === 'string') {
 		elem[key] = ''
-	} else if (isBln(oldValue)) {
+	} else if (typeof oldValue === 'boolean') {
 		elem[key] = false
 	} else {
 		try {
@@ -162,46 +144,47 @@ export let removeProp = (elem, key, oldValue) => {
 	}
 }
 
-let $props = null
-let $newProps = null
-let $elem = null
-let $patchProps = key => {
-    if (key === 'children') {
-        return
+function patchProp(key, oldValue, value, elem) {
+    if (key === 'value' || key === 'checked') {
+    	oldValue = elem[key]
     }
-    let value = $newProps[key]
-    let oldValue = shouldUseDOMProp[key] == true
-    ? $elem[key]
-    : $props[key]
+
     if (value === oldValue) {
         return
     }
     if (value === undefined) {
-        removeProp($elem, key, oldValue)
+        removeProp(elem, key, oldValue)
         return
     }
-    if (isStyleKey(key)) {
-        patchStyle($elem, oldValue, value)
-    } else if (isInnerHTMLKey(key)) {
+    if (key === 'style') {
+        patchStyle(elem, oldValue, value)
+    } else if (key === 'dangerouslySetInnerHTML') {
         let oldHtml = oldValue && oldValue.__html
         let html = value && value.__html
         if (html != null && html !== oldHtml) {
-            $($elem).html(html)
+            $(elem).html(html)
         }
     } else {
-        setProp($elem, key, value)
+        setProp(elem, key, value)
     }
 }
 
-export let patchProps = (elem, props, newProps) => {
-	$elem = elem
-	$props = props
-	$newProps = newProps
-	mapKey(props, newProps, $patchProps)
-	$elem = $props = $newProps = null
+export function patchProps(elem, props, newProps) {
+	let keyMap = { children: true }
+	for (let key in props) {
+		if (props.hasOwnProperty(key) && key !== 'children') {
+			keyMap[key] = true
+			patchProp(key, props[key], newProps[key], elem)
+		}
+	}
+	for (let key in newProps) {
+		if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
+			patchProp(key, props[key], newProps[key], elem)
+		}
+	}
 }
 
-export let removeStyle = (elem, style) => {
+function removeStyle(elem, style) {
 	if (!style) {
 		return
 	}
@@ -212,7 +195,7 @@ export let removeStyle = (elem, style) => {
 		}
 	}
 }
-export let setStyle = (elem, style) => {
+function setStyle(elem, style) {
 	if (!style) {
 		return
 	}
@@ -224,33 +207,37 @@ export let setStyle = (elem, style) => {
 	}
 }
 
-let $elemStyle = null
-let $style = null
-let $newStyle = null
-let $patchStyle = key => {
-    let value = $newStyle[key]
-    let oldValue = $style[key]
-    if (value !== oldValue) {
-        setStyleValue($elemStyle, key, value)
+function patchStyle(elem, style, newStyle) {
+    if (style === newStyle) {
+        return
+    }
+    if (!newStyle && style) {
+        removeStyle(elem, style)
+        return
+    } else if (newStyle && !style) {
+        setStyle(elem, newStyle)
+        return
+    }
+
+    let elemStyle = elem.style
+    let keyMap = {}
+    for (let key in style) {
+        if (style.hasOwnProperty(key)) {
+            keyMap[key] = true
+            if (style[key] !== newStyle[key]) {
+                setStyleValue(elemStyle, key, newStyle[key])
+            }
+        }
+    }
+    for (let key in newStyle) {
+        if (newStyle.hasOwnProperty(key) && keyMap[key] !== true) {
+            if (style[key] !== newStyle[key]) {
+                setStyleValue(elemStyle, key, newStyle[key])
+            }
+        }
     }
 }
 
-export let patchStyle = (elem, style, newStyle) => {
-	if (style === newStyle) {
-		return
-	}
-	if (!newStyle && style) {
-		removeStyle(elem, style)
-	} else if (newStyle && !style) {
-		setStyle(elem, newStyle)
-	} else {
-		$elemStyle = elem.style
-		$style = style
-		$newStyle = newStyle
-		mapKey(style, newStyle, $patchStyle)
-		$elemStyle = $style = $newStyle = null
-	}
-}
 
 let isUnitlessNumberWithPrefix = {}
 let prefixes = ['Webkit', 'ms', 'Moz', 'O'];
@@ -265,13 +252,12 @@ mapValue(isUnitlessNumberWithPrefix, (value, key) => {
 })
 
 let RE_NUMBER = /^-?\d+(\.\d+)?$/
-let setStyleValue = (style, key, value) => {
+function setStyleValue(style, key, value) {
 	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
 		style[key] = value + 'px'
 	} else {
 		key = key === 'float' ? 'cssFloat' : key
-		value = (value == null || isBln(value)) ? '' : value
-		style[key] = value
+		style[key] = (value == null || typeof value === 'boolean') ? '' : value
 	}
 }
 

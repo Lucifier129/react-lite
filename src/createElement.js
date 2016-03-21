@@ -1,9 +1,11 @@
 import * as _ from './util'
 import { createVelem, createVcomponent, createVstateless } from './virtual-dom'
 
-export let isValidElement = obj => obj != null && !!obj.vtype
+export function isValidElement(obj) {
+	return obj != null && !!obj.vtype
+}
 
-export let cloneElement = (originElem, props, ...children) => {
+export function cloneElement(originElem, props, ...children) {
 	let { type, key, ref } = originElem
 	let newProps = _.extend(_.extend({ key, ref }, originElem.props), props)
 	let vnode = createElement(type, newProps, ...children)
@@ -13,23 +15,14 @@ export let cloneElement = (originElem, props, ...children) => {
 	return vnode
 }
 
-export let createFactory = type => {
+export function createFactory(type) {
 	let factory = (...args) => createElement(type, ...args)
 	factory.type = type
 	return factory
 }
 
-let createElement = function(type, props, children) {
+export default function createElement(type, props, children) {
 	let createVnode = null
-	let argsLen = arguments.length
-
-	if (argsLen > 3) {
-		children = [children]
-		for (let i = 3; i < argsLen; i++) {
-			children[i - 2] = arguments[i]
-		}
-	}
-
 	let varType = typeof type
 
 	if (varType === 'string') {
@@ -77,8 +70,18 @@ let createElement = function(type, props, children) {
 		}
 	}
 
-	if (children !== undefined) {
-		finalProps.children = children
+	let childrenLen = arguments.length - 2
+	let finalChildren = children
+
+	if (childrenLen > 1) {
+		finalChildren = Array(childrenLen)
+		for (let i = 0; i < childrenLen; i++) {
+			finalChildren[i] = arguments[i + 2]
+		}
+	}
+
+	if (finalChildren !== undefined) {
+		finalProps.children = finalChildren
 	}
 
 	let vnode = createVnode(type, finalProps)
@@ -86,5 +89,3 @@ let createElement = function(type, props, children) {
 	vnode.ref = ref
 	return vnode
 }
-
-export default createElement
