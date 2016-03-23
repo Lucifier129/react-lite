@@ -18,7 +18,7 @@ react-lite is an implementation of React that optimizes for small script size.
 | React                  | 0.14.3     | 136.0kb       |
 | Web Components Polyfill| 0.7.19     | 118.0kb       |
 | Riot                   | 2.3.11     | 20kb          |
-| React-lite             | 0.15.0     | 20kb          |
+| React-lite             | 0.15.6     | 20kb          |
 
 It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no `React.renderToString` & `React.renderToStaticMarkup`).
@@ -84,6 +84,8 @@ via react-lite:
 	* react-lite will replace the dom tree with new dom tree
 	* you had better avoid `script|head|link` tag in client side
 - can not use react-dev-tool inspect react-lite, should switch to regular react for debugging
+- handle props by different way
+	* react-lite simply `setAttribute` if `!(propName in elem)` return true
 
 ## Test
 react-lite reuses react's unitest(170), you can see them in `__test__`, and run the tests with:
