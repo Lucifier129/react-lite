@@ -113,6 +113,31 @@ function collectChild(child, children) {
     }
 }
 
+function matchChild(child, list, length, fromIndex) {
+    let { type, key, refs } = child
+    let targetIndex = null
+    for (let i = fromIndex; i < length; i++) {
+        let item = list[i]
+        if (item === null) {
+            continue
+        }
+
+        // for re-order by immutable react element 
+        if (item === child) {
+            return '' + i
+        }
+
+        // for re-order by same type, key and refs, pick up the first one
+        if (targetIndex === undefined) {
+            if (item.type === type && item.key === key && item.refs === item.refs) {
+                targetIndex = i
+                continue
+            }
+        }
+    }
+    return targetIndex
+}
+
 function updateVelem(velem, newVelem, node, parentContext) {
     let { props } = velem
     let newProps = newVelem.props
@@ -131,32 +156,62 @@ function updateVelem(velem, newVelem, node, parentContext) {
     let newVchildrenLen = newVchildren.length
 
     if (oldHtml == null && vchildrenLen) {
-        let shouldRemove = []
+        let shouldRemove = null
         let patches = Array(newVchildrenLen)
 
-        outer: for (let i = 0; i < vchildrenLen; i++) {
+        for (let i = 0; i < vchildrenLen; i++) {
             let vnode = vchildren[i]
-            let { type, refs, key } = vnode
             for (let j = 0; j < newVchildrenLen; j++) {
                 if (patches[j]) {
                     continue
                 }
                 let newVnode = newVchildren[j]
-                if (newVnode === vnode || newVnode.type === type && newVnode.key === key && newVnode.refs === refs) {
+                if (vnode === newVnode) {
                     patches[j] = {
                         vnode: vnode,
                         node: childNodes[i]
                     }
+                    vchildren[i] = null
+                    break
+                }
+            }
+        }
+
+        outer: for (let i = 0; i < vchildrenLen; i++) {
+            let vnode = vchildren[i]
+            if (vnode === null) {
+                continue
+            }
+            let { type, key, refs } = vnode
+            let childNode = childNodes[i]
+
+            for (let j = 0; j < newVchildrenLen; j++) {
+                if (patches[j]) {
+                    continue
+                }
+                let newVnode = newVchildren[j]
+                if (newVnode.type === type && newVnode.key === key && newVnode.refs === refs) {
+                    patches[j] = {
+                        vnode: vnode,
+                        node: childNode
+                    }
                     continue outer
                 }
             }
-            destroyVnode(vnode, shouldRemove[shouldRemove.length] = childNodes[i])
+
+            if (!shouldRemove) {
+                shouldRemove = []
+            }
+            shouldRemove.push(childNode)
+            destroyVnode(vnode, childNode)
         }
 
-        for (let i = 0, len = shouldRemove.length; i < len; i++) {
-            node.removeChild(shouldRemove[i])
+        if (shouldRemove) {
+            for (let i = 0, len = shouldRemove.length; i < len; i++) {
+                node.removeChild(shouldRemove[i])
+            }
         }
-
+        
         for (let i = 0; i < newVchildrenLen; i++) {
             let newVnode = newVchildren[i]
             let patchItem = patches[i]

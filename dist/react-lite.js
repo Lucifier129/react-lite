@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.5
+ * react-lite.js v0.15.6
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -432,33 +432,63 @@
       var newVchildrenLen = newVchildren.length;
 
       if (oldHtml == null && vchildrenLen) {
-          var shouldRemove = [];
+          var shouldRemove = null;
           var patches = Array(newVchildrenLen);
+
+          for (var i = 0; i < vchildrenLen; i++) {
+              var vnode = vchildren[i];
+              for (var j = 0; j < newVchildrenLen; j++) {
+                  if (patches[j]) {
+                      continue;
+                  }
+                  var newVnode = newVchildren[j];
+                  if (vnode === newVnode) {
+                      patches[j] = {
+                          vnode: vnode,
+                          node: childNodes[i]
+                      };
+                      vchildren[i] = null;
+                      break;
+                  }
+              }
+          }
 
           outer: for (var i = 0; i < vchildrenLen; i++) {
               var vnode = vchildren[i];
+              if (vnode === null) {
+                  continue;
+              }
               var type = vnode.type;
-              var _refs = vnode.refs;
               var key = vnode.key;
+              var _refs = vnode.refs;
+
+              var childNode = childNodes[i];
 
               for (var j = 0; j < newVchildrenLen; j++) {
                   if (patches[j]) {
                       continue;
                   }
                   var newVnode = newVchildren[j];
-                  if (newVnode === vnode || newVnode.type === type && newVnode.key === key && newVnode.refs === _refs) {
+                  if (newVnode.type === type && newVnode.key === key && newVnode.refs === _refs) {
                       patches[j] = {
                           vnode: vnode,
-                          node: childNodes[i]
+                          node: childNode
                       };
                       continue outer;
                   }
               }
-              destroyVnode(vnode, shouldRemove[shouldRemove.length] = childNodes[i]);
+
+              if (!shouldRemove) {
+                  shouldRemove = [];
+              }
+              shouldRemove.push(childNode);
+              destroyVnode(vnode, childNode);
           }
 
-          for (var i = 0, len = shouldRemove.length; i < len; i++) {
-              node.removeChild(shouldRemove[i]);
+          if (shouldRemove) {
+              for (var i = 0, len = shouldRemove.length; i < len; i++) {
+                  node.removeChild(shouldRemove[i]);
+              }
           }
 
           for (var i = 0; i < newVchildrenLen; i++) {
