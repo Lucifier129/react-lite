@@ -79,7 +79,6 @@
 
   // those keys must use be attributes
   var attrbutesConfigs = {
-      children: TRUE,
       type: TRUE,
       clipPath: TRUE,
       cx: TRUE,
@@ -1353,7 +1352,9 @@
   	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
   		style[key] = value + 'px';
   	} else {
-  		key = key === 'float' ? 'cssFloat' : key;
+  		if (key === 'float') {
+  			key = 'cssFloat' in style ? 'cssFloat' : 'styleFloat';
+  		}
   		style[key] = value == null || typeof value === 'boolean' ? '' : value;
   	}
   }

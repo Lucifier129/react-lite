@@ -73,7 +73,6 @@ export const attributesNS = {
 
 // those keys must use be attributes
 export const attrbutesConfigs = {
-    children: TRUE,
     type: TRUE,
     clipPath: TRUE,
     cx: TRUE,

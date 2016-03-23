@@ -113,31 +113,6 @@ function collectChild(child, children) {
     }
 }
 
-function matchChild(child, list, length, fromIndex) {
-    let { type, key, refs } = child
-    let targetIndex = null
-    for (let i = fromIndex; i < length; i++) {
-        let item = list[i]
-        if (item === null) {
-            continue
-        }
-
-        // for re-order by immutable react element 
-        if (item === child) {
-            return '' + i
-        }
-
-        // for re-order by same type, key and refs, pick up the first one
-        if (targetIndex === undefined) {
-            if (item.type === type && item.key === key && item.refs === item.refs) {
-                targetIndex = i
-                continue
-            }
-        }
-    }
-    return targetIndex
-}
-
 function updateVelem(velem, newVelem, node, parentContext) {
     let { props } = velem
     let newProps = newVelem.props
