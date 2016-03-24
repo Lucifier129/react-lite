@@ -1,13 +1,12 @@
 import * as _ from './util'
 import {
     SVGNamespaceURI,
-    notBubbleEvents,
     VELEMENT,
     VSTATELESS,
     VCOMPONENT,
     VCOMMENT
 } from './constant'
-import { getEventName } from './event-system'
+import { getEventName, notBubbleEvents } from './event-system'
 let refs = null
 
 export function createVelem(type, props) {

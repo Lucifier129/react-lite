@@ -1,28 +1,30 @@
 // util
 import { addEvent, removeEvent } from './event-system'
 import {
-	propAlias,
-	attributesNS,
-	attrbutesConfigs,
-	readOnlyProps,
-	isUnitlessNumber
-} from './constant'
+    setStyle,
+    removeStyle,
+    patchStyle
+} from './CSSPropertyOperations.js'
+import {
+    setPropValue,
+    removePropValue
+} from './DOMPropertyOperations'
 
 export function isFn(obj) {
-	return typeof obj === 'function'
+    return typeof obj === 'function'
 }
 
 export let isArr = Array.isArray
 
-export function noop(){}
+export function noop() {}
 export function identity(obj) {
-	return obj
+    return obj
 }
 export function pipe(fn1, fn2) {
-	return function() {
-		fn1.apply(this, arguments)
-		return fn2.apply(this, arguments)
-	}
+    return function() {
+        fn1.apply(this, arguments)
+        return fn2.apply(this, arguments)
+    }
 }
 
 export function flattenChildren(list, iteratee, a) {
@@ -32,25 +34,25 @@ export function flattenChildren(list, iteratee, a) {
     while (len--) {
         let item = list[++i]
         if (isArr(item)) {
-        	flattenChildren(item, iteratee, a)
+            flattenChildren(item, iteratee, a)
         } else {
-        	iteratee(item, a)
+            iteratee(item, a)
         }
     }
 }
 
 export function eachItem(list, iteratee) {
-	for (let i = 0, len = list.length; i < len; i++) {
-		iteratee(list[i], i)
-	}
+    for (let i = 0, len = list.length; i < len; i++) {
+        iteratee(list[i], i)
+    }
 }
 
 export function mapValue(obj, iteratee) {
-	for (let key in obj) {
-		if (obj.hasOwnProperty(key)) {
-			iteratee(obj[key], key)
-		}
-	}
+    for (let key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            iteratee(obj[key], key)
+        }
+    }
 }
 
 export function extend(to, from) {
@@ -70,198 +72,95 @@ export function extend(to, from) {
 
 let uid = 0
 export function getUid() {
-	return ++uid
+    return ++uid
 }
 
 export let EVENT_KEYS = /^on/i
-function isInnerHTMLKey(key) {
-	return key === 'dangerouslySetInnerHTML'
-}
-function isStyleKey(key) {
-	return key === 'style'
-}
-
-function setProp(elem, key, value) {
-	let originalKey = key
-	key = propAlias[key] || key
-
-	if (EVENT_KEYS.test(key)) {
-		addEvent(elem, key, value)
-	} else if (key === 'style') {
-		setStyle(elem, value)
-	} else if (key === 'dangerouslySetInnerHTML') {
-		value && value.__html != null && (elem.innerHTML = value.__html)
-	} else if ((key in elem) && attrbutesConfigs[originalKey] !== true) {
-		if (readOnlyProps[key] !== true) {
-			if (key === 'title' && value == null) {
-				value = ''
-			}
-			elem[key] = value
-		}
-	} else {
-		if (value == null) {
-		    elem.removeAttribute(key)
-		} else if (attributesNS.hasOwnProperty(originalKey)) {
-			elem.setAttributeNS(attributesNS[originalKey], key, value)
-		} else {
-		    elem.setAttribute(key, value)
-		}
-	}
-}
 export function setProps(elem, props) {
-	for (let key in props) {
-		if (props.hasOwnProperty(key) && key !== 'children') {
-			setProp(elem, key, props[key])
-		}
-	}
-}
+    let isCustomComponent = elem.tagName.indexOf('-') >= 0 || props.is != null
 
-function removeProp(elem, key, oldValue) {
-	key = propAlias[key] || key
-
-	if (EVENT_KEYS.test(key)) {
-		removeEvent(elem, key)
-	} else if (key === 'style') {
-		removeStyle(elem, oldValue)
-	} else if (key === 'dangerouslySetInnerHTML') {
-		elem.innerHTML = ''
-	} else if (!(key in elem) || attrbutesConfigs[key] === true) {
-		elem.removeAttribute(key)
-	} else if (isFn(oldValue)) {
-		elem[key] = null
-	} else if (typeof oldValue === 'string') {
-		elem[key] = ''
-	} else if (typeof oldValue === 'boolean') {
-		elem[key] = false
-	} else {
-		try {
-		    delete elem[key]
-		} catch (e) {
-		    //pass
-		}
-	}
-}
-
-function patchProp(key, oldValue, value, elem) {
-    if (key === 'value' || key === 'checked') {
-    	oldValue = elem[key]
+    for (let key in props) {
+        if (!props.hasOwnProperty(key) || key === 'children') {
+            continue
+        }
+        let value = props[key]
+        if (EVENT_KEYS.test(key)) {
+            addEvent(elem, key, value)
+        } else if (key === 'style') {
+            setStyle(elem.style, value)
+        } else if (key === 'dangerouslySetInnerHTML') {
+            value && value.__html != null && (elem.innerHTML = value.__html)
+        } else if (isCustomComponent) {
+            if (value == null) {
+                elem.removeAttribute(key)
+            } else {
+                elem.setAttribute(key, '' + value)
+            }
+        } else {
+            setPropValue(elem, key, value)
+        }
     }
+}
 
+function patchProp(key, oldValue, value, elem, isCustomComponent) {
+    if (value === undefined) {
+        if (EVENT_KEYS.test(key)) {
+            removeEvent(elem, key)
+        } else if (key === 'style') {
+            removeStyle(elem.style, oldValue)
+        } else if (key === 'dangerouslySetInnerHTML') {
+            elem.innerHTML = ''
+        } else if (isCustomComponent) {
+            elem.removeAttribute(key)
+        } else {
+            removePropValue(elem, key)
+        }
+        return
+    }
+    if (key === 'value' || key === 'checked') {
+        oldValue = elem[key]
+    }
     if (value === oldValue) {
         return
     }
-    if (value === undefined) {
-        removeProp(elem, key, oldValue)
-        return
-    }
-    if (key === 'style') {
-        patchStyle(elem, oldValue, value)
+    if (EVENT_KEYS.test(key)) {
+        // addEvent will replace the oldValue
+        addEvent(elem, key, value)
+    } else if (key === 'style') {
+        patchStyle(elem.style, oldValue, value)
     } else if (key === 'dangerouslySetInnerHTML') {
         let oldHtml = oldValue && oldValue.__html
         let html = value && value.__html
         if (html != null && html !== oldHtml) {
             elem.innerHTML = html
         }
+    } else if (isCustomComponent) {
+        if (value === null) {
+            elem.removeAttribute(key)
+        } else {
+            elem.setAttribute(key, '' + value)
+        }
     } else {
-        setProp(elem, key, value)
+        setPropValue(elem, key, value)
     }
 }
-
 
 export function patchProps(elem, props, newProps) {
-	let keyMap = { children: true }
-	for (let key in props) {
-		if (props.hasOwnProperty(key) && key !== 'children') {
-			keyMap[key] = true
-			patchProp(key, props[key], newProps[key], elem)
-		}
-	}
-	for (let key in newProps) {
-		if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
-			patchProp(key, props[key], newProps[key], elem)
-		}
-	}
-}
-
-function removeStyle(elem, style) {
-	if (!style) {
-		return
-	}
-	let elemStyle = elem.style
-	for (let key in style) {
-		if (style.hasOwnProperty(key)) {
-			elemStyle[key] = ''
-		}
-	}
-}
-function setStyle(elem, style) {
-	if (!style) {
-		return
-	}
-	let elemStyle = elem.style
-	for (let key in style) {
-		if (style.hasOwnProperty(key)) {
-			setStyleValue(elemStyle, key, style[key])
-		}
-	}
-}
-
-function patchStyle(elem, style, newStyle) {
-    if (style === newStyle) {
-        return
-    }
-    if (!newStyle && style) {
-        removeStyle(elem, style)
-        return
-    } else if (newStyle && !style) {
-        setStyle(elem, newStyle)
-        return
-    }
-
-    let elemStyle = elem.style
-    let keyMap = {}
-    for (let key in style) {
-        if (style.hasOwnProperty(key)) {
+    let isCustomComponent = elem.tagName.indexOf('-') >= 0 || props.is != null
+    let keyMap = { children: true }
+    for (let key in props) {
+        if (props.hasOwnProperty(key) && key !== 'children') {
             keyMap[key] = true
-            if (style[key] !== newStyle[key]) {
-                setStyleValue(elemStyle, key, newStyle[key])
-            }
+            patchProp(key, props[key], newProps[key], elem, isCustomComponent)
         }
     }
-    for (let key in newStyle) {
-        if (newStyle.hasOwnProperty(key) && keyMap[key] !== true) {
-            if (style[key] !== newStyle[key]) {
-                setStyleValue(elemStyle, key, newStyle[key])
-            }
+    for (let key in newProps) {
+        if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
+            patchProp(key, props[key], newProps[key], elem, isCustomComponent)
         }
     }
-}
-
-
-let isUnitlessNumberWithPrefix = {}
-let prefixes = ['Webkit', 'ms', 'Moz', 'O'];
-let prefixKey = (prefix, key) => prefix + key.charAt(0).toUpperCase() + key.substring(1)
-mapValue(isUnitlessNumber, (_, prop) => {
-	eachItem(prefixes, prefix => 
-		isUnitlessNumberWithPrefix[prefixKey(prefix, prop)] = true
-	)
-})
-mapValue(isUnitlessNumberWithPrefix, (value, key) => {
-	isUnitlessNumber[key] = value
-})
-
-let RE_NUMBER = /^-?\d+(\.\d+)?$/
-function setStyleValue(style, key, value) {
-	if (!isUnitlessNumber[key] && RE_NUMBER.test(value)) {
-		style[key] = value + 'px'
-	} else {
-		if (key === 'float') {
-			key = 'cssFloat' in style ? 'cssFloat' : 'styleFloat'
-		}
-		style[key] = (value == null || typeof value === 'boolean') ? '' : value
-	}
 }
 
 if (!Object.freeze) {
-	Object.freeze = identity
+    Object.freeze = identity
 }

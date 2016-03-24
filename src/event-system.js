@@ -1,8 +1,30 @@
 import { updateQueue } from './Component'
-import { eventNameAlias, notBubbleEvents } from './constant'
+
+
+const TRUE = true
+
+// event config
+export const notBubbleEvents = {
+    onmouseleave: TRUE,
+    onmouseenter: TRUE,
+    onload: TRUE,
+    onunload: TRUE,
+    onscroll: TRUE,
+    onfocus: TRUE,
+    onblur: TRUE,
+    onrowexit: TRUE,
+    onbeforeunload: TRUE,
+    onstop: TRUE,
+    ondragdrop: TRUE,
+    ondragenter: TRUE,
+    ondragexit: TRUE,
+    ondraggesture: TRUE,
+    ondragover: TRUE,
+    oncontextmenu: TRUE
+}
 
 export function getEventName(key) {
-	key = eventNameAlias[key] || key
+	key = key === 'onDoubleClick' ? 'ondblclick' : key
 	return key.toLowerCase()
 }
 
@@ -10,7 +32,7 @@ let eventTypes = {}
 export function addEvent(elem, eventType, listener) {
 	eventType = getEventName(eventType)
 
-	if (notBubbleEvents[eventType] === true) {
+	if (notBubbleEvents[eventType] === TRUE) {
 		elem[eventType] = listener
 		return
 	}
@@ -33,7 +55,7 @@ export function addEvent(elem, eventType, listener) {
 
 export function removeEvent(elem, eventType) {
 	eventType = getEventName(eventType)
-	if (notBubbleEvents[eventType] === true) {
+	if (notBubbleEvents[eventType] === TRUE) {
 		elem[eventType] = null
 		return
 	}
