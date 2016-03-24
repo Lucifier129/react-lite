@@ -105,7 +105,8 @@ function initVelem(velem, parentContext, namespaceURI) {
         node.appendChild(initVnode(vchildren[i], parentContext, namespaceURI));
     }
 
-    setProps(node, props);
+    var isCustomComponent = type.indexOf('-') >= 0 || props.is != null;
+    setProps(node, props, isCustomComponent);
 
     if (velem.ref !== null) {
         attachRef(velem.refs, velem.ref, node);
@@ -122,6 +123,7 @@ function collectChild(child, children) {
 
 function updateVelem(velem, newVelem, node, parentContext) {
     var props = velem.props;
+    var type = velem.type;
 
     var newProps = newVelem.props;
     var oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html;
@@ -130,6 +132,7 @@ function updateVelem(velem, newVelem, node, parentContext) {
     var childNodes = node.childNodes;
     var namespaceURI = node.namespaceURI;
 
+    var isCustomComponent = type.indexOf('-') >= 0 || props.is != null;
     var vchildrenLen = vchildren.length;
     var newVchildren = node.vchildren = [];
 
@@ -168,7 +171,7 @@ function updateVelem(velem, newVelem, node, parentContext) {
             if (vnode === null) {
                 continue;
             }
-            var type = vnode.type;
+            var _type = vnode.type;
             var key = vnode.key;
             var _refs = vnode.refs;
 
@@ -179,7 +182,7 @@ function updateVelem(velem, newVelem, node, parentContext) {
                     continue;
                 }
                 var newVnode = newVchildren[j];
-                if (newVnode.type === type && newVnode.key === key && newVnode.refs === _refs) {
+                if (newVnode.type === _type && newVnode.key === key && newVnode.refs === _refs) {
                     patches[j] = {
                         vnode: vnode,
                         node: childNode
@@ -230,10 +233,10 @@ function updateVelem(velem, newVelem, node, parentContext) {
                 node.insertBefore(newChildNode, childNodes[i] || null);
             }
         }
-        patchProps(node, props, newProps);
+        patchProps(node, props, newProps, isCustomComponent);
     } else {
         // should patch props first, make sure innerHTML was cleared
-        patchProps(node, props, newProps);
+        patchProps(node, props, newProps, isCustomComponent);
         for (var i = 0; i < newVchildrenLen; i++) {
             node.appendChild(initVnode(newVchildren[i], parentContext, namespaceURI));
         }
@@ -724,26 +727,24 @@ function shouldUpdate(component, nextProps, nextState, nextContext, callback) {
 	component.forceUpdate(callback);
 }
 
-var TRUE = true;
-
 // event config
 var notBubbleEvents = {
-	onmouseleave: TRUE,
-	onmouseenter: TRUE,
-	onload: TRUE,
-	onunload: TRUE,
-	onscroll: TRUE,
-	onfocus: TRUE,
-	onblur: TRUE,
-	onrowexit: TRUE,
-	onbeforeunload: TRUE,
-	onstop: TRUE,
-	ondragdrop: TRUE,
-	ondragenter: TRUE,
-	ondragexit: TRUE,
-	ondraggesture: TRUE,
-	ondragover: TRUE,
-	oncontextmenu: TRUE
+	onmouseleave: 1,
+	onmouseenter: 1,
+	onload: 1,
+	onunload: 1,
+	onscroll: 1,
+	onfocus: 1,
+	onblur: 1,
+	onrowexit: 1,
+	onbeforeunload: 1,
+	onstop: 1,
+	ondragdrop: 1,
+	ondragenter: 1,
+	ondragexit: 1,
+	ondraggesture: 1,
+	ondragover: 1,
+	oncontextmenu: 1
 };
 
 function getEventName(key) {
@@ -756,7 +757,7 @@ var eventTypes = {};
 function addEvent(elem, eventType, listener) {
 	eventType = getEventName(eventType);
 
-	if (notBubbleEvents[eventType] === TRUE) {
+	if (notBubbleEvents[eventType] === 1) {
 		elem[eventType] = listener;
 		return;
 	}
@@ -779,7 +780,7 @@ function addEvent(elem, eventType, listener) {
 
 function removeEvent(elem, eventType) {
 	eventType = getEventName(eventType);
-	if (notBubbleEvents[eventType] === TRUE) {
+	if (notBubbleEvents[eventType] === 1) {
 		elem[eventType] = null;
 		return;
 	}
@@ -892,42 +893,42 @@ function patchStyle(elemStyle, style, newStyle) {
  * CSS properties which accept numbers but are not in units of "px".
  */
 var isUnitlessNumber = {
-    animationIterationCount: true,
-    borderImageOutset: true,
-    borderImageSlice: true,
-    borderImageWidth: true,
-    boxFlex: true,
-    boxFlexGroup: true,
-    boxOrdinalGroup: true,
-    columnCount: true,
-    flex: true,
-    flexGrow: true,
-    flexPositive: true,
-    flexShrink: true,
-    flexNegative: true,
-    flexOrder: true,
-    gridRow: true,
-    gridColumn: true,
-    fontWeight: true,
-    lineClamp: true,
-    lineHeight: true,
-    opacity: true,
-    order: true,
-    orphans: true,
-    tabSize: true,
-    widows: true,
-    zIndex: true,
-    zoom: true,
+    animationIterationCount: 1,
+    borderImageOutset: 1,
+    borderImageSlice: 1,
+    borderImageWidth: 1,
+    boxFlex: 1,
+    boxFlexGroup: 1,
+    boxOrdinalGroup: 1,
+    columnCount: 1,
+    flex: 1,
+    flexGrow: 1,
+    flexPositive: 1,
+    flexShrink: 1,
+    flexNegative: 1,
+    flexOrder: 1,
+    gridRow: 1,
+    gridColumn: 1,
+    fontWeight: 1,
+    lineClamp: 1,
+    lineHeight: 1,
+    opacity: 1,
+    order: 1,
+    orphans: 1,
+    tabSize: 1,
+    widows: 1,
+    zIndex: 1,
+    zoom: 1,
 
     // SVG-related properties
-    fillOpacity: true,
-    floodOpacity: true,
-    stopOpacity: true,
-    strokeDasharray: true,
-    strokeDashoffset: true,
-    strokeMiterlimit: true,
-    strokeOpacity: true,
-    strokeWidth: true
+    fillOpacity: 1,
+    floodOpacity: 1,
+    stopOpacity: 1,
+    strokeDasharray: 1,
+    strokeDashoffset: 1,
+    strokeMiterlimit: 1,
+    strokeOpacity: 1,
+    strokeWidth: 1
 };
 
 function prefixKey(prefix, key) {
@@ -938,7 +939,7 @@ var prefixes = ['Webkit', 'ms', 'Moz', 'O'];
 
 Object.keys(isUnitlessNumber).forEach(function (prop) {
     prefixes.forEach(function (prefix) {
-        isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop];
+        isUnitlessNumber[prefixKey(prefix, prop)] = 1;
     });
 });
 
@@ -950,8 +951,8 @@ function setStyleValue(elemStyle, styleName, styleValue) {
         return;
     }
 
-    if (styleName === 'float' || styleName === 'cssFloat') {
-        styleName = styleFloatAccessor;
+    if (styleName === 'float') {
+        styleName = 'cssFloat';
     }
 
     if (styleValue == null || typeof styleValue === 'boolean') {
@@ -1453,7 +1454,7 @@ Object.keys(ATTRS).map(function (key) {
     }
 });
 
-// merge html and svg cofig into properties
+// merge html and svg config into properties
 mergeConfigToProperties(HTMLDOMPropertyConfig);
 mergeConfigToProperties(SVGDOMPropertyConfig);
 
@@ -1501,7 +1502,7 @@ function checkMask(value, bitmask) {
  * @param {*} value
  */
 
-function setPropValue(node, name, value, isCustomComponent) {
+function setPropValue(node, name, value) {
     var propInfo = properties.hasOwnProperty(name) && properties[name];
     if (propInfo) {
         // should delete value from dom
@@ -1591,14 +1592,6 @@ function eachItem(list, iteratee) {
     }
 }
 
-function mapValue(obj, iteratee) {
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            iteratee(obj[key], key);
-        }
-    }
-}
-
 function extend(to, from) {
     if (!from) {
         return to;
@@ -1620,9 +1613,7 @@ function getUid() {
 }
 
 var EVENT_KEYS = /^on/i;
-function setProps(elem, props) {
-    var isCustomComponent = elem.tagName.indexOf('-') >= 0 || props.is != null;
-
+function setProps(elem, props, isCustomComponent) {
     for (var key in props) {
         if (!props.hasOwnProperty(key) || key === 'children') {
             continue;
@@ -1647,6 +1638,12 @@ function setProps(elem, props) {
 }
 
 function patchProp(key, oldValue, value, elem, isCustomComponent) {
+    if (key === 'value' || key === 'checked') {
+        oldValue = elem[key];
+    }
+    if (value === oldValue) {
+        return;
+    }
     if (value === undefined) {
         if (EVENT_KEYS.test(key)) {
             removeEvent(elem, key);
@@ -1661,12 +1658,6 @@ function patchProp(key, oldValue, value, elem, isCustomComponent) {
         }
         return;
     }
-    if (key === 'value' || key === 'checked') {
-        oldValue = elem[key];
-    }
-    if (value === oldValue) {
-        return;
-    }
     if (EVENT_KEYS.test(key)) {
         // addEvent will replace the oldValue
         addEvent(elem, key, value);
@@ -1679,7 +1670,7 @@ function patchProp(key, oldValue, value, elem, isCustomComponent) {
             elem.innerHTML = html;
         }
     } else if (isCustomComponent) {
-        if (value === null) {
+        if (value == null) {
             elem.removeAttribute(key);
         } else {
             elem.setAttribute(key, '' + value);
@@ -1689,8 +1680,7 @@ function patchProp(key, oldValue, value, elem, isCustomComponent) {
     }
 }
 
-function patchProps(elem, props, newProps) {
-    var isCustomComponent = elem.tagName.indexOf('-') >= 0 || props.is != null;
+function patchProps(elem, props, newProps, isCustomComponent) {
     var keyMap = { children: true };
     for (var key in props) {
         if (props.hasOwnProperty(key) && key !== 'children') {
@@ -2064,10 +2054,14 @@ function eachMixin(mixins, iteratee) {
 }
 
 function combineMixinToProto(proto, mixin) {
-	mapValue(mixin, function (value, key) {
+	for (var key in mixin) {
+		if (!mixin.hasOwnProperty(key)) {
+			continue;
+		}
+		var value = mixin[key];
 		if (key === 'getInitialState') {
 			proto.$getInitialStates.push(value);
-			return;
+			continue;
 		}
 		var curValue = proto[key];
 		if (isFn(curValue) && isFn(value)) {
@@ -2075,7 +2069,7 @@ function combineMixinToProto(proto, mixin) {
 		} else {
 			proto[key] = value;
 		}
-	});
+	}
 }
 
 function combineMixinToClass(Component, mixin) {
@@ -2088,11 +2082,13 @@ function combineMixinToClass(Component, mixin) {
 }
 
 function bindContext(obj, source) {
-	mapValue(source, function (value, key) {
-		if (isFn(value)) {
-			obj[key] = value.bind(obj);
+	for (var key in source) {
+		if (source.hasOwnProperty(key)) {
+			if (isFn(source[key])) {
+				obj[key] = source[key].bind(obj);
+			}
 		}
-	});
+	}
 }
 
 var Facade = function Facade() {};

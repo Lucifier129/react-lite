@@ -52,42 +52,42 @@ export function patchStyle(elemStyle, style, newStyle) {
  * CSS properties which accept numbers but are not in units of "px".
  */
 const isUnitlessNumber = {
-    animationIterationCount: true,
-    borderImageOutset: true,
-    borderImageSlice: true,
-    borderImageWidth: true,
-    boxFlex: true,
-    boxFlexGroup: true,
-    boxOrdinalGroup: true,
-    columnCount: true,
-    flex: true,
-    flexGrow: true,
-    flexPositive: true,
-    flexShrink: true,
-    flexNegative: true,
-    flexOrder: true,
-    gridRow: true,
-    gridColumn: true,
-    fontWeight: true,
-    lineClamp: true,
-    lineHeight: true,
-    opacity: true,
-    order: true,
-    orphans: true,
-    tabSize: true,
-    widows: true,
-    zIndex: true,
-    zoom: true,
+    animationIterationCount: 1,
+    borderImageOutset: 1,
+    borderImageSlice: 1,
+    borderImageWidth: 1,
+    boxFlex: 1,
+    boxFlexGroup: 1,
+    boxOrdinalGroup: 1,
+    columnCount: 1,
+    flex: 1,
+    flexGrow: 1,
+    flexPositive: 1,
+    flexShrink: 1,
+    flexNegative: 1,
+    flexOrder: 1,
+    gridRow: 1,
+    gridColumn: 1,
+    fontWeight: 1,
+    lineClamp: 1,
+    lineHeight: 1,
+    opacity: 1,
+    order: 1,
+    orphans: 1,
+    tabSize: 1,
+    widows: 1,
+    zIndex: 1,
+    zoom: 1,
 
     // SVG-related properties
-    fillOpacity: true,
-    floodOpacity: true,
-    stopOpacity: true,
-    strokeDasharray: true,
-    strokeDashoffset: true,
-    strokeMiterlimit: true,
-    strokeOpacity: true,
-    strokeWidth: true,
+    fillOpacity: 1,
+    floodOpacity: 1,
+    stopOpacity: 1,
+    strokeDasharray: 1,
+    strokeDashoffset: 1,
+    strokeMiterlimit: 1,
+    strokeOpacity: 1,
+    strokeWidth: 1,
 }
 
 function prefixKey(prefix, key) {
@@ -98,7 +98,7 @@ let prefixes = ['Webkit', 'ms', 'Moz', 'O']
 
 Object.keys(isUnitlessNumber).forEach(function(prop) {
     prefixes.forEach(function(prefix) {
-        isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop]
+        isUnitlessNumber[prefixKey(prefix, prop)] = 1
     })
 })
 
@@ -110,8 +110,8 @@ function setStyleValue(elemStyle, styleName, styleValue) {
         return
     }
 
-    if (styleName === 'float' || styleName === 'cssFloat') {
-        styleName = styleFloatAccessor
+    if (styleName === 'float') {
+        styleName = 'cssFloat'
     }
 
     if (styleValue == null || typeof styleValue === 'boolean') {

@@ -1,26 +1,23 @@
 import { updateQueue } from './Component'
 
-
-const TRUE = true
-
 // event config
 export const notBubbleEvents = {
-    onmouseleave: TRUE,
-    onmouseenter: TRUE,
-    onload: TRUE,
-    onunload: TRUE,
-    onscroll: TRUE,
-    onfocus: TRUE,
-    onblur: TRUE,
-    onrowexit: TRUE,
-    onbeforeunload: TRUE,
-    onstop: TRUE,
-    ondragdrop: TRUE,
-    ondragenter: TRUE,
-    ondragexit: TRUE,
-    ondraggesture: TRUE,
-    ondragover: TRUE,
-    oncontextmenu: TRUE
+    onmouseleave: 1,
+    onmouseenter: 1,
+    onload: 1,
+    onunload: 1,
+    onscroll: 1,
+    onfocus: 1,
+    onblur: 1,
+    onrowexit: 1,
+    onbeforeunload: 1,
+    onstop: 1,
+    ondragdrop: 1,
+    ondragenter: 1,
+    ondragexit: 1,
+    ondraggesture: 1,
+    ondragover: 1,
+    oncontextmenu: 1
 }
 
 export function getEventName(key) {
@@ -32,7 +29,7 @@ let eventTypes = {}
 export function addEvent(elem, eventType, listener) {
 	eventType = getEventName(eventType)
 
-	if (notBubbleEvents[eventType] === TRUE) {
+	if (notBubbleEvents[eventType] === 1) {
 		elem[eventType] = listener
 		return
 	}
@@ -55,7 +52,7 @@ export function addEvent(elem, eventType, listener) {
 
 export function removeEvent(elem, eventType) {
 	eventType = getEventName(eventType)
-	if (notBubbleEvents[eventType] === TRUE) {
+	if (notBubbleEvents[eventType] === 1) {
 		elem[eventType] = null
 		return
 	}
@@ -95,7 +92,6 @@ function dispatchEvent(event) {
 	updateQueue.isPending = false
 	updateQueue.batchUpdate()
 }
-
 
 function createSyntheticEvent(nativeEvent) {
     let syntheticEvent = {}

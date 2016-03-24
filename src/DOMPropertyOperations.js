@@ -14,7 +14,7 @@ import {
  * @param {string} name
  * @param {*} value
  */
-export function setPropValue(node, name, value, isCustomComponent) {
+export function setPropValue(node, name, value) {
     let propInfo = properties.hasOwnProperty(name) && properties[name]
     if (propInfo) {
         // should delete value from dom

@@ -97,7 +97,8 @@ function initVelem(velem, parentContext, namespaceURI) {
         node.appendChild(initVnode(vchildren[i], parentContext, namespaceURI))
     }
 
-    _.setProps(node, props)
+    let isCustomComponent = type.indexOf('-') >= 0 || props.is != null
+    _.setProps(node, props, isCustomComponent)
 
     if (velem.ref !== null) {
         attachRef(velem.refs, velem.ref, node)
@@ -113,11 +114,12 @@ function collectChild(child, children) {
 }
 
 function updateVelem(velem, newVelem, node, parentContext) {
-    let { props } = velem
+    let { props, type } = velem
     let newProps = newVelem.props
     let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
     let newChildren = newProps.children
     let { vchildren, childNodes, namespaceURI } = node
+    let isCustomComponent = type.indexOf('-') >= 0 || props.is != null
     let vchildrenLen = vchildren.length
     let newVchildren = node.vchildren = []
 
@@ -214,10 +216,10 @@ function updateVelem(velem, newVelem, node, parentContext) {
                 node.insertBefore(newChildNode, childNodes[i] || null)
             }
         }
-        _.patchProps(node, props, newProps)
+        _.patchProps(node, props, newProps, isCustomComponent)
     } else {
         // should patch props first, make sure innerHTML was cleared 
-        _.patchProps(node, props, newProps)
+        _.patchProps(node, props, newProps, isCustomComponent)
         for (let i = 0; i < newVchildrenLen; i++) {
             node.appendChild(initVnode(newVchildren[i], parentContext, namespaceURI))
         }

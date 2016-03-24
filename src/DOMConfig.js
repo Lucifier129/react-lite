@@ -500,7 +500,7 @@ Object.keys(ATTRS).map((key) => {
 })
 
 
-// merge html and svg cofig into properties
+// merge html and svg config into properties
 mergeConfigToProperties(HTMLDOMPropertyConfig)
 mergeConfigToProperties(SVGDOMPropertyConfig)
 

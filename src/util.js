@@ -47,14 +47,6 @@ export function eachItem(list, iteratee) {
     }
 }
 
-export function mapValue(obj, iteratee) {
-    for (let key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            iteratee(obj[key], key)
-        }
-    }
-}
-
 export function extend(to, from) {
     if (!from) {
         return to
@@ -76,9 +68,7 @@ export function getUid() {
 }
 
 export let EVENT_KEYS = /^on/i
-export function setProps(elem, props) {
-    let isCustomComponent = elem.tagName.indexOf('-') >= 0 || props.is != null
-
+export function setProps(elem, props, isCustomComponent) {
     for (let key in props) {
         if (!props.hasOwnProperty(key) || key === 'children') {
             continue
@@ -103,6 +93,12 @@ export function setProps(elem, props) {
 }
 
 function patchProp(key, oldValue, value, elem, isCustomComponent) {
+    if (key === 'value' || key === 'checked') {
+        oldValue = elem[key]
+    }
+    if (value === oldValue) {
+        return
+    }
     if (value === undefined) {
         if (EVENT_KEYS.test(key)) {
             removeEvent(elem, key)
@@ -117,12 +113,6 @@ function patchProp(key, oldValue, value, elem, isCustomComponent) {
         }
         return
     }
-    if (key === 'value' || key === 'checked') {
-        oldValue = elem[key]
-    }
-    if (value === oldValue) {
-        return
-    }
     if (EVENT_KEYS.test(key)) {
         // addEvent will replace the oldValue
         addEvent(elem, key, value)
@@ -135,7 +125,7 @@ function patchProp(key, oldValue, value, elem, isCustomComponent) {
             elem.innerHTML = html
         }
     } else if (isCustomComponent) {
-        if (value === null) {
+        if (value == null) {
             elem.removeAttribute(key)
         } else {
             elem.setAttribute(key, '' + value)
@@ -145,8 +135,7 @@ function patchProp(key, oldValue, value, elem, isCustomComponent) {
     }
 }
 
-export function patchProps(elem, props, newProps) {
-    let isCustomComponent = elem.tagName.indexOf('-') >= 0 || props.is != null
+export function patchProps(elem, props, newProps, isCustomComponent) {
     let keyMap = { children: true }
     for (let key in props) {
         if (props.hasOwnProperty(key) && key !== 'children') {
