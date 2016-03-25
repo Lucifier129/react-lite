@@ -63,6 +63,10 @@ const HTMLDOMPropertyConfig = {
         data: 0, // For `<object />` acts as `src`.
         dateTime: 0,
         default: HAS_BOOLEAN_VALUE,
+        // not in regular react, they did it in other way
+        defaultValue: MUST_USE_PROPERTY,
+        // not in regular react, they did it in other way
+        defaultChecked: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
         defer: HAS_BOOLEAN_VALUE,
         dir: 0,
         disabled: HAS_BOOLEAN_VALUE,
