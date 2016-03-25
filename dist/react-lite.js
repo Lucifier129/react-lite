@@ -112,16 +112,14 @@
       var isCustomComponent = type.indexOf('-') >= 0 || props.is != null;
       setProps(node, props, isCustomComponent);
 
-      if (velem.ref !== null) {
-          attachRef(velem.refs, velem.ref, node);
-      }
+      attachRef(velem.refs, velem.ref, node);
 
       return node;
   }
 
   function collectChild(child, children) {
       if (child != null && typeof child !== 'boolean') {
-          children.push(child.vtype ? child : '' + child);
+          children[children.length] = child.vtype ? child : '' + child;
       }
   }
 
@@ -198,7 +196,8 @@
               if (!shouldRemove) {
                   shouldRemove = [];
               }
-              shouldRemove.push(childNode);
+              shouldRemove[shouldRemove.length] = childNode;
+              // shouldRemove.push(childNode)
               destroyVnode(vnode, childNode);
           }
 
@@ -218,15 +217,15 @@
                       var vtype = newVnode.vtype;
                       if (!vtype) {
                           // textNode
-                          // newChildNode.nodeValue = newVnode
-                          newChildNode.replaceData(0, vnode.length, newVnode);
+                          newChildNode.nodeValue = newVnode;
+                          // newChildNode.replaceData(0, vnode.length, newVnode)
                       } else if (vtype === VELEMENT) {
-                          newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext);
-                      } else if (vtype === VCOMPONENT) {
-                          newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext);
-                      } else if (vtype === VSTATELESS) {
-                          newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext);
-                      }
+                              newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext);
+                          } else if (vtype === VCOMPONENT) {
+                              newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext);
+                          } else if (vtype === VSTATELESS) {
+                              newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext);
+                          }
                   }
                   var currentNode = childNodes[i];
                   if (currentNode !== newChildNode) {
@@ -245,13 +244,9 @@
               node.appendChild(initVnode(newVchildren[i], parentContext, namespaceURI));
           }
       }
-      if (velem.ref !== null) {
-          if (newVelem.ref !== null) {
-              attachRef(newVelem.refs, newVelem.ref, node);
-          } else {
-              detachRef(velem.refs, velem.ref);
-          }
-      } else if (newVelem.ref !== null) {
+
+      if (velem.ref !== newVelem.ref) {
+          detachRef(velem.refs, velem.ref);
           attachRef(newVelem.refs, newVelem.ref, node);
       }
       return node;
@@ -266,9 +261,8 @@
           destroyVnode(vchildren[i], childNodes[i]);
       }
 
-      if (velem.ref !== null) {
-          detachRef(velem.refs, velem.ref);
-      }
+      detachRef(velem.refs, velem.ref);
+
       node.eventStore = node.vchildren = null;
       for (var key in props) {
           if (props.hasOwnProperty(key) && EVENT_KEYS.test(key)) {
@@ -350,9 +344,7 @@
       cache.node = node;
       cache.isMounted = true;
       pendingComponents.push(component);
-      if (vcomponent.ref !== null) {
-          attachRef(vcomponent.refs, vcomponent.ref, component);
-      }
+      attachRef(vcomponent.refs, vcomponent.ref, component);
       return node;
   }
   function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
@@ -373,13 +365,9 @@
           updater.isPending = false;
       }
       updater.emitUpdate(nextProps, componentContext);
-      if (vcomponent.ref !== null) {
-          if (newVcomponent.ref !== null) {
-              attachRef(newVcomponent.refs, newVcomponent.ref, component);
-          } else {
-              detachRef(vcomponent.refs, vcomponent.ref);
-          }
-      } else if (newVcomponent.ref !== null) {
+
+      if (vcomponent.ref !== newVcomponent.ref) {
+          detachRef(vcomponent.refs, vcomponent.ref);
           attachRef(newVcomponent.refs, newVcomponent.ref, component);
       }
       return cache.node;
@@ -389,9 +377,7 @@
       var component = node.cache[id];
       var cache = component.$cache;
       delete node.cache[id];
-      if (vcomponent.ref !== null) {
-          detachRef(vcomponent.refs, vcomponent.ref);
-      }
+      detachRef(vcomponent.refs, vcomponent.ref);
       component.setState = component.forceUpdate = noop;
       if (component.componentWillUnmount) {
           component.componentWillUnmount();
@@ -1000,8 +986,7 @@
           alt: 0,
           async: HAS_BOOLEAN_VALUE,
           autoComplete: 0,
-          // autoFocus is polyfilled/normalized by AutoFocusUtils
-          // autoFocus: HAS_BOOLEAN_VALUE,
+          autoFocus: HAS_BOOLEAN_VALUE,
           autoPlay: HAS_BOOLEAN_VALUE,
           capture: HAS_BOOLEAN_VALUE,
           cellPadding: 0,

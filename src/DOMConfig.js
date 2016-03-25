@@ -40,8 +40,7 @@ const HTMLDOMPropertyConfig = {
         alt: 0,
         async: HAS_BOOLEAN_VALUE,
         autoComplete: 0,
-        // autoFocus is polyfilled/normalized by AutoFocusUtils
-        // autoFocus: HAS_BOOLEAN_VALUE,
+        autoFocus: HAS_BOOLEAN_VALUE,
         autoPlay: HAS_BOOLEAN_VALUE,
         capture: HAS_BOOLEAN_VALUE,
         cellPadding: 0,
