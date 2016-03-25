@@ -110,7 +110,7 @@ export default function Component(props, context) {
 	this.props = props
 	this.state = {}
 	this.refs = {}
-	this.context = context || {}
+	this.context = context
 }
 
 Component.prototype = {
