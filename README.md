@@ -18,7 +18,7 @@ react-lite is an implementation of React that optimizes for small script size.
 | Riot                   | 2.3.11     | 20kb          |
 | React-lite             | 0.15.6     | 25kb          |
 
-It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
+React-lite supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no `React.renderToString` & `React.renderToStaticMarkup`).
 
 If you are using webpack, it's so easy to use react-lite, just [config alias](http://webpack.github.io/docs/configuration.html#resolve-alias) in webpack.config.js:
@@ -35,10 +35,10 @@ If you are using webpack, it's so easy to use react-lite, just [config alias](ht
 }
 ```
 
-Note: feel free to try react-lite, if something happen and we can't fixed in time, then use [regular react](https://github.com/facebook/react) instead.
+Note: feel free to try react-lite, if something happen and we can't fix it in time, then use [regular react](https://github.com/facebook/react) instead.
 ## Installation
 
-you can install react-lite from npm
+You can install react-lite from npm:
 
 ```shell
 npm install react-lite --save
@@ -47,7 +47,6 @@ npm install react-lite --save
 ## Browser compatibility
 
 supports IE9+ / ES5 enviroment
-
 
 ## Documentation
 
@@ -76,7 +75,6 @@ just the same as what react does, see some demos below(I just add the alias to w
 ## React-lite vs React
 
 via react-lite:
-- In browser, virtual-dom can not render to string(no `React.renderToString` and `React.renderToStaticMarkup`)
 - all of React.PropTypes method is no-op(empty function)
 - use React in server side rendering, and use React-lite in browser
 	* react-lite will replace the dom tree with new dom tree
