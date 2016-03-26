@@ -20,7 +20,7 @@ react-lite is an implementation of React that optimizes for small script size.
 | Riot                   | 2.3.11     | 20kb          |
 | React-lite             | 0.15.6     | 20kb          |
 
-It supports the core APIs of React, such as Virtual DOM, intended as a drop-in
+React-lite supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no `React.renderToString` & `React.renderToStaticMarkup`).
 
 If you are using webpack, it's so easy to use react-lite, just [config alias](http://webpack.github.io/docs/configuration.html#resolve-alias) in webpack.config.js:
@@ -37,10 +37,10 @@ If you are using webpack, it's so easy to use react-lite, just [config alias](ht
 }
 ```
 
-Note: feel free to try react-lite, if something happen and we can't fixed in time, then use [regular react](https://github.com/facebook/react) instead.
+Note: feel free to try react-lite, if something happen and we can't fix it in time, then use [regular react](https://github.com/facebook/react) instead.
 ## Installation
 
-you can install react-lite from npm
+You can install react-lite from npm:
 
 ```shell
 npm install react-lite --save
@@ -49,7 +49,6 @@ npm install react-lite --save
 ## Browser compatibility
 
 supports IE9+ / ES5 enviroment
-
 
 ## Documentation
 
@@ -84,8 +83,8 @@ via react-lite:
 	* react-lite will replace the dom tree with new dom tree
 	* you had better avoid `script|head|link` tag in client side
 - can not use react-dev-tool inspect react-lite, should switch to regular react for debugging
-- handle props by different way
-	* react-lite simply `setAttribute` if `!(propName in elem)` return true
+- handle props in a different way
+	* react-lite simply `setAttribute` if `!(propName in elem)` returns true
 
 ## Test
 react-lite reuses react's unitest(170), you can see them in `__test__`, and run the tests with:
