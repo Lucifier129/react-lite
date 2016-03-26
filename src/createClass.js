@@ -13,10 +13,14 @@ function eachMixin (mixins, iteratee) {
 }
 
 function combineMixinToProto(proto, mixin) {
-	_.mapValue(mixin, (value, key) => {
+	for (let key in mixin) {
+		if (!mixin.hasOwnProperty(key)) {
+			continue
+		}
+		let value = mixin[key]
 		if (key === 'getInitialState') {
 			proto.$getInitialStates.push(value)
-			return
+			continue
 		}
 		let curValue = proto[key]
 		if (_.isFn(curValue) && _.isFn(value)) {
@@ -24,7 +28,7 @@ function combineMixinToProto(proto, mixin) {
 		} else {
 			proto[key] = value
 		}
-	})
+	}
 }
 
 function combineMixinToClass(Component, mixin) {
@@ -37,11 +41,13 @@ function combineMixinToClass(Component, mixin) {
 }
 
 function bindContext(obj, source) {
-	_.mapValue(source, (value, key) => {
-		if (_.isFn(value)) {
-			obj[key] = value.bind(obj)
+	for (let key in source) {
+		if (source.hasOwnProperty(key)) {
+			if (_.isFn(source[key])) {
+				obj[key] = source[key].bind(obj)
+			}
 		}
-	})
+	}
 }
 
 let Facade = function() {}
