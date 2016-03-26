@@ -57,6 +57,7 @@ learn react-lite from [React official documentation](http://facebook.github.io/r
 just the same as what react does, see some demos below(I just add the alias to webpack.config.js, no need to do anything else):
 
 - works with react-bootstrap: [doc demo](http://react-lite-with-bootstrap.herokuapp.com/)
+- works with ant-design: [demo](http://lucifier129.github.io/ant-design/)
 - works with react-router: [examples](http://react-lite-with-react-router.coding.io/)
 - works with redux:
 	* [async](http://lucifier129.github.io/redux-with-react-lite/async/index.html)
