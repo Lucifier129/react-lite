@@ -429,12 +429,15 @@
       return vnode;
   }
 
-  var pendingComponents = [];
-
-  function clearPendingComponents() {
-      var len = pendingComponents.length;
+  function batchUpdateDOM() {
       clearPendingPropsUpdater();
       clearPendingTextUpdater();
+      clearPendingComponents();
+  }
+
+  var pendingComponents = [];
+  function clearPendingComponents() {
+      var len = pendingComponents.length;
       if (!len) {
           return;
       }
@@ -452,7 +455,6 @@
       }
   }
 
-  var pendingPropsUpdater = [];
   var pendingTextUpdater = [];
   var clearPendingTextUpdater = function clearPendingTextUpdater() {
       var len = pendingTextUpdater.length;
@@ -466,6 +468,8 @@
           node.nodeValue = node.newText;
       }
   };
+
+  var pendingPropsUpdater = [];
   var clearPendingPropsUpdater = function clearPendingPropsUpdater() {
       var len = pendingPropsUpdater.length;
       if (!len) {
@@ -703,7 +707,7 @@
   		}
   		$cache.vnode = newVnode;
   		$cache.node = newNode;
-  		clearPendingComponents();
+  		batchUpdateDOM();
   		if (this.componentDidUpdate) {
   			this.componentDidUpdate(props, state, context);
   		}
@@ -1767,7 +1771,7 @@
   	vnodeStore[id] = vnode;
   	var isPending = updateQueue.isPending;
   	updateQueue.isPending = true;
-  	clearPendingComponents();
+  	batchUpdateDOM();
   	argsCache = pendingRendering[id];
   	delete pendingRendering[id];
 

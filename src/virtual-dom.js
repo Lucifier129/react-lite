@@ -397,11 +397,15 @@ export function renderComponent(component, parentContext) {
 	return vnode
 }
 
-let pendingComponents = []
-export function clearPendingComponents() {
-	let len = pendingComponents.length
+export function batchUpdateDOM() {
     clearPendingPropsUpdater()
     clearPendingTextUpdater()
+    clearPendingComponents()
+}
+
+let pendingComponents = []
+function clearPendingComponents() {
+	let len = pendingComponents.length
 	if (!len) {
 		return
 	}
@@ -419,7 +423,6 @@ export function clearPendingComponents() {
     }
 }
 
-let pendingPropsUpdater = []
 let pendingTextUpdater = []
 let clearPendingTextUpdater = () => {
     let len = pendingTextUpdater.length
@@ -433,6 +436,8 @@ let clearPendingTextUpdater = () => {
         node.nodeValue = node.newText
     }
 }
+
+let pendingPropsUpdater = []
 let clearPendingPropsUpdater = () => {
     let len = pendingPropsUpdater.length
     if (!len) {

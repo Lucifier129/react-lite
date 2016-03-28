@@ -425,12 +425,15 @@ function renderComponent(component, parentContext) {
     return vnode;
 }
 
-var pendingComponents = [];
-
-function clearPendingComponents() {
-    var len = pendingComponents.length;
+function batchUpdateDOM() {
     clearPendingPropsUpdater();
     clearPendingTextUpdater();
+    clearPendingComponents();
+}
+
+var pendingComponents = [];
+function clearPendingComponents() {
+    var len = pendingComponents.length;
     if (!len) {
         return;
     }
@@ -448,7 +451,6 @@ function clearPendingComponents() {
     }
 }
 
-var pendingPropsUpdater = [];
 var pendingTextUpdater = [];
 var clearPendingTextUpdater = function clearPendingTextUpdater() {
     var len = pendingTextUpdater.length;
@@ -462,6 +464,8 @@ var clearPendingTextUpdater = function clearPendingTextUpdater() {
         node.nodeValue = node.newText;
     }
 };
+
+var pendingPropsUpdater = [];
 var clearPendingPropsUpdater = function clearPendingPropsUpdater() {
     var len = pendingPropsUpdater.length;
     if (!len) {
@@ -699,7 +703,7 @@ Component.prototype = {
 		}
 		$cache.vnode = newVnode;
 		$cache.node = newNode;
-		clearPendingComponents();
+		batchUpdateDOM();
 		if (this.componentDidUpdate) {
 			this.componentDidUpdate(props, state, context);
 		}
@@ -1763,7 +1767,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	vnodeStore[id] = vnode;
 	var isPending = updateQueue.isPending;
 	updateQueue.isPending = true;
-	clearPendingComponents();
+	batchUpdateDOM();
 	argsCache = pendingRendering[id];
 	delete pendingRendering[id];
 
