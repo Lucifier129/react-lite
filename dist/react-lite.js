@@ -217,7 +217,9 @@
                       var vtype = newVnode.vtype;
                       if (!vtype) {
                           // textNode
-                          newChildNode.nodeValue = newVnode;
+                          newChildNode.newText = newVnode;
+                          pendingTextUpdater[pendingTextUpdater.length] = newChildNode;
+                          // newChildNode.nodeValue = newVnode
                           // newChildNode.replaceData(0, vnode.length, newVnode)
                       } else if (vtype === VELEMENT) {
                               newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext);
@@ -236,7 +238,10 @@
                   node.insertBefore(newChildNode, childNodes[i] || null);
               }
           }
-          patchProps(node, props, newProps, isCustomComponent);
+          node.props = props;
+          node.newProps = newProps;
+          node.isCustomComponent = isCustomComponent;
+          pendingPropsUpdater[pendingPropsUpdater.length] = node;
       } else {
           // should patch props first, make sure innerHTML was cleared
           patchProps(node, props, newProps, isCustomComponent);
@@ -427,11 +432,13 @@
   var pendingComponents = [];
 
   function clearPendingComponents() {
-      var components = pendingComponents;
-      var len = components.length;
+      var len = pendingComponents.length;
+      clearPendingPropsUpdater();
+      clearPendingTextUpdater();
       if (!len) {
           return;
       }
+      var components = pendingComponents;
       pendingComponents = [];
       var i = -1;
       while (len--) {
@@ -444,6 +451,34 @@
           updater.emitUpdate();
       }
   }
+
+  var pendingPropsUpdater = [];
+  var pendingTextUpdater = [];
+  var clearPendingTextUpdater = function clearPendingTextUpdater() {
+      var len = pendingTextUpdater.length;
+      if (!len) {
+          return;
+      }
+      var list = pendingTextUpdater;
+      pendingTextUpdater = [];
+      for (var i = 0; i < len; i++) {
+          var node = list[i];
+          node.nodeValue = node.newText;
+      }
+  };
+  var clearPendingPropsUpdater = function clearPendingPropsUpdater() {
+      var len = pendingPropsUpdater.length;
+      if (!len) {
+          return;
+      }
+      var list = pendingPropsUpdater;
+      pendingPropsUpdater = [];
+      for (var i = 0; i < len; i++) {
+          var node = list[i];
+          patchProps(node, node.props, node.newProps, node.isCustomComponent);
+          node.props = node.newProps = null;
+      }
+  };
 
   function compareTwoVnodes(vnode, newVnode, node, parentContext) {
       var newNode = node;
