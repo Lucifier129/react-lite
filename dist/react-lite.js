@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.6
+ * react-lite.js v0.15.7
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -217,7 +217,9 @@
                       var vtype = newVnode.vtype;
                       if (!vtype) {
                           // textNode
-                          newChildNode.nodeValue = newVnode;
+                          newChildNode.newText = newVnode;
+                          pendingTextUpdater[pendingTextUpdater.length] = newChildNode;
+                          // newChildNode.nodeValue = newVnode
                           // newChildNode.replaceData(0, vnode.length, newVnode)
                       } else if (vtype === VELEMENT) {
                               newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext);
@@ -236,7 +238,10 @@
                   node.insertBefore(newChildNode, childNodes[i] || null);
               }
           }
-          patchProps(node, props, newProps, isCustomComponent);
+          node.props = props;
+          node.newProps = newProps;
+          node.isCustomComponent = isCustomComponent;
+          pendingPropsUpdater[pendingPropsUpdater.length] = node;
       } else {
           // should patch props first, make sure innerHTML was cleared
           patchProps(node, props, newProps, isCustomComponent);
@@ -424,14 +429,19 @@
       return vnode;
   }
 
-  var pendingComponents = [];
+  function batchUpdateDOM() {
+      clearPendingPropsUpdater();
+      clearPendingTextUpdater();
+      clearPendingComponents();
+  }
 
+  var pendingComponents = [];
   function clearPendingComponents() {
-      var components = pendingComponents;
-      var len = components.length;
+      var len = pendingComponents.length;
       if (!len) {
           return;
       }
+      var components = pendingComponents;
       pendingComponents = [];
       var i = -1;
       while (len--) {
@@ -444,6 +454,35 @@
           updater.emitUpdate();
       }
   }
+
+  var pendingTextUpdater = [];
+  var clearPendingTextUpdater = function clearPendingTextUpdater() {
+      var len = pendingTextUpdater.length;
+      if (!len) {
+          return;
+      }
+      var list = pendingTextUpdater;
+      pendingTextUpdater = [];
+      for (var i = 0; i < len; i++) {
+          var node = list[i];
+          node.nodeValue = node.newText;
+      }
+  };
+
+  var pendingPropsUpdater = [];
+  var clearPendingPropsUpdater = function clearPendingPropsUpdater() {
+      var len = pendingPropsUpdater.length;
+      if (!len) {
+          return;
+      }
+      var list = pendingPropsUpdater;
+      pendingPropsUpdater = [];
+      for (var i = 0; i < len; i++) {
+          var node = list[i];
+          patchProps(node, node.props, node.newProps, node.isCustomComponent);
+          node.props = node.newProps = null;
+      }
+  };
 
   function compareTwoVnodes(vnode, newVnode, node, parentContext) {
       var newNode = node;
@@ -668,7 +707,7 @@
   		}
   		$cache.vnode = newVnode;
   		$cache.node = newNode;
-  		clearPendingComponents();
+  		batchUpdateDOM();
   		if (this.componentDidUpdate) {
   			this.componentDidUpdate(props, state, context);
   		}
@@ -1502,7 +1541,11 @@
           if (value == null || propInfo.hasBooleanValue && !value || propInfo.hasNumericValue && isNaN(value) || propInfo.hasPositiveNumericValue && value < 1 || propInfo.hasOverloadedBooleanValue && value === false) {
               removePropValue(node, name);
           } else if (propInfo.mustUseProperty) {
-              node[propInfo.propertyName] = value;
+              var propName = propInfo.propertyName;
+              // dom.value has side effect
+              if (propName !== 'value' || '' + node[propName] !== '' + value) {
+                  node[propName] = value;
+              }
           } else {
               var attributeName = propInfo.attributeName;
               var namespace = propInfo.attributeNamespace;
@@ -1537,7 +1580,15 @@
       var propInfo = properties.hasOwnProperty(name) && properties[name];
       if (propInfo) {
           if (propInfo.mustUseProperty) {
-              node[propInfo.propertyName] = propInfo.hasBooleanValue ? false : '';
+              var propName = propInfo.propertyName;
+              if (propInfo.hasBooleanValue) {
+                  node[propName] = false;
+              } else {
+                  // dom.value accept string value has side effect
+                  if (propName !== 'value' || '' + node[propName] !== '') {
+                      node[propName] = '';
+                  }
+              }
           } else {
               node.removeAttribute(propInfo.attributeName);
           }
@@ -1592,9 +1643,7 @@
       var keys = Object.keys(from);
       var i = keys.length;
       while (i--) {
-          if (from[keys[i]] !== undefined) {
-              to[keys[i]] = from[keys[i]];
-          }
+          to[keys[i]] = from[keys[i]];
       }
       return to;
   }
@@ -1732,7 +1781,7 @@
   	vnodeStore[id] = vnode;
   	var isPending = updateQueue.isPending;
   	updateQueue.isPending = true;
-  	clearPendingComponents();
+  	batchUpdateDOM();
   	argsCache = pendingRendering[id];
   	delete pendingRendering[id];
 
@@ -1856,7 +1905,6 @@
   	var key = null;
   	var ref = null;
   	var finalProps = {};
-  	var propValue = null;
   	if (props != null) {
   		for (var propKey in props) {
   			if (!props.hasOwnProperty(propKey)) {
@@ -1870,8 +1918,8 @@
   				if (props.ref !== undefined) {
   					ref = props.ref;
   				}
-  			} else if ((propValue = props[propKey]) !== undefined) {
-  				finalProps[propKey] = propValue;
+  			} else {
+  				finalProps[propKey] = props[propKey];
   			}
   		}
   	}
