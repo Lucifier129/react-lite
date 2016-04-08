@@ -232,41 +232,41 @@ let update = count => {
 }
 
 let num = 10
-// update()
+update()
 
-const context = {
-    THIS_IS_IMPORTANT: function() {}
-}
+// const context = {
+//     THIS_IS_IMPORTANT: function() {}
+// }
 
-class ContextProvider extends React.Component {
-    static childContextTypes = context;
+// class ContextProvider extends React.Component {
+//     static childContextTypes = context;
 
-    getChildContext() {
-        return this.props.context
-    }
+//     getChildContext() {
+//         return this.props.context
+//     }
 
-    render() {
-        return this.props.children
-    }
-}
+//     render() {
+//         return this.props.children
+//     }
+// }
 
-class Test extends React.Component {
+// class Test extends React.Component {
 
-    static contextTypes = context;
+//     static contextTypes = context;
 
-    // We added THIS constructor
-    constructor(props) {
-        super(props)
-    }
+//     // We added THIS constructor
+//     constructor(props) {
+//         super(props)
+//     }
 
-    render() {
-        console.info('This should NOT be undefined:', this.context.THIS_IS_IMPORTANT)
-        return <div>Test1</div>
-    }
-}
+//     render() {
+//         console.info('This should NOT be undefined:', this.context.THIS_IS_IMPORTANT)
+//         return <div>Test1</div>
+//     }
+// }
 
-// Render HTML on the browser
-React.render(<ContextProvider context={context}><Test/></ContextProvider>, document.body)
+// // Render HTML on the browser
+// React.render(<ContextProvider context={context}><Test/></ContextProvider>, document.body)
 
 
 

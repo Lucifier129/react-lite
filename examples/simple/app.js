@@ -46,14 +46,6 @@
 
 	'use strict';
 
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 	if (typeof requestAnimationFrame === 'undefined') {
 		window.requestAnimationFrame = function (fn) {
 			return setTimeout(fn, 100 / 6);
@@ -342,79 +334,41 @@
 	};
 
 	var num = 10;
-	// update()
+	update();
 
-	var context = {
-		THIS_IS_IMPORTANT: function THIS_IS_IMPORTANT() {}
-	};
+	// const context = {
+	//     THIS_IS_IMPORTANT: function() {}
+	// }
 
-	var ContextProvider = (function (_React$Component) {
-		_inherits(ContextProvider, _React$Component);
+	// class ContextProvider extends React.Component {
+	//     static childContextTypes = context;
 
-		function ContextProvider() {
-			_classCallCheck(this, ContextProvider);
+	//     getChildContext() {
+	//         return this.props.context
+	//     }
 
-			_get(Object.getPrototypeOf(ContextProvider.prototype), 'constructor', this).apply(this, arguments);
-		}
+	//     render() {
+	//         return this.props.children
+	//     }
+	// }
 
-		_createClass(ContextProvider, [{
-			key: 'getChildContext',
-			value: function getChildContext() {
-				return this.props.context;
-			}
-		}, {
-			key: 'render',
-			value: function render() {
-				return this.props.children;
-			}
-		}], [{
-			key: 'childContextTypes',
-			value: context,
-			enumerable: true
-		}]);
+	// class Test extends React.Component {
 
-		return ContextProvider;
-	})(React.Component);
+	//     static contextTypes = context;
 
-	var Test = (function (_React$Component2) {
-		_inherits(Test, _React$Component2);
+	//     // We added THIS constructor
+	//     constructor(props) {
+	//         super(props)
+	//     }
 
-		_createClass(Test, null, [{
-			key: 'contextTypes',
-			value: context,
+	//     render() {
+	//         console.info('This should NOT be undefined:', this.context.THIS_IS_IMPORTANT)
+	//         return <div>Test1</div>
+	//     }
+	// }
 
-			// We added THIS constructor
-			enumerable: true
-		}]);
-
-		function Test(props) {
-			_classCallCheck(this, Test);
-
-			_get(Object.getPrototypeOf(Test.prototype), 'constructor', this).call(this, props);
-		}
-
-		// Render HTML on the browser
-
-		_createClass(Test, [{
-			key: 'render',
-			value: function render() {
-				console.info('This should NOT be undefined:', this.context.THIS_IS_IMPORTANT);
-				return React.createElement(
-					'div',
-					null,
-					'Test1'
-				);
-			}
-		}]);
-
-		return Test;
-	})(React.Component);
-
-	React.render(React.createElement(
-		ContextProvider,
-		{ context: context },
-		React.createElement(Test, null)
-	), document.body);
+	// // Render HTML on the browser
+	// React.render(<ContextProvider context={context}><Test/></ContextProvider>, document.body)
 
 	// class TestRootUpdateAtDidMount extends React.Component {
 	// 	componentDidMount() {

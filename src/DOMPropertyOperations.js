@@ -25,7 +25,11 @@ export function setPropValue(node, name, value) {
             (propInfo.hasOverloadedBooleanValue && value === false)) {
             removePropValue(node, name)
         } else if (propInfo.mustUseProperty) {
-            node[propInfo.propertyName] = value
+            let propName = propInfo.propertyName;
+            // dom.value has side effect
+            if (propName !== 'value' || '' + node[propName] !== '' + value) {
+                node[propName] = value
+            }
         } else {
             let attributeName = propInfo.attributeName
             let namespace = propInfo.attributeNamespace
@@ -59,7 +63,15 @@ export function removePropValue(node, name) {
     let propInfo = properties.hasOwnProperty(name) && properties[name]
     if (propInfo) {
         if (propInfo.mustUseProperty) {
-            node[propInfo.propertyName] = propInfo.hasBooleanValue ? false : ''
+            let propName = propInfo.propertyName;
+            if (propInfo.hasBooleanValue) {
+                node[propName] = false
+            } else {
+                // dom.value accept string value has side effect
+                if (propName !== 'value' || '' + node[propName] !== '') {
+                    node[propName] = ''
+                }
+            }
         } else {
             node.removeAttribute(propInfo.attributeName)
         }

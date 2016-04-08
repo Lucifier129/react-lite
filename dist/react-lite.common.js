@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.6
+ * react-lite.js v0.15.7
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -1537,7 +1537,11 @@ function setPropValue(node, name, value) {
         if (value == null || propInfo.hasBooleanValue && !value || propInfo.hasNumericValue && isNaN(value) || propInfo.hasPositiveNumericValue && value < 1 || propInfo.hasOverloadedBooleanValue && value === false) {
             removePropValue(node, name);
         } else if (propInfo.mustUseProperty) {
-            node[propInfo.propertyName] = value;
+            var propName = propInfo.propertyName;
+            // dom.value has side effect
+            if (propName !== 'value' || '' + node[propName] !== '' + value) {
+                node[propName] = value;
+            }
         } else {
             var attributeName = propInfo.attributeName;
             var namespace = propInfo.attributeNamespace;
@@ -1572,7 +1576,15 @@ function removePropValue(node, name) {
     var propInfo = properties.hasOwnProperty(name) && properties[name];
     if (propInfo) {
         if (propInfo.mustUseProperty) {
-            node[propInfo.propertyName] = propInfo.hasBooleanValue ? false : '';
+            var propName = propInfo.propertyName;
+            if (propInfo.hasBooleanValue) {
+                node[propName] = false;
+            } else {
+                // dom.value accept string value has side effect
+                if (propName !== 'value' || '' + node[propName] !== '') {
+                    node[propName] = '';
+                }
+            }
         } else {
             node.removeAttribute(propInfo.attributeName);
         }
@@ -1627,9 +1639,7 @@ function extend(to, from) {
     var keys = Object.keys(from);
     var i = keys.length;
     while (i--) {
-        if (from[keys[i]] !== undefined) {
-            to[keys[i]] = from[keys[i]];
-        }
+        to[keys[i]] = from[keys[i]];
     }
     return to;
 }
@@ -1891,7 +1901,6 @@ function createElement(type, props, children) {
 	var key = null;
 	var ref = null;
 	var finalProps = {};
-	var propValue = null;
 	if (props != null) {
 		for (var propKey in props) {
 			if (!props.hasOwnProperty(propKey)) {
@@ -1905,8 +1914,8 @@ function createElement(type, props, children) {
 				if (props.ref !== undefined) {
 					ref = props.ref;
 				}
-			} else if ((propValue = props[propKey]) !== undefined) {
-				finalProps[propKey] = propValue;
+			} else {
+				finalProps[propKey] = props[propKey];
 			}
 		}
 	}
