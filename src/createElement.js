@@ -40,7 +40,6 @@ export default function createElement(type, props, children) {
 	let key = null
 	let ref = null
 	let finalProps = {}
-	let propValue = null
 	if (props != null) {
 		for (let propKey in props) {
 			if (!props.hasOwnProperty(propKey)) {
@@ -54,8 +53,8 @@ export default function createElement(type, props, children) {
 				if (props.ref !== undefined) {
 					ref = props.ref
 				}
-			} else if ((propValue = props[propKey]) !== undefined) {
-				finalProps[propKey] = propValue
+			} else {
+				finalProps[propKey] = props[propKey]
 			}
 		}
 	}

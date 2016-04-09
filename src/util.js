@@ -54,9 +54,7 @@ export function extend(to, from) {
     var keys = Object.keys(from)
     var i = keys.length
     while (i--) {
-        if (from[keys[i]] !== undefined) {
-            to[keys[i]] = from[keys[i]]
-        }
+        to[keys[i]] = from[keys[i]]
     }
     return to
 }

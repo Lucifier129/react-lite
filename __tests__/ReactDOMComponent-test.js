@@ -399,6 +399,9 @@ describe('ReactDOMComponent', function() {
       expect(nodeValueSetter.mock.calls.length).toBe(0);
 
       ReactDOM.render(<div />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(0);
+
+      ReactDOM.render(<div value="1" />, container);
       expect(nodeValueSetter.mock.calls.length).toBe(1);
     });
 
