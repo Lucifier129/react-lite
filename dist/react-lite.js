@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.7
+ * react-lite.js v0.15.8
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -295,7 +295,7 @@
       newNode.cache = newNode.cache || {};
       newNode.cache[newVstateless.id] = newVnode;
       if (newNode !== node) {
-          extend(newNode.cache, node.cache);
+          syncCache(newNode.cache, node.cache, newNode);
       }
       return newNode;
   }
@@ -541,6 +541,20 @@
       }
   }
 
+  function syncCache(cache, oldCache, node) {
+      for (var key in oldCache) {
+          if (!oldCache.hasOwnProperty(key)) {
+              continue;
+          }
+          var value = oldCache[key];
+          cache[key] = value;
+          // is component, update component.$cache.node
+          if (value.forceUpdate) {
+              value.$cache.node = node;
+          }
+      }
+  }
+
   var updateQueue = {
   	updaters: [],
   	isPending: false,
@@ -703,7 +717,7 @@
   		var newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context);
   		if (newNode !== node) {
   			newNode.cache = newNode.cache || {};
-  			extend(newNode.cache, node.cache);
+  			syncCache(newNode.cache, node.cache, newNode);
   		}
   		$cache.vnode = newVnode;
   		$cache.node = newNode;

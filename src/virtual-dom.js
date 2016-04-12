@@ -273,7 +273,7 @@ function updateVstateless(vstateless, newVstateless, node, parentContext) {
     newNode.cache = newNode.cache || {}
     newNode.cache[newVstateless.id] = newVnode
     if (newNode !== node) {
-        _.extend(newNode.cache, node.cache)
+        syncCache(newNode.cache, node.cache, newNode)
     }
     return newNode
 }
@@ -502,5 +502,19 @@ function detachRef(refs, refKey) {
         refKey(null)
     } else {
         delete refs[refKey]
+    }
+}
+
+export function syncCache(cache, oldCache, node) {
+    for (let key in oldCache) {
+        if (!oldCache.hasOwnProperty(key)) {
+            continue
+        }
+        let value = oldCache[key]
+        cache[key] = value
+        // is component, update component.$cache.node
+        if (value.forceUpdate) {
+            value.$cache.node = node
+        }
     }
 }
