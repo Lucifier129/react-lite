@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.7
+ * react-lite.js v0.15.9
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -291,7 +291,7 @@ function updateVstateless(vstateless, newVstateless, node, parentContext) {
     newNode.cache = newNode.cache || {};
     newNode.cache[newVstateless.id] = newVnode;
     if (newNode !== node) {
-        extend(newNode.cache, node.cache);
+        syncCache(newNode.cache, node.cache, newNode);
     }
     return newNode;
 }
@@ -537,6 +537,20 @@ function detachRef(refs, refKey) {
     }
 }
 
+function syncCache(cache, oldCache, node) {
+    for (var key in oldCache) {
+        if (!oldCache.hasOwnProperty(key)) {
+            continue;
+        }
+        var value = oldCache[key];
+        cache[key] = value;
+        // is component, update component.$cache.node
+        if (value.forceUpdate) {
+            value.$cache.node = node;
+        }
+    }
+}
+
 var updateQueue = {
 	updaters: [],
 	isPending: false,
@@ -699,7 +713,7 @@ Component.prototype = {
 		var newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context);
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {};
-			extend(newNode.cache, node.cache);
+			syncCache(newNode.cache, node.cache, newNode);
 		}
 		$cache.vnode = newVnode;
 		$cache.node = newNode;
@@ -777,6 +791,14 @@ function getEventName(key) {
 	return key.toLowerCase();
 }
 
+// Mobile Safari does not fire properly bubble click events on
+// non-interactive elements, which means delegated click listeners do not
+// fire. The workaround for this bug involves attaching an empty click
+// listener on the target node.
+var inMobile = ('ontouchstart' in document);
+var emptyFunction = function emptyFunction() {};
+var ON_CLICK_KEY = 'onclick';
+
 var eventTypes = {};
 
 function addEvent(elem, eventType, listener) {
@@ -792,8 +814,12 @@ function addEvent(elem, eventType, listener) {
 
 	if (!eventTypes[eventType]) {
 		// onclick -> click
-		document.addEventListener(eventType.substr(2), dispatchEvent);
+		document.addEventListener(eventType.substr(2), dispatchEvent, false);
 		eventTypes[eventType] = true;
+	}
+
+	if (inMobile && eventType === ON_CLICK_KEY) {
+		elem.addEventListener('click', emptyFunction, false);
 	}
 
 	var nodeName = elem.nodeName;
@@ -813,6 +839,10 @@ function removeEvent(elem, eventType) {
 	var eventStore = elem.eventStore || (elem.eventStore = {});
 	delete eventStore[eventType];
 
+	if (inMobile && eventType === ON_CLICK_KEY) {
+		elem.removeEventListener('click', emptyFunction, false);
+	}
+
 	var nodeName = elem.nodeName;
 
 	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
@@ -826,6 +856,7 @@ function dispatchEvent(event) {
 
 	var eventType = 'on' + type;
 	var syntheticEvent = undefined;
+
 	updateQueue.isPending = true;
 	while (target) {
 		var _target = target;

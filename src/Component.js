@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { renderComponent, batchUpdateDOM, compareTwoVnodes } from './virtual-dom'
+import { renderComponent, batchUpdateDOM, compareTwoVnodes, syncCache } from './virtual-dom'
 
 export let updateQueue = {
 	updaters: [],
@@ -148,7 +148,7 @@ Component.prototype = {
 		let newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context)
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {}
-			_.extend(newNode.cache, node.cache)
+			syncCache(newNode.cache, node.cache, newNode)
 		}
 		$cache.vnode = newVnode
 		$cache.node = newNode

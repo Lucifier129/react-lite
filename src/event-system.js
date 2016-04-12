@@ -25,6 +25,15 @@ export function getEventName(key) {
 	return key.toLowerCase()
 }
 
+
+// Mobile Safari does not fire properly bubble click events on
+// non-interactive elements, which means delegated click listeners do not
+// fire. The workaround for this bug involves attaching an empty click
+// listener on the target node.
+let inMobile = 'ontouchstart' in document
+let emptyFunction = () => {}
+let ON_CLICK_KEY = 'onclick'
+
 let eventTypes = {}
 export function addEvent(elem, eventType, listener) {
 	eventType = getEventName(eventType)
@@ -39,8 +48,12 @@ export function addEvent(elem, eventType, listener) {
 
 	if (!eventTypes[eventType]) {
 		// onclick -> click
-		document.addEventListener(eventType.substr(2), dispatchEvent)
+		document.addEventListener(eventType.substr(2), dispatchEvent, false)
 		eventTypes[eventType] = true
+	}
+
+	if (inMobile && eventType === ON_CLICK_KEY) {
+	    elem.addEventListener('click', emptyFunction, false)
 	}
 
 	let nodeName = elem.nodeName
@@ -60,6 +73,10 @@ export function removeEvent(elem, eventType) {
 	let eventStore = elem.eventStore || (elem.eventStore = {})
 	delete eventStore[eventType]
 
+	if (inMobile && eventType === ON_CLICK_KEY) {
+	    elem.removeEventListener('click', emptyFunction, false)
+	}
+
 	let nodeName = elem.nodeName
 
 	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
@@ -71,6 +88,7 @@ function dispatchEvent(event) {
 	let { target, type } = event
 	let eventType = 'on' + type
 	let syntheticEvent
+
 	updateQueue.isPending = true
 	while (target) {
 		let { eventStore } = target
