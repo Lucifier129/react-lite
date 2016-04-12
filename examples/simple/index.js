@@ -232,7 +232,44 @@ let update = count => {
 }
 
 let num = 10
-update()
+// update()
+
+class SearchView extends React.Component {
+
+    //构造函数
+    constructor (props) {
+        super(props);
+        this.clickAction = this.clickAction.bind(this)
+        this.handleTouch = this.handleTouch.bind(this)
+        this.state = {
+        	text: 'default'
+        }
+    }
+
+    componentDidMount () {
+       alert('done');
+
+    }
+
+    clickAction() {
+        alert('1123 click');
+    }
+
+    handleTouch() {
+    	alert('12312 touch')
+    }
+
+    render() {
+        return <div className="" onClick={this.clickAction}  style={{
+        	height: 400,
+        	background: '#eaeaea'
+        }}>{ JSON.stringify(this.state.text) }</div>
+    }
+}
+
+ReactDOM.render(<SearchView />, document.getElementById('container')); 
+
+
 
 // const context = {
 //     THIS_IS_IMPORTANT: function() {}
