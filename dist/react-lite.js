@@ -123,7 +123,7 @@
       }
   }
 
-  function updateVelem(velem, newVelem, node, parentContext) {
+  function updateVelem(velem, newVelem, node, parentContext, hasNewContext) {
       var props = velem.props;
       var type = velem.type;
 
@@ -213,8 +213,8 @@
               if (patchItem) {
                   var vnode = patchItem.vnode;
                   var newChildNode = patchItem.node;
+                  var vtype = newVnode.vtype;
                   if (newVnode !== vnode) {
-                      var vtype = newVnode.vtype;
                       if (!vtype) {
                           // textNode
                           newChildNode.newText = newVnode;
@@ -222,12 +222,19 @@
                           // newChildNode.nodeValue = newVnode
                           // newChildNode.replaceData(0, vnode.length, newVnode)
                       } else if (vtype === VELEMENT) {
-                              newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext);
+                              newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext, hasNewContext);
                           } else if (vtype === VCOMPONENT) {
-                              newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext);
+                              newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext, hasNewContext);
                           } else if (vtype === VSTATELESS) {
-                              newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext);
+                              newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext, hasNewContext);
                           }
+                  } else if (hasNewContext) {
+                      // update component with new context
+                      if (vtype === VCOMPONENT) {
+                          newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext, hasNewContext);
+                      } else if (vtype === VSTATELESS) {
+                          newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext, hasNewContext);
+                      }
                   }
                   var currentNode = childNodes[i];
                   if (currentNode !== newChildNode) {
@@ -286,12 +293,12 @@
       node.cache[vstateless.id] = vnode;
       return node;
   }
-  function updateVstateless(vstateless, newVstateless, node, parentContext) {
+  function updateVstateless(vstateless, newVstateless, node, parentContext, hasNewContext) {
       var id = vstateless.id;
       var vnode = node.cache[id];
       delete node.cache[id];
       var newVnode = renderVstateless(newVstateless, parentContext);
-      var newNode = compareTwoVnodes(vnode, newVnode, node, parentContext);
+      var newNode = compareTwoVnodes(vnode, newVnode, node, parentContext, hasNewContext);
       newNode.cache = newNode.cache || {};
       newNode.cache[newVstateless.id] = newVnode;
       if (newNode !== node) {
@@ -352,7 +359,7 @@
       attachRef(vcomponent.refs, vcomponent.ref, component);
       return node;
   }
-  function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
+  function updateVcomponent(vcomponent, newVcomponent, node, parentContext, hasNewContext) {
       var id = vcomponent.id;
       var component = node.cache[id];
       var updater = component.$updater;
@@ -364,6 +371,7 @@
       delete node.cache[id];
       node.cache[newVcomponent.id] = component;
       cache.parentContext = parentContext;
+      cache.hasNewContext = hasNewContext;
       if (component.componentWillReceiveProps) {
           updater.isPending = true;
           component.componentWillReceiveProps(nextProps, componentContext);
@@ -484,7 +492,7 @@
       }
   };
 
-  function compareTwoVnodes(vnode, newVnode, node, parentContext) {
+  function compareTwoVnodes(vnode, newVnode, node, parentContext, hasNewContext) {
       var newNode = node;
 
       if (newVnode == null) {
@@ -500,11 +508,19 @@
           // same type and same key -> update
           var vtype = vnode.vtype;
           if (vtype === VELEMENT) {
-              newNode = updateVelem(vnode, newVnode, node, parentContext);
+              newNode = updateVelem(vnode, newVnode, node, parentContext, hasNewContext);
           } else if (vtype === VCOMPONENT) {
-              newNode = updateVcomponent(vnode, newVnode, node, parentContext);
+              newNode = updateVcomponent(vnode, newVnode, node, parentContext, hasNewContext);
           } else if (vtype === VSTATELESS) {
-              newNode = updateVstateless(vnode, newVnode, node, parentContext);
+              newNode = updateVstateless(vnode, newVnode, node, parentContext, hasNewContext);
+          }
+      } else if (hasNewContext) {
+          // update component with new context
+          var vtype = vnode.vtype;
+          if (vtype === VCOMPONENT) {
+              newNode = updateVcomponent(vnode, newVnode, node, parentContext, hasNewContext);
+          } else if (vtype === VSTATELESS) {
+              newNode = updateVstateless(vnode, newVnode, node, parentContext, hasNewContext);
           }
       }
 
@@ -705,6 +721,7 @@
   		var parentContext = $cache.parentContext;
   		var node = $cache.node;
   		var vnode = $cache.vnode;
+  		var hasNewContext = $cache.hasNewContext || !!this.getChildContext;
   		$cache.props = $cache.state = $cache.context = null;
   		$updater.isPending = true;
   		if (this.componentWillUpdate) {
@@ -714,13 +731,14 @@
   		this.props = nextProps;
   		this.context = nextContext;
   		var newVnode = renderComponent(this, parentContext);
-  		var newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context);
+  		var newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context, hasNewContext);
   		if (newNode !== node) {
   			newNode.cache = newNode.cache || {};
   			syncCache(newNode.cache, node.cache, newNode);
   		}
   		$cache.vnode = newVnode;
   		$cache.node = newNode;
+  		$cache.hasNewContext = false;
   		batchUpdateDOM();
   		if (this.componentDidUpdate) {
   			this.componentDidUpdate(props, state, context);
