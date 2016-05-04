@@ -136,6 +136,7 @@ Component.prototype = {
 		let parentContext = $cache.parentContext
 		let node = $cache.node
 		let vnode = $cache.vnode
+		let hasNewContext = $cache.hasNewContext || !!this.getChildContext
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
 		if (this.componentWillUpdate) {
@@ -145,13 +146,14 @@ Component.prototype = {
 		this.props = nextProps
 		this.context = nextContext
 		let newVnode = renderComponent(this, parentContext)
-		let newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context)
+		let newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context, hasNewContext)
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {}
 			syncCache(newNode.cache, node.cache, newNode)
 		}
 		$cache.vnode = newVnode
 		$cache.node = newNode
+		$cache.hasNewContext = false
 		batchUpdateDOM()
 		if (this.componentDidUpdate) {
 			this.componentDidUpdate(props, state, context)

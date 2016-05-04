@@ -111,7 +111,7 @@ function collectChild(child, children) {
     }
 }
 
-function updateVelem(velem, newVelem, node, parentContext) {
+function updateVelem(velem, newVelem, node, parentContext, hasNewContext) {
     let { props, type } = velem
     let newProps = newVelem.props
     let oldHtml = props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html
@@ -193,19 +193,25 @@ function updateVelem(velem, newVelem, node, parentContext) {
             if (patchItem) {
                 let vnode = patchItem.vnode
                 let newChildNode = patchItem.node
+                let vtype = newVnode.vtype
                 if (newVnode !== vnode) {
-                    let vtype = newVnode.vtype
                     if (!vtype) { // textNode
                         newChildNode.newText = newVnode
                         pendingTextUpdater[pendingTextUpdater.length] = newChildNode
                         // newChildNode.nodeValue = newVnode
                         // newChildNode.replaceData(0, vnode.length, newVnode)
                     } else if (vtype === VELEMENT) {
-                        newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext)
+                        newChildNode = updateVelem(vnode, newVnode, newChildNode, parentContext, hasNewContext)
                     } else if (vtype === VCOMPONENT) {
-                        newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext)
+                        newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext, hasNewContext)
                     } else if (vtype === VSTATELESS) {
-                        newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext)
+                        newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext, hasNewContext)
+                    }
+                } else if (hasNewContext) { // update component with new context
+                    if (vtype === VCOMPONENT) {
+                        newChildNode = updateVcomponent(vnode, newVnode, newChildNode, parentContext, hasNewContext)
+                    } else if (vtype === VSTATELESS) {
+                        newChildNode = updateVstateless(vnode, newVnode, newChildNode, parentContext, hasNewContext)
                     }
                 }
                 let currentNode = childNodes[i]
@@ -264,12 +270,12 @@ function initVstateless(vstateless, parentContext, namespaceURI) {
     node.cache[vstateless.id] = vnode
     return node
 }
-function updateVstateless(vstateless, newVstateless, node, parentContext) {
+function updateVstateless(vstateless, newVstateless, node, parentContext, hasNewContext) {
     let id = vstateless.id
     let vnode = node.cache[id]
     delete node.cache[id]
     let newVnode = renderVstateless(newVstateless, parentContext)
-    let newNode = compareTwoVnodes(vnode, newVnode, node, parentContext)
+    let newNode = compareTwoVnodes(vnode, newVnode, node, parentContext, hasNewContext)
     newNode.cache = newNode.cache || {}
     newNode.cache[newVstateless.id] = newVnode
     if (newNode !== node) {
@@ -323,7 +329,7 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
     attachRef(vcomponent.refs, vcomponent.ref, component)
     return node
 }
-function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
+function updateVcomponent(vcomponent, newVcomponent, node, parentContext, hasNewContext) {
     let id = vcomponent.id
     let component = node.cache[id]
     let { $updater: updater, $cache: cache } = component
@@ -332,6 +338,7 @@ function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
     delete node.cache[id]
     node.cache[newVcomponent.id] = component
     cache.parentContext = parentContext
+    cache.hasNewContext = hasNewContext
     if (component.componentWillReceiveProps) {
         updater.isPending = true
         component.componentWillReceiveProps(nextProps, componentContext)
@@ -452,7 +459,7 @@ let clearPendingPropsUpdater = () => {
     }
 }
 
-export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
+export function compareTwoVnodes(vnode, newVnode, node, parentContext, hasNewContext) {
     let newNode = node
 
     if (newVnode == null) { // remove
@@ -466,11 +473,18 @@ export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
         // same type and same key -> update
         let vtype = vnode.vtype
         if (vtype === VELEMENT) {
-            newNode = updateVelem(vnode, newVnode, node, parentContext)
+            newNode = updateVelem(vnode, newVnode, node, parentContext, hasNewContext)
         } else if (vtype === VCOMPONENT) {
-            newNode = updateVcomponent(vnode, newVnode, node, parentContext)
+            newNode = updateVcomponent(vnode, newVnode, node, parentContext, hasNewContext)
         } else if (vtype === VSTATELESS) {
-            newNode = updateVstateless(vnode, newVnode, node, parentContext)
+            newNode = updateVstateless(vnode, newVnode, node, parentContext, hasNewContext)
+        }
+    } else if (hasNewContext) { // update component with new context
+        let vtype = vnode.vtype
+        if (vtype === VCOMPONENT) {
+            newNode = updateVcomponent(vnode, newVnode, node, parentContext, hasNewContext)
+        } else if (vtype === VSTATELESS) {
+            newNode = updateVstateless(vnode, newVnode, node, parentContext, hasNewContext)
         }
     }
     
