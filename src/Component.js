@@ -1,5 +1,5 @@
 import * as _ from './util'
-import { renderComponent, batchUpdateDOM, compareTwoVnodes, syncCache } from './virtual-dom'
+import { renderComponent, clearPendingComponents, compareTwoVnodes, syncCache } from './virtual-dom'
 
 export let updateQueue = {
 	updaters: [],
@@ -154,7 +154,7 @@ Component.prototype = {
 		$cache.vnode = newVnode
 		$cache.node = newNode
 		$cache.hasNewContext = false
-		batchUpdateDOM()
+		clearPendingComponents()
 		if (this.componentDidUpdate) {
 			this.componentDidUpdate(props, state, context)
 		}
