@@ -1,5 +1,11 @@
 import * as _ from './util'
-import { renderComponent, clearPendingComponents, compareTwoVnodes, syncCache } from './virtual-dom'
+import {
+	renderComponent,
+	clearPendingComponents,
+	compareTwoVnodes,
+	getChildContext,
+	syncCache
+} from './virtual-dom'
 
 export let updateQueue = {
 	updaters: [],
@@ -144,14 +150,8 @@ Component.prototype = {
 		this.state = nextState
 		this.props = nextProps
 		this.context = nextContext
-		let newVnode = renderComponent(this)
-		if (this.getChildContext) {
-	        let curContext = this.getChildContext()
-	        if (curContext) {
-	            parentContext = _.extend(_.extend({}, parentContext), curContext)
-	        }
-	    }
-		let newNode = compareTwoVnodes(vnode, newVnode, node, parentContext)
+	    let newVnode = renderComponent(this)
+		let newNode = compareTwoVnodes(vnode, newVnode, node, getChildContext(this, parentContext))
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {}
 			syncCache(newNode.cache, node.cache, newNode)

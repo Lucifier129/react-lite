@@ -53,7 +53,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	} else if (vnode.vtype === VELEMENT) {
 		result = rootNode
 	} else if (vnode.vtype === VCOMPONENT) {
-		result = rootNode.cache[vnode.id]
+		result = rootNode.cache[vnode.uid]
 	}
 	
 	if (!isPending) {

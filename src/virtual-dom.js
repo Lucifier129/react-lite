@@ -15,15 +15,18 @@ import {
 let refs = null
 
 export function createVnode(vtype, type, props, key, ref) {
-    return {
+    let vnode = {
         vtype: vtype,
-        uid: _.getUid(),
         type: type,
         props: props,
         refs: refs,
         key: key,
         ref: ref,
     }
+    if (vtype === VSTATELESS || vtype === VCOMPONENT) {
+        vnode.uid = _.getUid()
+    }
+    return vnode
 }
 
 export function initVnode(vnode, parentContext, namespaceURI) {
@@ -50,9 +53,7 @@ function updateVnode(vnode, newVnode, node, parentContext) {
         creates: [],
     }
     diffVnodes(patches, vnode, newVnode, node, parentContext)
-
     _.loop8(patches.removes, applyDestroy)
-
     let newNode = applyUpdate({
         vnode,
         newVnode,
@@ -87,16 +88,16 @@ function applyUpdate(data) {
 }
 
 function applyDestroy(data) {
-     destroyVnode(data.vnode, data.node)
+    destroyVnode(data.vnode, data.node)
     data.node.parentNode.removeChild(data.node)
 }
 
 function applyCreate(data) {
-    let domNode = initVnode(data.vnode, data.parentContext, data.parentNode.namespaceURI)
+    let node = initVnode(data.vnode, data.parentContext, data.parentNode.namespaceURI)
     if (data.index >= data.parentNode.childNodes.length) {
-        data.parentNode.appendChild(domNode)
+        data.parentNode.appendChild(node)
     } else {
-        data.parentNode.insertBefore(domNode, data.parentNode.childNodes[data.index])
+        data.parentNode.insertBefore(node, data.parentNode.childNodes[data.index])
     }
 }
 
@@ -166,6 +167,9 @@ function diffVnodes(patches, vnode, newVnode, node, parentContext) {
 
     let newVchildren = getFlattenChildren(newVnode)
     let { vchildren } = node
+    if (!vchildren) {
+        console.log(vnode)
+    }
     if (vchildren.length > 0) {
         if (newVchildren.length > 0) {
             diffChildren(patches, vchildren, newVchildren, node, parentContext)
@@ -271,7 +275,8 @@ function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
 }
 
 function updateVelem(velem, newVelem, node) {
-    _.patchProps(node, velem.props, newVelem.props)
+    let isCustomComponent = velem.type.indexOf('-') >= 0 || velem.props.is != null
+    _.patchProps(node, velem.props, newVelem.props, isCustomComponent)
     if (velem.ref !== newVelem.ref) {
         detachRef(velem.refs, velem.ref)
         attachRef(newVelem.refs, newVelem.ref, node)
@@ -345,13 +350,7 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
         component.state = updater.getState()
     }
     let vnode = renderComponent(component)
-    if (component.getChildContext) {
-        let curContext = component.getChildContext()
-        if (curContext) {
-            parentContext = _.extend(_.extend({}, parentContext), curContext)
-        }
-    }
-    let node = initVnode(vnode, parentContext, namespaceURI)
+    let node = initVnode(vnode, getChildContext(component, parentContext), namespaceURI)
     node.cache = node.cache || {}
     node.cache[uid] = component
     cache.vnode = vnode
@@ -424,6 +423,17 @@ export function renderComponent(component, parentContext) {
 	return vnode
 }
 
+export function getChildContext(component, parentContext) {
+    if (component.getChildContext) {
+        let curContext = component.getChildContext()
+        if (curContext) {
+            parentContext = _.extend(_.extend({}, parentContext), curContext)
+        }
+    }
+    return parentContext
+}
+
+
 let pendingComponents = []
 export function clearPendingComponents() {
 	let len = pendingComponents.length
@@ -446,10 +456,12 @@ export function clearPendingComponents() {
 
 export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
     let newNode = node
-    if (newVnode == null) { // remove
+    if (newVnode == null) {
+        // remove
         destroyVnode(vnode, node)
         node.parentNode.removeChild(node)
-    } else if (vnode.type !== newVnode.type || newVnode.key !== vnode.key) {  // replace
+    } else if (vnode.type !== newVnode.type || vnode.key !== newVnode.key || vnode.refs !== newVnode.refs) { 
+        // replace
         destroyVnode(vnode, node)
         newNode = initVnode(newVnode, parentContext, node.namespaceURI)
         node.parentNode.replaceChild(newNode, node)
