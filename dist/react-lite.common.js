@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.10
+ * react-lite.js v0.15.11
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -60,33 +60,28 @@ function updateVnode(vnode, newVnode, node, parentContext) {
         creates: []
     };
     diffVnodes(patches, vnode, newVnode, node, parentContext);
-    var newNode = applyUpdate(vnode, newVnode, node, parentContext, 0);
-    patchNodes(patches);
+
+    loop8(patches.removes, applyDestroy);
+
+    var newNode = applyUpdate({
+        vnode: vnode,
+        newVnode: newVnode,
+        node: node,
+        parentContext: parentContext,
+        index: 0
+    });
+    loop8(patches.updates, applyUpdate);
+    loop8(patches.creates, applyCreate);
     return newNode;
 }
 
-function patchNodes(patches) {
-    for (var i = 0, len = patches.removes.length; i < len; i++) {
-        var item = patches.removes[i];
-        destroyVnode(item.vnode, item.node);
-        item.node.parentNode.removeChild(item.node);
-    }
-    for (var i = 0, len = patches.updates.length; i < len; i++) {
-        var item = patches.updates[i];
-        applyUpdate(item.vnode, item.newVnode, item.node, item.parentContext, item.index);
-    }
-    for (var i = 0, len = patches.creates.length; i < len; i++) {
-        var item = patches.creates[i];
-        var domNode = initVnode(item.vnode, item.parentContext, item.parentNode.namespaceURI);
-        if (item.index >= item.parentNode.childNodes.length) {
-            item.parentNode.appendChild(domNode);
-        } else {
-            item.parentNode.insertBefore(domNode, item.parentNode.childNodes[item.index]);
-        }
-    }
-}
+function applyUpdate(data) {
+    var vnode = data.vnode;
+    var newVnode = data.newVnode;
+    var node = data.node;
+    var parentContext = data.parentContext;
+    var index = data.index;
 
-function applyUpdate(vnode, newVnode, node, parentContext, index) {
     var vtype = vnode.vtype;
     var newNode = node;
     if (!vtype) {
@@ -100,10 +95,24 @@ function applyUpdate(vnode, newVnode, node, parentContext, index) {
             newNode = updateVcomponent(vnode, newVnode, newNode, parentContext);
         }
     var currentNode = newNode.parentNode.childNodes[index];
-    if (currentNode === newNode) {
+    if (currentNode !== newNode) {
         newNode.parentNode.insertBefore(newNode, currentNode);
     }
     return newNode;
+}
+
+function applyDestroy(data) {
+    destroyVnode(data.vnode, data.node);
+    data.node.parentNode.removeChild(data.node);
+}
+
+function applyCreate(data) {
+    var domNode = initVnode(data.vnode, data.parentContext, data.parentNode.namespaceURI);
+    if (data.index >= data.parentNode.childNodes.length) {
+        data.parentNode.appendChild(domNode);
+    } else {
+        data.parentNode.insertBefore(domNode, data.parentNode.childNodes[data.index]);
+    }
 }
 
 /**
@@ -1641,6 +1650,28 @@ function flattenChildren(list, iteratee, a) {
 function eachItem(list, iteratee) {
     for (var i = 0, len = list.length; i < len; i++) {
         iteratee(list[i], i);
+    }
+}
+
+function loop8(list, iteratee) {
+    var len = list.length;
+    var optimizeCount = Math.floor(len / 8);
+    var normalCount = len % 8;
+    var index = 0;
+    while (optimizeCount > 0) {
+        iteratee(list[index++]);
+        iteratee(list[index++]);
+        iteratee(list[index++]);
+        iteratee(list[index++]);
+        iteratee(list[index++]);
+        iteratee(list[index++]);
+        iteratee(list[index++]);
+        iteratee(list[index++]);
+        optimizeCount -= 1;
+    }
+    while (normalCount > 0) {
+        iteratee(list[index++]);
+        normalCount -= 1;
     }
 }
 

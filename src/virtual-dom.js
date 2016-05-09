@@ -50,33 +50,23 @@ function updateVnode(vnode, newVnode, node, parentContext) {
         creates: [],
     }
     diffVnodes(patches, vnode, newVnode, node, parentContext)
-    let newNode = applyUpdate(vnode, newVnode, node, parentContext, 0)
-    patchNodes(patches)
+
+    _.loop8(patches.removes, applyDestroy)
+
+    let newNode = applyUpdate({
+        vnode,
+        newVnode,
+        node,
+        parentContext,
+        index: 0
+    })
+    _.loop8(patches.updates, applyUpdate)
+    _.loop8(patches.creates, applyCreate)
     return newNode
 }
 
-function patchNodes(patches) {
-    for (let i = 0, len = patches.removes.length; i < len; i++) {
-        let item = patches.removes[i]
-        destroyVnode(item.vnode, item.node)
-        item.node.parentNode.removeChild(item.node)
-    }
-    for (let i = 0, len = patches.updates.length; i < len; i++) {
-        let item = patches.updates[i]
-        applyUpdate(item.vnode, item.newVnode, item.node, item.parentContext, item.index)
-    }
-    for (let i = 0, len = patches.creates.length; i < len; i++) {
-        let item = patches.creates[i]
-        let domNode = initVnode(item.vnode, item.parentContext, item.parentNode.namespaceURI)
-        if (item.index >= item.parentNode.childNodes.length) {
-            item.parentNode.appendChild(domNode)
-        } else {
-            item.parentNode.insertBefore(domNode, item.parentNode.childNodes[item.index])
-        }
-    }
-}
-
-function applyUpdate(vnode, newVnode, node, parentContext, index) {
+function applyUpdate(data) {
+    let { vnode, newVnode, node, parentContext, index } = data
     let vtype = vnode.vtype
     let newNode = node
     if (!vtype) {
@@ -90,10 +80,24 @@ function applyUpdate(vnode, newVnode, node, parentContext, index) {
         newNode = updateVcomponent(vnode, newVnode, newNode, parentContext)
     }
     let currentNode = newNode.parentNode.childNodes[index]
-    if (currentNode === newNode) {
+    if (currentNode !== newNode) {
         newNode.parentNode.insertBefore(newNode, currentNode)
     }
     return newNode
+}
+
+function applyDestroy(data) {
+     destroyVnode(data.vnode, data.node)
+    data.node.parentNode.removeChild(data.node)
+}
+
+function applyCreate(data) {
+    let domNode = initVnode(data.vnode, data.parentContext, data.parentNode.namespaceURI)
+    if (data.index >= data.parentNode.childNodes.length) {
+        data.parentNode.appendChild(domNode)
+    } else {
+        data.parentNode.insertBefore(domNode, data.parentNode.childNodes[data.index])
+    }
 }
 
 
