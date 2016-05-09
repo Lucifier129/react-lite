@@ -1797,12 +1797,12 @@
   	// should bundle them and render by only one time
   	if (argsCache) {
   		if (argsCache === true) {
-  			pendingRendering[id] = argsCache = [vnode, callback, parentContext];
+  			pendingRendering[id] = argsCache = { vnode: vnode, callback: callback, parentContext: parentContext };
   		} else {
-  			argsCache[0] = vnode;
-  			argsCache[2] = parentContext;
-  			if (callback) {
-  				argsCache[1] = argsCache[1] ? pipe(argsCache[1], callback) : callback;
+  			argsCache.vnode = vnode;
+  			argsCache.parentContext = parentContext;
+  			if (argsCache.callback) {
+  				argsCache.callback = argsCache.callback ? pipe(argsCache.callback, callback) : callback;
   			}
   		}
   		return;
@@ -1830,7 +1830,7 @@
 
   	var result = null;
   	if (isArr(argsCache)) {
-  		result = renderTreeIntoContainer(argsCache[0], container, argsCache[1], argsCache[2]);
+  		result = renderTreeIntoContainer(argsCache.vnode, container, argsCache.parentContext, argsCache.callback);
   	} else if (vnode.vtype === VELEMENT) {
   		result = rootNode;
   	} else if (vnode.vtype === VCOMPONENT) {
