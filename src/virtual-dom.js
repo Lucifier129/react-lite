@@ -293,26 +293,26 @@ function initVstateless(vstateless, parentContext, namespaceURI) {
     let vnode = renderVstateless(vstateless, parentContext)
     let node = initVnode(vnode, parentContext, namespaceURI)
     node.cache = node.cache || {}
-    node.cache[vstateless.id] = vnode
+    node.cache[vstateless.uid] = vnode
     return node
 }
 function updateVstateless(vstateless, newVstateless, node, parentContext) {
-    let id = vstateless.id
-    let vnode = node.cache[id]
-    delete node.cache[id]
+    let uid = vstateless.uid
+    let vnode = node.cache[uid]
+    delete node.cache[uid]
     let newVnode = renderVstateless(newVstateless, parentContext)
     let newNode = compareTwoVnodes(vnode, newVnode, node, parentContext)
     newNode.cache = newNode.cache || {}
-    newNode.cache[newVstateless.id] = newVnode
+    newNode.cache[newVstateless.uid] = newVnode
     if (newNode !== node) {
         syncCache(newNode.cache, node.cache, newNode)
     }
     return newNode
 }
 function destroyVstateless(vstateless, node) {
-    let id = vstateless.id
-    let vnode = node.cache[id]
-    delete node.cache[id]
+    let uid = vstateless.uid
+    let vnode = node.cache[uid]
+    delete node.cache[uid]
     destroyVnode(vnode, node)
 }
 
@@ -332,7 +332,7 @@ function renderVstateless(vstateless, parentContext) {
 }
 
 function initVcomponent(vcomponent, parentContext, namespaceURI) {
-    let { type: Component, props, id } = vcomponent
+    let { type: Component, props, uid } = vcomponent
     let componentContext = getContextByTypes(parentContext, Component.contextTypes)
     let component = new Component(props, componentContext)
     let { $updater: updater, $cache: cache } = component
@@ -353,7 +353,7 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
     }
     let node = initVnode(vnode, parentContext, namespaceURI)
     node.cache = node.cache || {}
-    node.cache[id] = component
+    node.cache[uid] = component
     cache.vnode = vnode
     cache.node = node
     cache.isMounted = true
@@ -362,13 +362,13 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
     return node
 }
 function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
-    let id = vcomponent.id
-    let component = node.cache[id]
+    let uid = vcomponent.uid
+    let component = node.cache[uid]
     let { $updater: updater, $cache: cache } = component
     let { type: Component, props: nextProps } = newVcomponent
     let componentContext = getContextByTypes(parentContext, Component.contextTypes)
-    delete node.cache[id]
-    node.cache[newVcomponent.id] = component
+    delete node.cache[uid]
+    node.cache[newVcomponent.uid] = component
     cache.parentContext = parentContext
     if (component.componentWillReceiveProps) {
         updater.isPending = true
@@ -384,10 +384,10 @@ function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
     return cache.node
 }
 function destroyVcomponent(vcomponent, node) {
-    let id = vcomponent.id
-    let component = node.cache[id]
+    let uid = vcomponent.uid
+    let component = node.cache[uid]
     let cache = component.$cache
-    delete node.cache[id]
+    delete node.cache[uid]
     detachRef(vcomponent.refs, vcomponent.ref)
     component.setState = component.forceUpdate = _.noop
     if (component.componentWillUnmount) {

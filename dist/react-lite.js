@@ -193,6 +193,9 @@
       var newVchildren = getFlattenChildren(newVnode);
       var vchildren = node.vchildren;
 
+      if (!vchildren) {
+          console.log(vnode);
+      }
       if (vchildren.length > 0) {
           if (newVchildren.length > 0) {
               diffChildren(patches, vchildren, newVchildren, node, parentContext);
@@ -319,26 +322,26 @@
       var vnode = renderVstateless(vstateless, parentContext);
       var node = initVnode(vnode, parentContext, namespaceURI);
       node.cache = node.cache || {};
-      node.cache[vstateless.id] = vnode;
+      node.cache[vstateless.uid] = vnode;
       return node;
   }
   function updateVstateless(vstateless, newVstateless, node, parentContext) {
-      var id = vstateless.id;
-      var vnode = node.cache[id];
-      delete node.cache[id];
+      var uid = vstateless.uid;
+      var vnode = node.cache[uid];
+      delete node.cache[uid];
       var newVnode = renderVstateless(newVstateless, parentContext);
       var newNode = compareTwoVnodes(vnode, newVnode, node, parentContext);
       newNode.cache = newNode.cache || {};
-      newNode.cache[newVstateless.id] = newVnode;
+      newNode.cache[newVstateless.uid] = newVnode;
       if (newNode !== node) {
           syncCache(newNode.cache, node.cache, newNode);
       }
       return newNode;
   }
   function destroyVstateless(vstateless, node) {
-      var id = vstateless.id;
-      var vnode = node.cache[id];
-      delete node.cache[id];
+      var uid = vstateless.uid;
+      var vnode = node.cache[uid];
+      delete node.cache[uid];
       destroyVnode(vnode, node);
   }
 
@@ -362,7 +365,7 @@
   function initVcomponent(vcomponent, parentContext, namespaceURI) {
       var Component = vcomponent.type;
       var props = vcomponent.props;
-      var id = vcomponent.id;
+      var uid = vcomponent.uid;
 
       var componentContext = getContextByTypes(parentContext, Component.contextTypes);
       var component = new Component(props, componentContext);
@@ -386,7 +389,7 @@
       }
       var node = initVnode(vnode, parentContext, namespaceURI);
       node.cache = node.cache || {};
-      node.cache[id] = component;
+      node.cache[uid] = component;
       cache.vnode = vnode;
       cache.node = node;
       cache.isMounted = true;
@@ -395,16 +398,16 @@
       return node;
   }
   function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
-      var id = vcomponent.id;
-      var component = node.cache[id];
+      var uid = vcomponent.uid;
+      var component = node.cache[uid];
       var updater = component.$updater;
       var cache = component.$cache;
       var Component = newVcomponent.type;
       var nextProps = newVcomponent.props;
 
       var componentContext = getContextByTypes(parentContext, Component.contextTypes);
-      delete node.cache[id];
-      node.cache[newVcomponent.id] = component;
+      delete node.cache[uid];
+      node.cache[newVcomponent.uid] = component;
       cache.parentContext = parentContext;
       if (component.componentWillReceiveProps) {
           updater.isPending = true;
@@ -420,10 +423,10 @@
       return cache.node;
   }
   function destroyVcomponent(vcomponent, node) {
-      var id = vcomponent.id;
-      var component = node.cache[id];
+      var uid = vcomponent.uid;
+      var component = node.cache[uid];
       var cache = component.$cache;
-      delete node.cache[id];
+      delete node.cache[uid];
       detachRef(vcomponent.refs, vcomponent.ref);
       component.setState = component.forceUpdate = noop;
       if (component.componentWillUnmount) {
@@ -693,7 +696,6 @@
   		var parentContext = $cache.parentContext;
   		var node = $cache.node;
   		var vnode = $cache.vnode;
-  		var hasNewContext = $cache.hasNewContext || !!this.getChildContext;
   		$cache.props = $cache.state = $cache.context = null;
   		$updater.isPending = true;
   		if (this.componentWillUpdate) {
@@ -702,15 +704,20 @@
   		this.state = nextState;
   		this.props = nextProps;
   		this.context = nextContext;
-  		var newVnode = renderComponent(this, parentContext);
-  		var newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context, hasNewContext);
+  		var newVnode = renderComponent(this);
+  		if (this.getChildContext) {
+  			var curContext = this.getChildContext();
+  			if (curContext) {
+  				parentContext = extend(extend({}, parentContext), curContext);
+  			}
+  		}
+  		var newNode = compareTwoVnodes(vnode, newVnode, node, parentContext);
   		if (newNode !== node) {
   			newNode.cache = newNode.cache || {};
   			syncCache(newNode.cache, node.cache, newNode);
   		}
   		$cache.vnode = newVnode;
   		$cache.node = newNode;
-  		$cache.hasNewContext = false;
   		clearPendingComponents();
   		if (this.componentDidUpdate) {
   			this.componentDidUpdate(props, state, context);
