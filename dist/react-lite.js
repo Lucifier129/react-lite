@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.10
+ * react-lite.js v0.15.11
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -909,6 +909,7 @@
   		return syntheticEvent.$cancalBubble = true;
   	};
   	syntheticEvent.nativeEvent = nativeEvent;
+  	syntheticEvent.persist = noop;
   	for (var key in nativeEvent) {
   		if (typeof nativeEvent[key] !== 'function') {
   			syntheticEvent[key] = nativeEvent[key];

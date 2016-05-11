@@ -1,4 +1,5 @@
 import { updateQueue } from './Component'
+import * as _ from './util'
 
 // event config
 export const notBubbleEvents = {
@@ -115,6 +116,7 @@ function createSyntheticEvent(nativeEvent) {
     let syntheticEvent = {}
     let cancalBubble = () => syntheticEvent.$cancalBubble = true
     syntheticEvent.nativeEvent = nativeEvent
+    syntheticEvent.persist = _.noop
     for (let key in nativeEvent) {
     	if (typeof nativeEvent[key] !== 'function') {
     		syntheticEvent[key] = nativeEvent[key]
