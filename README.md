@@ -82,6 +82,7 @@ via react-lite:
 	* you had better avoid `script|head|link` tag in client side
 - can not use react-dev-tool inspect react-lite, should switch to regular react for debugging
 - react-lite only works with a JSX toolchain([issue](https://github.com/Lucifier129/react-lite/issues/51))
+- unlike react, `event` object in react-lite is always persistent, and `event.persist` is set as no-op to avoid throwing error.
 
 ## Test
 react-lite reuses react's unitest(170), you can see them in `__test__`, and run the tests with:
