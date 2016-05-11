@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.11
+ * react-lite.js v0.15.12
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -19,15 +19,18 @@ var VCOMMENT = 5;
 var refs = null;
 
 function createVnode(vtype, type, props, key, ref) {
-    return {
+    var vnode = {
         vtype: vtype,
-        uid: getUid(),
         type: type,
         props: props,
         refs: refs,
         key: key,
         ref: ref
     };
+    if (vtype === VSTATELESS || vtype === VCOMPONENT) {
+        vnode.uid = getUid();
+    }
+    return vnode;
 }
 
 function initVnode(vnode, parentContext, namespaceURI) {
@@ -59,10 +62,10 @@ function updateVnode(vnode, newVnode, node, parentContext) {
         updates: [],
         creates: []
     };
-    diffVnodes(patches, vnode, newVnode, node, parentContext);
-
+    if (vnode.vtype === VELEMENT) {
+        diffVnodes(patches, vnode, newVnode, node, parentContext);
+    }
     loop8(patches.removes, applyDestroy);
-
     var newNode = applyUpdate({
         vnode: vnode,
         newVnode: newVnode,
@@ -107,11 +110,11 @@ function applyDestroy(data) {
 }
 
 function applyCreate(data) {
-    var domNode = initVnode(data.vnode, data.parentContext, data.parentNode.namespaceURI);
+    var node = initVnode(data.vnode, data.parentContext, data.parentNode.namespaceURI);
     if (data.index >= data.parentNode.childNodes.length) {
-        data.parentNode.appendChild(domNode);
+        data.parentNode.appendChild(node);
     } else {
-        data.parentNode.insertBefore(domNode, data.parentNode.childNodes[data.index]);
+        data.parentNode.insertBefore(node, data.parentNode.childNodes[data.index]);
     }
 }
 
@@ -189,9 +192,6 @@ function diffVnodes(patches, vnode, newVnode, node, parentContext) {
     var newVchildren = getFlattenChildren(newVnode);
     var vchildren = node.vchildren;
 
-    if (!vchildren) {
-        console.log(vnode);
-    }
     if (vchildren.length > 0) {
         if (newVchildren.length > 0) {
             diffChildren(patches, vchildren, newVchildren, node, parentContext);
@@ -223,6 +223,7 @@ function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
     var newVchildrenLen = newVchildren.length;
     var matches = Array(newVchildrenLen);
 
+    // isEqual
     for (var i = 0; i < vchildrenLen; i++) {
         var vnode = vchildren[i];
         for (var j = 0; j < newVchildrenLen; j++) {
@@ -241,13 +242,14 @@ function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
                     });
                     diffVnodes(patches, vnode, newVnode, childNodes[i], parentContext);
                 }
-                matches[j] = 1;
+                matches[j] = true;
                 vchildren[i] = null;
                 break;
             }
         }
     }
 
+    // isSimilar
     for (var i = 0; i < vchildrenLen; i++) {
         var vnode = vchildren[i];
         if (vnode === null) {
@@ -281,6 +283,7 @@ function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
         }
     }
 
+    // isNew
     for (var i = 0; i < newVchildrenLen; i++) {
         if (!matches[i]) {
             patches.creates.push({
@@ -294,7 +297,8 @@ function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
 }
 
 function updateVelem(velem, newVelem, node) {
-    patchProps(node, velem.props, newVelem.props);
+    var isCustomComponent = velem.type.indexOf('-') >= 0 || velem.props.is != null;
+    patchProps(node, velem.props, newVelem.props, isCustomComponent);
     if (velem.ref !== newVelem.ref) {
         detachRef(velem.refs, velem.ref);
         attachRef(newVelem.refs, newVelem.ref, node);
@@ -377,13 +381,7 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
         component.state = updater.getState();
     }
     var vnode = renderComponent(component);
-    if (component.getChildContext) {
-        var curContext = component.getChildContext();
-        if (curContext) {
-            parentContext = extend(extend({}, parentContext), curContext);
-        }
-    }
-    var node = initVnode(vnode, parentContext, namespaceURI);
+    var node = initVnode(vnode, getChildContext(component, parentContext), namespaceURI);
     node.cache = node.cache || {};
     node.cache[uid] = component;
     cache.vnode = vnode;
@@ -459,6 +457,16 @@ function renderComponent(component, parentContext) {
     return vnode;
 }
 
+function getChildContext(component, parentContext) {
+    if (component.getChildContext) {
+        var curContext = component.getChildContext();
+        if (curContext) {
+            parentContext = extend(extend({}, parentContext), curContext);
+        }
+    }
+    return parentContext;
+}
+
 var pendingComponents = [];
 
 function clearPendingComponents() {
@@ -486,7 +494,7 @@ function compareTwoVnodes(vnode, newVnode, node, parentContext) {
         // remove
         destroyVnode(vnode, node);
         node.parentNode.removeChild(node);
-    } else if (vnode.type !== newVnode.type || newVnode.key !== vnode.key) {
+    } else if (vnode.type !== newVnode.type || vnode.key !== newVnode.key) {
         // replace
         destroyVnode(vnode, node);
         newNode = initVnode(newVnode, parentContext, node.namespaceURI);
@@ -701,13 +709,7 @@ Component.prototype = {
 		this.props = nextProps;
 		this.context = nextContext;
 		var newVnode = renderComponent(this);
-		if (this.getChildContext) {
-			var curContext = this.getChildContext();
-			if (curContext) {
-				parentContext = extend(extend({}, parentContext), curContext);
-			}
-		}
-		var newNode = compareTwoVnodes(vnode, newVnode, node, parentContext);
+		var newNode = compareTwoVnodes(vnode, newVnode, node, getChildContext(this, parentContext));
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {};
 			syncCache(newNode.cache, node.cache, newNode);
@@ -1837,7 +1839,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	} else if (vnode.vtype === VELEMENT) {
 		result = rootNode;
 	} else if (vnode.vtype === VCOMPONENT) {
-		result = rootNode.cache[vnode.id];
+		result = rootNode.cache[vnode.uid];
 	}
 
 	if (!isPending) {
