@@ -81,7 +81,7 @@ Updater.prototype = {
 		let { state, props } = instance
 		if (pendingStates.length) {
 			state = _.extend({}, state)
-			_.eachItem(pendingStates, nextState => {
+			_.each(pendingStates, nextState => {
 				// replace state
 				if (_.isArr(nextState)) {
 					state = _.extend({}, nextState[0])
@@ -100,7 +100,7 @@ Updater.prototype = {
 		let { pendingCallbacks, instance } = this
 		if (pendingCallbacks.length > 0) {
 			this.pendingCallbacks = []
-			_.eachItem(pendingCallbacks, callback => callback.call(instance))
+			_.each(pendingCallbacks, callback => callback.call(instance))
 		}
 	},
 	addCallback(callback) {

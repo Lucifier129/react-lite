@@ -9,6 +9,7 @@
   global.React = factory();
 }(this, function () { 'use strict';
 
+  var HTML_KEY = 'dangerouslySetInnerHTML';
   var SVGNamespaceURI = 'http://www.w3.org/2000/svg';
   var COMPONENT_ID = 'liteid';
   var VELEMENT = 2;
@@ -17,9 +18,9 @@
   var VCOMMENT = 5;
 
   /**
-  * current state component's refs property
-  * will attach to every vnode created by calling component.render method
-  */
+   * current state component's refs property
+   * will attach to every vnode created by calling component.render method
+   */
   var refs = null;
 
   function createVnode(vtype, type, props, key, ref) {
@@ -61,25 +62,42 @@
   }
 
   function updateVnode(vnode, newVnode, node, parentContext) {
+      var vtype = vnode.vtype;
+
+      if (vtype === VCOMPONENT) {
+          return updateVcomponent(vnode, newVnode, node, parentContext);
+      }
+
+      if (vtype === VSTATELESS) {
+          return updateVstateless(vnode, newVnode, node, parentContext);
+      }
+
+      // ignore VCOMMENT and other vtypes
+      if (vtype !== VELEMENT) {
+          return node;
+      }
+
+      var oldHtml = vnode.props[HTML_KEY] && vnode.props[HTML_KEY].__html;
+      if (oldHtml != null) {
+          updateVelem(vnode, newVnode, node, parentContext);
+          initVchildren(newVnode, node, parentContext, node.namespaceURI);
+      } else {
+          updateVChildren(vnode, newVnode, node, parentContext);
+          updateVelem(vnode, newVnode, node, parentContext);
+      }
+      return node;
+  }
+
+  function updateVChildren(vnode, newVnode, node, parentContext) {
       var patches = {
           removes: [],
           updates: [],
           creates: []
       };
-      if (vnode.vtype === VELEMENT) {
-          diffVnodes(patches, vnode, newVnode, node, parentContext);
-      }
-      loop8(patches.removes, applyDestroy);
-      var newNode = applyUpdate({
-          vnode: vnode,
-          newVnode: newVnode,
-          node: node,
-          parentContext: parentContext,
-          index: 0
-      });
-      loop8(patches.updates, applyUpdate);
-      loop8(patches.creates, applyCreate);
-      return newNode;
+      diffVchildren(patches, vnode, newVnode, node, parentContext);
+      each(patches.removes, applyDestroy);
+      each(patches.updates, applyUpdate);
+      each(patches.creates, applyCreate);
   }
 
   function applyUpdate(data) {
@@ -115,17 +133,13 @@
 
   function applyCreate(data) {
       var node = initVnode(data.vnode, data.parentContext, data.parentNode.namespaceURI);
-      if (data.index >= data.parentNode.childNodes.length) {
-          data.parentNode.appendChild(node);
-      } else {
-          data.parentNode.insertBefore(node, data.parentNode.childNodes[data.index]);
-      }
+      data.parentNode.insertBefore(node, data.parentNode.childNodes[data.index]);
   }
 
   /**
-  * Only vnode which has props.children need to call destroy function
-  * to check whether subTree has component that need to call lify-cycle method and release cache.
-  */
+   * Only vnode which has props.children need to call destroy function
+   * to check whether subTree has component that need to call lify-cycle method and release cache.
+   */
 
   function destroyVnode(vnode, node) {
       var vtype = vnode.vtype;
@@ -155,10 +169,7 @@
           node = document.createElement(type);
       }
 
-      var vchildren = node.vchildren = getFlattenChildren(velem);
-      for (var i = 0, len = vchildren.length; i < len; i++) {
-          node.appendChild(initVnode(vchildren[i], parentContext, namespaceURI));
-      }
+      initVchildren(velem, node, parentContext, namespaceURI);
 
       var isCustomComponent = type.indexOf('-') >= 0 || props.is != null;
       setProps(node, props, isCustomComponent);
@@ -166,6 +177,13 @@
       attachRef(velem.refs, velem.ref, node);
 
       return node;
+  }
+
+  function initVchildren(velem, node, parentContext, namespaceURI) {
+      var vchildren = node.vchildren = getFlattenChildren(velem);
+      for (var i = 0, len = vchildren.length; i < len; i++) {
+          node.appendChild(initVnode(vchildren[i], parentContext, namespaceURI));
+      }
   }
 
   function getFlattenChildren(vnode) {
@@ -186,67 +204,39 @@
       }
   }
 
-  function diffVnodes(patches, vnode, newVnode, node, parentContext) {
-      var vtype = vnode.vtype;
-
-      if (vtype !== VELEMENT && vtype !== VCOMPONENT && vtype !== VSTATELESS) {
-          return;
-      }
-
-      var newVchildren = getFlattenChildren(newVnode);
+  function diffVchildren(patches, vnode, newVnode, node, parentContext) {
+      var childNodes = node.childNodes;
       var vchildren = node.vchildren;
 
-      if (vchildren.length > 0) {
-          if (newVchildren.length > 0) {
-              diffChildren(patches, vchildren, newVchildren, node, parentContext);
-          } else {
-              for (var i = 0, len = vchildren.length; i < len; i++) {
-                  patches.removes.push({
-                      vnode: vchildren[i],
-                      node: node.childNodes[i]
-                  });
-              }
-          }
-      } else if (newVchildren.length > 0) {
-          for (var i = 0, len = newVchildren.length; i < len; i++) {
-              patches.creates.push({
-                  vnode: newVchildren[i],
-                  parentNode: node,
-                  parentContext: parentContext,
-                  index: i
-              });
-          }
-      }
-      node.vchildren = newVchildren;
-  }
-
-  function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
-      var childNodes = node.childNodes;
-
+      var newVchildren = node.vchildren = getFlattenChildren(newVnode);
       var vchildrenLen = vchildren.length;
       var newVchildrenLen = newVchildren.length;
       var matches = Array(newVchildrenLen);
 
       // isEqual
       for (var i = 0; i < vchildrenLen; i++) {
-          var vnode = vchildren[i];
+          var _vnode = vchildren[i];
           for (var j = 0; j < newVchildrenLen; j++) {
               if (matches[j]) {
                   continue;
               }
-              var newVnode = newVchildren[j];
-              if (vnode === newVnode) {
+              var _newVnode = newVchildren[j];
+              if (_vnode === _newVnode) {
                   if (parentContext) {
-                      patches.updates.push({
-                          vnode: vnode,
-                          newVnode: newVnode,
+                      /**
+                       * Why not just push object to patches.updates?
+                       * Because we want to merge update and re-order
+                       */
+                      matches[j] = {
+                          vnode: _vnode,
+                          newVnode: _newVnode,
                           node: childNodes[i],
                           parentContext: parentContext,
                           index: j
-                      });
-                      diffVnodes(patches, vnode, newVnode, childNodes[i], parentContext);
+                      };
+                  } else {
+                      matches[j] = true;
                   }
-                  matches[j] = true;
                   vchildren[i] = null;
                   break;
               }
@@ -255,8 +245,8 @@
 
       // isSimilar
       for (var i = 0; i < vchildrenLen; i++) {
-          var vnode = vchildren[i];
-          if (vnode === null) {
+          var _vnode2 = vchildren[i];
+          if (_vnode2 === null) {
               continue;
           }
           var shouldRemove = true;
@@ -264,38 +254,41 @@
               if (matches[j]) {
                   continue;
               }
-              var newVnode = newVchildren[j];
-              if (newVnode.type === vnode.type && newVnode.key === vnode.key && newVnode.refs === vnode.refs) {
-                  patches.updates.push({
-                      vnode: vnode,
-                      newVnode: newVnode,
+              var _newVnode2 = newVchildren[j];
+              if (_newVnode2.type === _vnode2.type && _newVnode2.key === _vnode2.key && _newVnode2.refs === _vnode2.refs) {
+                  matches[j] = {
+                      vnode: _vnode2,
+                      newVnode: _newVnode2,
                       node: childNodes[i],
                       parentContext: parentContext,
                       index: j
-                  });
-                  diffVnodes(patches, vnode, newVnode, childNodes[i], parentContext);
-                  matches[j] = 1;
+                  };
                   shouldRemove = false;
                   break;
               }
           }
           if (shouldRemove) {
               patches.removes.push({
-                  vnode: vnode,
+                  vnode: _vnode2,
                   node: childNodes[i]
               });
           }
       }
 
-      // isNew
       for (var i = 0; i < newVchildrenLen; i++) {
-          if (!matches[i]) {
+          var item = matches[i];
+          if (!item) {
               patches.creates.push({
                   vnode: newVchildren[i],
                   parentNode: node,
                   parentContext: parentContext,
                   index: i
               });
+          } else if (typeof item === 'object') {
+              if (item.vnode.vtype === VELEMENT) {
+                  diffVchildren(patches, item.node, item.newVnode, item.node, item.parentContext);
+              }
+              patches.updates.push(item);
           }
       }
   }
@@ -329,6 +322,7 @@
       node.cache[vstateless.uid] = vnode;
       return node;
   }
+
   function updateVstateless(vstateless, newVstateless, node, parentContext) {
       var uid = vstateless.uid;
       var vnode = node.cache[uid];
@@ -342,6 +336,7 @@
       }
       return newNode;
   }
+
   function destroyVstateless(vstateless, node) {
       var uid = vstateless.uid;
       var vnode = node.cache[uid];
@@ -395,6 +390,7 @@
       attachRef(vcomponent.refs, vcomponent.ref, component);
       return node;
   }
+
   function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
       var uid = vcomponent.uid;
       var component = node.cache[uid];
@@ -420,6 +416,7 @@
       }
       return cache.node;
   }
+
   function destroyVcomponent(vcomponent, node) {
       var uid = vcomponent.uid;
       var component = node.cache[uid];
@@ -635,7 +632,7 @@
 
   		if (pendingStates.length) {
   			state = extend({}, state);
-  			eachItem(pendingStates, function (nextState) {
+  			each(pendingStates, function (nextState) {
   				// replace state
   				if (isArr(nextState)) {
   					state = extend({}, nextState[0]);
@@ -656,7 +653,7 @@
 
   		if (pendingCallbacks.length > 0) {
   			this.pendingCallbacks = [];
-  			eachItem(pendingCallbacks, function (callback) {
+  			each(pendingCallbacks, function (callback) {
   				return callback.call(instance);
   			});
   		}
@@ -930,20 +927,18 @@
           return;
       }
 
-      var keyMap = {};
       for (var key in style) {
-          if (style.hasOwnProperty(key)) {
-              keyMap[key] = true;
-              if (style[key] !== newStyle[key]) {
+          if (newStyle.hasOwnProperty(key)) {
+              if (newStyle[key] !== style[key]) {
                   setStyleValue(elemStyle, key, newStyle[key]);
               }
+          } else {
+              elemStyle[key] = '';
           }
       }
       for (var key in newStyle) {
-          if (newStyle.hasOwnProperty(key) && keyMap[key] !== true) {
-              if (style[key] !== newStyle[key]) {
-                  setStyleValue(elemStyle, key, newStyle[key]);
-              }
+          if (!style.hasOwnProperty(key)) {
+              setStyleValue(elemStyle, key, newStyle[key]);
           }
       }
   }
@@ -1660,13 +1655,7 @@
       }
   }
 
-  function eachItem(list, iteratee) {
-      for (var i = 0, len = list.length; i < len; i++) {
-          iteratee(list[i], i);
-      }
-  }
-
-  function loop8(list, iteratee) {
+  function each(list, iteratee) {
       var len = list.length;
       var optimizeCount = Math.floor(len / 8);
       var normalCount = len % 8;
@@ -1707,61 +1696,15 @@
   }
 
   var EVENT_KEYS = /^on/i;
-  function setProps(elem, props, isCustomComponent) {
-      for (var key in props) {
-          if (!props.hasOwnProperty(key) || key === 'children') {
-              continue;
-          }
-          var value = props[key];
-          if (EVENT_KEYS.test(key)) {
-              addEvent(elem, key, value);
-          } else if (key === 'style') {
-              setStyle(elem.style, value);
-          } else if (key === 'dangerouslySetInnerHTML') {
-              value && value.__html != null && (elem.innerHTML = value.__html);
-          } else if (isCustomComponent) {
-              if (value == null) {
-                  elem.removeAttribute(key);
-              } else {
-                  elem.setAttribute(key, '' + value);
-              }
-          } else {
-              setPropValue(elem, key, value);
-          }
-      }
-  }
 
-  function patchProp(key, oldValue, value, elem, isCustomComponent) {
-      if (key === 'value' || key === 'checked') {
-          oldValue = elem[key];
-      }
-      if (value === oldValue) {
-          return;
-      }
-      if (value === undefined) {
-          if (EVENT_KEYS.test(key)) {
-              removeEvent(elem, key);
-          } else if (key === 'style') {
-              removeStyle(elem.style, oldValue);
-          } else if (key === 'dangerouslySetInnerHTML') {
-              elem.innerHTML = '';
-          } else if (isCustomComponent) {
-              elem.removeAttribute(key);
-          } else {
-              removePropValue(elem, key);
-          }
-          return;
-      }
+  function setProp(elem, key, value, isCustomComponent) {
       if (EVENT_KEYS.test(key)) {
-          // addEvent will replace the oldValue
           addEvent(elem, key, value);
       } else if (key === 'style') {
-          patchStyle(elem.style, oldValue, value);
-      } else if (key === 'dangerouslySetInnerHTML') {
-          var oldHtml = oldValue && oldValue.__html;
-          var html = value && value.__html;
-          if (html != null && html !== oldHtml) {
-              elem.innerHTML = html;
+          setStyle(elem.style, value);
+      } else if (key === HTML_KEY) {
+          if (value && value.__html != null) {
+              elem.innerHTML = value.__html;
           }
       } else if (isCustomComponent) {
           if (value == null) {
@@ -1774,17 +1717,59 @@
       }
   }
 
-  function patchProps(elem, props, newProps, isCustomComponent) {
-      var keyMap = { children: true };
+  function removeProp(elem, key, oldValue, isCustomComponent) {
+      if (EVENT_KEYS.test(key)) {
+          removeEvent(elem, key);
+      } else if (key === 'style') {
+          removeStyle(elem.style, oldValue);
+      } else if (key === HTML_KEY) {
+          elem.innerHTML = '';
+      } else if (isCustomComponent) {
+          elem.removeAttribute(key);
+      } else {
+          removePropValue(elem, key);
+      }
+  }
+
+  function patchProp(elem, key, value, oldValue, isCustomComponent) {
+      if (key === 'value' || key === 'checked') {
+          oldValue = elem[key];
+      }
+      if (value === oldValue) {
+          return;
+      }
+      if (value === undefined) {
+          removeProp(elem, key, oldValue, isCustomComponent);
+          return;
+      }
+      if (key === 'style') {
+          patchStyle(elem.style, oldValue, value);
+      } else {
+          setProp(elem, key, value, isCustomComponent);
+      }
+  }
+
+  function setProps(elem, props, isCustomComponent) {
       for (var key in props) {
-          if (props.hasOwnProperty(key) && key !== 'children') {
-              keyMap[key] = true;
-              patchProp(key, props[key], newProps[key], elem, isCustomComponent);
+          if (key !== 'children') {
+              setProp(elem, key, props[key], isCustomComponent);
+          }
+      }
+  }
+
+  function patchProps(elem, props, newProps, isCustomComponent) {
+      for (var key in props) {
+          if (key !== 'children') {
+              if (newProps.hasOwnProperty(key)) {
+                  patchProp(elem, key, newProps[key], props[key], isCustomComponent);
+              } else {
+                  removeProp(elem, key, props[key], isCustomComponent);
+              }
           }
       }
       for (var key in newProps) {
-          if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
-              patchProp(key, props[key], newProps[key], elem, isCustomComponent);
+          if (key !== 'children' && !props.hasOwnProperty(key)) {
+              setProp(elem, key, newProps[key], isCustomComponent);
           }
       }
   }
@@ -2003,7 +1988,7 @@
 
   var tagNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';
   var DOM = {};
-  eachItem(tagNames.split('|'), function (tagName) {
+  each(tagNames.split('|'), function (tagName) {
   	DOM[tagName] = createFactory(tagName);
   });
 
@@ -2070,7 +2055,7 @@
   		store.push(data);
   	});
   	var result = [];
-  	eachItem(store, function (_ref) {
+  	each(store, function (_ref) {
   		var child = _ref.child;
   		var key = _ref.key;
   		var index = _ref.index;
@@ -2131,7 +2116,7 @@
   });
 
   function eachMixin(mixins, iteratee) {
-  	eachItem(mixins, function (mixin) {
+  	each(mixins, function (mixin) {
   		if (mixin) {
   			if (isArr(mixin.mixins)) {
   				eachMixin(mixin.mixins, iteratee);
@@ -2188,7 +2173,7 @@
   	var state = {};
   	var setState = this.setState;
   	this.setState = Facade;
-  	eachItem(this.$getInitialStates, function (getInitialState) {
+  	each(this.$getInitialStates, function (getInitialState) {
   		if (isFn(getInitialState)) {
   			extend(state, getInitialState.call(_this));
   		}

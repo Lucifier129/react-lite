@@ -2,7 +2,7 @@ import * as _ from './util'
 import Component from './Component'
 
 function eachMixin (mixins, iteratee) {
-	_.eachItem(mixins, mixin => {
+	_.each(mixins, mixin => {
 		if (mixin) {
 			if (_.isArr(mixin.mixins)) {
 				eachMixin(mixin.mixins, iteratee)
@@ -57,7 +57,7 @@ function getInitialState() {
 	let state = {}
 	let setState = this.setState
 	this.setState = Facade
-	_.eachItem(this.$getInitialStates, getInitialState => {
+	_.each(this.$getInitialStates, getInitialState => {
 		if (_.isFn(getInitialState)) {
 			_.extend(state, getInitialState.call(this))
 		}

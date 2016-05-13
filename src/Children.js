@@ -42,7 +42,7 @@ export function map(children, iteratee, context) {
 		store.push(data)
 	})
 	let result = []
-	_.eachItem(store, ({ child, key, index, isEqual }) => {
+	_.each(store, ({ child, key, index, isEqual }) => {
 		if (child == null || typeof child === 'boolean') {
 			return
 		}

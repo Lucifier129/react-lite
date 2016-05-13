@@ -5,7 +5,8 @@ import {
     VSTATELESS,
     VCOMPONENT,
     VCOMMENT,
-    HTML_KEY
+    HTML_KEY,
+
 } from './constant'
 
 /**
@@ -47,24 +48,42 @@ export function initVnode(vnode, parentContext, namespaceURI) {
 }
 
 function updateVnode(vnode, newVnode, node, parentContext) {
-    let updateSettings = {
-        vnode: vnode,
-        newVnode: newVnode,
-        node: node,
-        parentContext: parentContext,
-        index: 0,
+    let { vtype } = vnode
+
+    if (vtype === VCOMPONENT) {
+        return updateVcomponent(vnode, newVnode, node, parentContext)
     }
-    if (vnode.vtype !== VELEMENT) {
-        return applyUpdate(updateSettings)
+
+    if (vtype === VSTATELESS) {
+        return updateVstateless(vnode, newVnode, node, parentContext)
     }
-    let oldHtml = vnode.props.dangerouslySetInnerHTML && vnode.props.dangerouslySetInnerHTML.__html
-    if (oldHtml != null) {
-        applyUpdate(updateSettings)
-        initVchildren(newVnode, node, parentContext, node.namespaceURI)
+
+    // ignore VCOMMENT and other vtypes
+    if (vtype !== VELEMENT) {
         return node
     }
-    updateVChildren(vnode, newVnode, node, parentContext)
-    return applyUpdate(updateSettings)
+
+    let oldHtml = vnode.props[HTML_KEY] && vnode.props[HTML_KEY].__html
+    if (oldHtml != null) {
+        updateVelem(vnode, newVnode, node, parentContext)
+        initVchildren(newVnode, node, parentContext, node.namespaceURI)
+    } else {
+        updateVChildren(vnode, newVnode, node, parentContext)
+        updateVelem(vnode, newVnode, node, parentContext)
+    }
+    return node
+}
+
+function updateVChildren(vnode, newVnode, node, parentContext) {
+    let patches = {
+        removes: [],
+        updates: [],
+        creates: [],
+    }
+    diffVchildren(patches, vnode, newVnode, node, parentContext)
+    _.each(patches.removes, applyDestroy)
+    _.each(patches.updates, applyUpdate)
+    _.each(patches.creates, applyCreate)
 }
 
 function applyUpdate(data) {
@@ -95,23 +114,7 @@ function applyDestroy(data) {
 
 function applyCreate(data) {
     let node = initVnode(data.vnode, data.parentContext, data.parentNode.namespaceURI)
-    if (data.index >= data.parentNode.childNodes.length) {
-        data.parentNode.appendChild(node)
-    } else {
-        data.parentNode.insertBefore(node, data.parentNode.childNodes[data.index])
-    }
-}
-
-function updateVChildren(vnode, newVnode, node, parentContext) {
-    let patches = {
-        removes: [],
-        updates: [],
-        creates: [],
-    }
-    diffVnodes(patches, vnode, newVnode, node, parentContext)
-    _.loop8(patches.removes, applyDestroy)
-    _.loop8(patches.updates, applyUpdate)
-    _.loop8(patches.creates, applyCreate)
+    data.parentNode.insertBefore(node, data.parentNode.childNodes[data.index])
 }
 
 
@@ -175,38 +178,9 @@ function collectChild(child, children) {
     }
 }
 
-function diffVnodes(patches, vnode, newVnode, node, parentContext) {
-    if (vnode.vtype !== VELEMENT) {
-        return
-    }
-    let newVchildren = getFlattenChildren(newVnode)
-    let { vchildren } = node
-    if (vchildren.length > 0) {
-        if (newVchildren.length > 0) {
-            diffChildren(patches, vchildren, newVchildren, node, parentContext)
-        } else {
-            for (let i = 0, len = vchildren.length; i < len; i++) {
-                patches.removes.push({
-                    vnode: vchildren[i],
-                    node: node.childNodes[i],
-                })
-            }
-        }
-    } else if (newVchildren.length > 0) {
-        for (let i = 0, len = newVchildren.length; i < len; i++) {
-            patches.creates.push({
-                vnode: newVchildren[i],
-                parentNode: node,
-                parentContext: parentContext,
-                index: i,
-            })
-        }
-    }
-    node.vchildren = newVchildren
-}
-
-function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
-    let { childNodes } = node
+function diffVchildren(patches, vnode, newVnode, node, parentContext) {
+    let { childNodes, vchildren } = node
+    let newVchildren = node.vchildren = getFlattenChildren(newVnode)
     let vchildrenLen = vchildren.length
     let newVchildrenLen = newVchildren.length
     let matches = Array(newVchildrenLen)
@@ -221,16 +195,20 @@ function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
             let newVnode = newVchildren[j]
             if (vnode === newVnode) {
                 if (parentContext) {
-                    patches.updates.push({
+                    /**
+                     * Why not just push object to patches.updates?
+                     * Because we want to merge update and re-order
+                     */
+                    matches[j] = {
                         vnode: vnode,
                         newVnode: newVnode,
                         node: childNodes[i],
                         parentContext: parentContext,
                         index: j,
-                    })
-                    diffVnodes(patches, vnode, newVnode, childNodes[i], parentContext)
+                    }
+                } else {
+                    matches[j] = true
                 }
-                matches[j] = true
                 vchildren[i] = null
                 break
             }
@@ -254,15 +232,13 @@ function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
                 newVnode.key === vnode.key &&
                 newVnode.refs === vnode.refs
             ) {
-                patches.updates.push({
+                matches[j] = {
                     vnode: vnode,
                     newVnode: newVnode,
                     node: childNodes[i],
                     parentContext: parentContext,
                     index: j,
-                })
-                diffVnodes(patches, vnode, newVnode, childNodes[i], parentContext)
-                matches[j] = 1
+                }
                 shouldRemove = false
                 break
             }
@@ -275,15 +251,20 @@ function diffChildren(patches, vchildren, newVchildren, node, parentContext) {
         }
     }
 
-    // isNew
     for (let i = 0; i < newVchildrenLen; i++) {
-        if (!matches[i]) {
+        let item = matches[i]
+        if (!item) {
             patches.creates.push({
                 vnode: newVchildren[i],
                 parentNode: node,
                 parentContext: parentContext,
                 index: i,
             })
+        } else if (typeof item === 'object') {
+            if (item.vnode.vtype === VELEMENT) {
+                diffVchildren(patches, item.node, item.newVnode, item.node, item.parentContext)
+            }
+            patches.updates.push(item)
         }
     }
 }

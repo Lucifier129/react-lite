@@ -9,6 +9,7 @@ import {
     setPropValue,
     removePropValue
 } from './DOMPropertyOperations'
+import { HTML_KEY } from './constant'
 
 export function isFn(obj) {
     return typeof obj === 'function'
@@ -41,14 +42,8 @@ export function flattenChildren(list, iteratee, a) {
     }
 }
 
-export function eachItem(list, iteratee) {
-    for (let i = 0, len = list.length; i < len; i++) {
-        iteratee(list[i], i)
-    }
-}
 
-
-export function loop8(list, iteratee) {
+export function each(list, iteratee) {
     let len = list.length
     let optimizeCount = Math.floor(len / 8)
     let normalCount = len % 8
@@ -89,61 +84,15 @@ export function getUid() {
 }
 
 export let EVENT_KEYS = /^on/i
-export function setProps(elem, props, isCustomComponent) {
-    for (let key in props) {
-        if (!props.hasOwnProperty(key) || key === 'children') {
-            continue
-        }
-        let value = props[key]
-        if (EVENT_KEYS.test(key)) {
-            addEvent(elem, key, value)
-        } else if (key === 'style') {
-            setStyle(elem.style, value)
-        } else if (key === 'dangerouslySetInnerHTML') {
-            value && value.__html != null && (elem.innerHTML = value.__html)
-        } else if (isCustomComponent) {
-            if (value == null) {
-                elem.removeAttribute(key)
-            } else {
-                elem.setAttribute(key, '' + value)
-            }
-        } else {
-            setPropValue(elem, key, value)
-        }
-    }
-}
 
-function patchProp(key, oldValue, value, elem, isCustomComponent) {
-    if (key === 'value' || key === 'checked') {
-        oldValue = elem[key]
-    }
-    if (value === oldValue) {
-        return
-    }
-    if (value === undefined) {
-        if (EVENT_KEYS.test(key)) {
-            removeEvent(elem, key)
-        } else if (key === 'style') {
-            removeStyle(elem.style, oldValue)
-        } else if (key === 'dangerouslySetInnerHTML') {
-            elem.innerHTML = ''
-        } else if (isCustomComponent) {
-            elem.removeAttribute(key)
-        } else {
-            removePropValue(elem, key)
-        }
-        return
-    }
+function setProp(elem, key, value, isCustomComponent) {
     if (EVENT_KEYS.test(key)) {
-        // addEvent will replace the oldValue
         addEvent(elem, key, value)
     } else if (key === 'style') {
-        patchStyle(elem.style, oldValue, value)
-    } else if (key === 'dangerouslySetInnerHTML') {
-        let oldHtml = oldValue && oldValue.__html
-        let html = value && value.__html
-        if (html != null && html !== oldHtml) {
-            elem.innerHTML = html
+        setStyle(elem.style, value)
+    } else if (key === HTML_KEY) {
+        if (value && value.__html != null) {
+            elem.innerHTML = value.__html
         }
     } else if (isCustomComponent) {
         if (value == null) {
@@ -156,17 +105,59 @@ function patchProp(key, oldValue, value, elem, isCustomComponent) {
     }
 }
 
-export function patchProps(elem, props, newProps, isCustomComponent) {
-    let keyMap = { children: true }
+function removeProp(elem, key, oldValue, isCustomComponent) {
+    if (EVENT_KEYS.test(key)) {
+        removeEvent(elem, key)
+    } else if (key === 'style') {
+        removeStyle(elem.style, oldValue)
+    } else if (key === HTML_KEY) {
+        elem.innerHTML = ''
+    } else if (isCustomComponent) {
+        elem.removeAttribute(key)
+    } else {
+        removePropValue(elem, key)
+    }
+}
+
+function patchProp(elem, key, value, oldValue, isCustomComponent) {
+    if (key === 'value' || key === 'checked') {
+        oldValue = elem[key]
+    }
+    if (value === oldValue) {
+        return
+    }
+    if (value === undefined) {
+        removeProp(elem, key, oldValue, isCustomComponent)
+        return
+    }
+    if (key === 'style') {
+        patchStyle(elem.style, oldValue, value)
+    } else {
+        setProp(elem, key, value, isCustomComponent)
+    }
+}
+
+export function setProps(elem, props, isCustomComponent) {
     for (let key in props) {
-        if (props.hasOwnProperty(key) && key !== 'children') {
-            keyMap[key] = true
-            patchProp(key, props[key], newProps[key], elem, isCustomComponent)
+        if (key !== 'children') {
+            setProp(elem, key, props[key], isCustomComponent)
+        }
+    }
+}
+
+export function patchProps(elem, props, newProps, isCustomComponent) {
+    for (let key in props) {
+        if (key !== 'children') {
+            if (newProps.hasOwnProperty(key)) {
+                patchProp(elem, key, newProps[key], props[key], isCustomComponent)
+            } else {
+                removeProp(elem, key, props[key], isCustomComponent)
+            }
         }
     }
     for (let key in newProps) {
-        if (newProps.hasOwnProperty(key) && keyMap[key] !== true) {
-            patchProp(key, props[key], newProps[key], elem, isCustomComponent)
+        if (key !== 'children' && !props.hasOwnProperty(key)) {
+            setProp(elem, key, newProps[key], isCustomComponent)
         }
     }
 }
