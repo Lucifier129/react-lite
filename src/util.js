@@ -28,40 +28,17 @@ export function pipe(fn1, fn2) {
     }
 }
 
-export function flattenChildren(list, iteratee, a) {
+export function flatEach(list, iteratee, a) {
     let len = list.length
     let i = -1
 
     while (len--) {
         let item = list[++i]
         if (isArr(item)) {
-            flattenChildren(item, iteratee, a)
+            flatEach(item, iteratee, a)
         } else {
             iteratee(item, a)
         }
-    }
-}
-
-
-export function each(list, iteratee) {
-    let len = list.length
-    let optimizeCount = Math.floor(len / 8)
-    let normalCount = len % 8
-    let index = 0
-    while (optimizeCount > 0) {
-        iteratee(list[index++])
-        iteratee(list[index++])
-        iteratee(list[index++])
-        iteratee(list[index++])
-        iteratee(list[index++])
-        iteratee(list[index++])
-        iteratee(list[index++])
-        iteratee(list[index++])
-        optimizeCount -= 1
-    }
-    while (normalCount > 0) {
-        iteratee(list[index++])
-        normalCount -= 1
     }
 }
 

@@ -58,7 +58,9 @@ var DBMon = React.createClass({
   }
 });
 
+console.time('mount')
 React.render(<DBMon />, document.getElementById('dbmon'));
+console.timeEnd('mount')
 
 
 

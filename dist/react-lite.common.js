@@ -76,7 +76,7 @@ function updateVnode(vnode, newVnode, node, parentContext) {
     var oldHtml = vnode.props[HTML_KEY] && vnode.props[HTML_KEY].__html;
     if (oldHtml != null) {
         updateVelem(vnode, newVnode, node, parentContext);
-        initVchildren(newVnode, node, parentContext, node.namespaceURI);
+        initVchildren(newVnode, node, parentContext);
     } else {
         updateVChildren(vnode, newVnode, node, parentContext);
         updateVelem(vnode, newVnode, node, parentContext);
@@ -91,30 +91,35 @@ function updateVChildren(vnode, newVnode, node, parentContext) {
         creates: []
     };
     diffVchildren(patches, vnode, newVnode, node, parentContext);
-    each(patches.removes, applyDestroy);
-    each(patches.updates, applyUpdate);
-    each(patches.creates, applyCreate);
+    flatEach(patches.removes, applyDestroy);
+    flatEach(patches.updates, applyUpdate);
+    flatEach(patches.creates, applyCreate);
 }
 
 function applyUpdate(data) {
+    if (!data) {
+        return;
+    }
+    var isEqual = data.isEqual;
     var vnode = data.vnode;
     var newVnode = data.newVnode;
     var node = data.node;
     var parentContext = data.parentContext;
     var index = data.index;
 
-    var vtype = vnode.vtype;
     var newNode = node;
-    if (!vtype) {
-        newNode.replaceData(0, newNode.length, newVnode);
-        // newNode.nodeValue = newVnode
-    } else if (vtype === VELEMENT) {
-            updateVelem(vnode, newVnode, newNode, parentContext);
-        } else if (vtype === VSTATELESS) {
-            newNode = updateVstateless(vnode, newVnode, newNode, parentContext);
-        } else if (vtype === VCOMPONENT) {
-            newNode = updateVcomponent(vnode, newVnode, newNode, parentContext);
-        }
+    if (!isEqual || parentContext) {
+        if (!vnode.vtype) {
+            newNode.replaceData(0, newNode.length, newVnode);
+            // newNode.nodeValue = newVnode
+        } else if (vnode.vtype === VELEMENT) {
+                updateVelem(vnode, newVnode, newNode, parentContext);
+            } else if (vnode.vtype === VSTATELESS) {
+                newNode = updateVstateless(vnode, newVnode, newNode, parentContext);
+            } else if (vnode.vtype === VCOMPONENT) {
+                newNode = updateVcomponent(vnode, newVnode, newNode, parentContext);
+            }
+    }
     var currentNode = newNode.parentNode.childNodes[index];
     if (currentNode !== newNode) {
         newNode.parentNode.insertBefore(newNode, currentNode);
@@ -165,7 +170,7 @@ function initVelem(velem, parentContext, namespaceURI) {
         node = document.createElement(type);
     }
 
-    initVchildren(velem, node, parentContext, namespaceURI);
+    initVchildren(velem, node, parentContext);
 
     var isCustomComponent = type.indexOf('-') >= 0 || props.is != null;
     setProps(node, props, isCustomComponent);
@@ -175,8 +180,9 @@ function initVelem(velem, parentContext, namespaceURI) {
     return node;
 }
 
-function initVchildren(velem, node, parentContext, namespaceURI) {
+function initVchildren(velem, node, parentContext) {
     var vchildren = node.vchildren = getFlattenChildren(velem);
+    var namespaceURI = node.namespaceURI;
     for (var i = 0, len = vchildren.length; i < len; i++) {
         node.appendChild(initVnode(vchildren[i], parentContext, namespaceURI));
     }
@@ -187,7 +193,7 @@ function getFlattenChildren(vnode) {
 
     var vchildren = [];
     if (isArr(children)) {
-        flattenChildren(children, collectChild, vchildren);
+        flatEach(children, collectChild, vchildren);
     } else {
         collectChild(children, vchildren);
     }
@@ -207,32 +213,50 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
     var newVchildren = node.vchildren = getFlattenChildren(newVnode);
     var vchildrenLen = vchildren.length;
     var newVchildrenLen = newVchildren.length;
-    var matches = Array(newVchildrenLen);
+
+    if (vchildrenLen === 0) {
+        if (newVchildrenLen > 0) {
+            for (var i = 0; i < newVchildrenLen; i++) {
+                patches.creates.push({
+                    vnode: newVchildren[i],
+                    parentNode: node,
+                    parentContext: parentContext,
+                    index: i
+                });
+            }
+        }
+        return;
+    } else if (newVchildrenLen === 0) {
+        for (var i = 0; i < vchildrenLen; i++) {
+            patches.removes.push({
+                vnode: vchildren[i],
+                node: childNodes[i]
+            });
+        }
+        return;
+    }
+
+    var updates = Array(newVchildrenLen);
+    var removes = null;
+    var creates = null;
 
     // isEqual
     for (var i = 0; i < vchildrenLen; i++) {
         var _vnode = vchildren[i];
         for (var j = 0; j < newVchildrenLen; j++) {
-            if (matches[j]) {
+            if (updates[j]) {
                 continue;
             }
             var _newVnode = newVchildren[j];
             if (_vnode === _newVnode) {
-                if (parentContext) {
-                    /**
-                     * Why not just push object to patches.updates?
-                     * Because we want to merge update and re-order
-                     */
-                    matches[j] = {
-                        vnode: _vnode,
-                        newVnode: _newVnode,
-                        node: childNodes[i],
-                        parentContext: parentContext,
-                        index: j
-                    };
-                } else {
-                    matches[j] = true;
-                }
+                updates[j] = {
+                    isEqual: true,
+                    vnode: _vnode,
+                    newVnode: _newVnode,
+                    node: childNodes[i],
+                    parentContext: parentContext,
+                    index: j
+                };
                 vchildren[i] = null;
                 break;
             }
@@ -247,12 +271,12 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
         }
         var shouldRemove = true;
         for (var j = 0; j < newVchildrenLen; j++) {
-            if (matches[j]) {
+            if (updates[j]) {
                 continue;
             }
             var _newVnode2 = newVchildren[j];
             if (_newVnode2.type === _vnode2.type && _newVnode2.key === _vnode2.key && _newVnode2.refs === _vnode2.refs) {
-                matches[j] = {
+                updates[j] = {
                     vnode: _vnode2,
                     newVnode: _newVnode2,
                     node: childNodes[i],
@@ -264,7 +288,10 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             }
         }
         if (shouldRemove) {
-            patches.removes.push({
+            if (!removes) {
+                removes = [];
+            }
+            removes.push({
                 vnode: _vnode2,
                 node: childNodes[i]
             });
@@ -272,21 +299,29 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
     }
 
     for (var i = 0; i < newVchildrenLen; i++) {
-        var item = matches[i];
+        var item = updates[i];
         if (!item) {
-            patches.creates.push({
+            if (!creates) {
+                creates = [];
+            }
+            creates.push({
                 vnode: newVchildren[i],
                 parentNode: node,
                 parentContext: parentContext,
                 index: i
             });
-        } else if (typeof item === 'object') {
-            if (item.vnode.vtype === VELEMENT) {
-                diffVchildren(patches, item.node, item.newVnode, item.node, item.parentContext);
-            }
-            patches.updates.push(item);
+        } else if (item.vnode.vtype === VELEMENT) {
+            diffVchildren(patches, item.vnode, item.newVnode, item.node, item.parentContext);
         }
     }
+
+    if (removes) {
+        patches.removes.push(removes);
+    }
+    if (creates) {
+        patches.creates.push(creates);
+    }
+    patches.updates.push(updates);
 }
 
 function updateVelem(velem, newVelem, node) {
@@ -628,7 +663,7 @@ Updater.prototype = {
 
 		if (pendingStates.length) {
 			state = extend({}, state);
-			each(pendingStates, function (nextState) {
+			pendingStates.forEach(function (nextState) {
 				// replace state
 				if (isArr(nextState)) {
 					state = extend({}, nextState[0]);
@@ -649,7 +684,7 @@ Updater.prototype = {
 
 		if (pendingCallbacks.length > 0) {
 			this.pendingCallbacks = [];
-			each(pendingCallbacks, function (callback) {
+			pendingCallbacks.forEach(function (callback) {
 				return callback.call(instance);
 			});
 		}
@@ -1637,39 +1672,17 @@ function pipe(fn1, fn2) {
     };
 }
 
-function flattenChildren(list, iteratee, a) {
+function flatEach(list, iteratee, a) {
     var len = list.length;
     var i = -1;
 
     while (len--) {
         var item = list[++i];
         if (isArr(item)) {
-            flattenChildren(item, iteratee, a);
+            flatEach(item, iteratee, a);
         } else {
             iteratee(item, a);
         }
-    }
-}
-
-function each(list, iteratee) {
-    var len = list.length;
-    var optimizeCount = Math.floor(len / 8);
-    var normalCount = len % 8;
-    var index = 0;
-    while (optimizeCount > 0) {
-        iteratee(list[index++]);
-        iteratee(list[index++]);
-        iteratee(list[index++]);
-        iteratee(list[index++]);
-        iteratee(list[index++]);
-        iteratee(list[index++]);
-        iteratee(list[index++]);
-        iteratee(list[index++]);
-        optimizeCount -= 1;
-    }
-    while (normalCount > 0) {
-        iteratee(list[index++]);
-        normalCount -= 1;
     }
 }
 
@@ -1984,7 +1997,7 @@ function createFactory(type) {
 
 var tagNames = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|big|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|main|map|mark|menu|menuitem|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr|circle|clipPath|defs|ellipse|g|image|line|linearGradient|mask|path|pattern|polygon|polyline|radialGradient|rect|stop|svg|text|tspan';
 var DOM = {};
-each(tagNames.split('|'), function (tagName) {
+tagNames.split('|').forEach(function (tagName) {
 	DOM[tagName] = createFactory(tagName);
 });
 
@@ -2023,7 +2036,7 @@ function forEach(children, iteratee, context) {
 	}
 	var index = 0;
 	if (isArr(children)) {
-		flattenChildren(children, function (child) {
+		flatEach(children, function (child) {
 			iteratee.call(context, child, index++);
 		});
 	} else {
@@ -2051,7 +2064,7 @@ function map(children, iteratee, context) {
 		store.push(data);
 	});
 	var result = [];
-	each(store, function (_ref) {
+	store.forEach(function (_ref) {
 		var child = _ref.child;
 		var key = _ref.key;
 		var index = _ref.index;
@@ -2112,7 +2125,7 @@ var Children = Object.freeze({
 });
 
 function eachMixin(mixins, iteratee) {
-	each(mixins, function (mixin) {
+	mixins.forEach(function (mixin) {
 		if (mixin) {
 			if (isArr(mixin.mixins)) {
 				eachMixin(mixin.mixins, iteratee);
@@ -2169,7 +2182,7 @@ function getInitialState() {
 	var state = {};
 	var setState = this.setState;
 	this.setState = Facade;
-	each(this.$getInitialStates, function (getInitialState) {
+	this.$getInitialStates.forEach(function (getInitialState) {
 		if (isFn(getInitialState)) {
 			extend(state, getInitialState.call(_this));
 		}

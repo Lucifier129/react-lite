@@ -1,8 +1,8 @@
 import * as _ from './util'
 import Component from './Component'
 
-function eachMixin (mixins, iteratee) {
-	_.each(mixins, mixin => {
+function eachMixin(mixins, iteratee) {
+	mixins.forEach(mixin => {
 		if (mixin) {
 			if (_.isArr(mixin.mixins)) {
 				eachMixin(mixin.mixins, iteratee)
@@ -57,7 +57,7 @@ function getInitialState() {
 	let state = {}
 	let setState = this.setState
 	this.setState = Facade
-	_.each(this.$getInitialStates, getInitialState => {
+	this.$getInitialStates.forEach(getInitialState => {
 		if (_.isFn(getInitialState)) {
 			_.extend(state, getInitialState.call(this))
 		}
