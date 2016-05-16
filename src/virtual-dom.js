@@ -90,21 +90,21 @@ function applyUpdate(data) {
     if (!data) {
         return
     }
-    let { isEqual, vnode, newVnode, node, parentContext, index } = data
-    let newNode = node
-    if (!isEqual || parentContext) {
+    let vnode = data.vnode
+    let newNode = data.node
+    if (!data.shouldIgnore) {
         if (!vnode.vtype) {
-            newNode.replaceData(0, newNode.length, newVnode)
-                // newNode.nodeValue = newVnode
+            newNode.replaceData(0, newNode.length, data.newVnode)
+            // newNode.nodeValue = data.newVnode
         } else if (vnode.vtype === VELEMENT) {
-            updateVelem(vnode, newVnode, newNode, parentContext)
+            updateVelem(vnode, data.newVnode, newNode, data.parentContext)
         } else if (vnode.vtype === VSTATELESS) {
-            newNode = updateVstateless(vnode, newVnode, newNode, parentContext)
+            newNode = updateVstateless(vnode, data.newVnode, newNode, data.parentContext)
         } else if (vnode.vtype === VCOMPONENT) {
-            newNode = updateVcomponent(vnode, newVnode, newNode, parentContext)
+            newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext)
         }
     }
-    let currentNode = newNode.parentNode.childNodes[index]
+    let currentNode = newNode.parentNode.childNodes[data.index]
     if (currentNode !== newNode) {
         newNode.parentNode.insertBefore(newNode, currentNode)
     }
@@ -227,8 +227,18 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             }
             let newVnode = newVchildren[j]
             if (vnode === newVnode) {
+                let shouldIgnore = true
+                if (parentContext) {
+                    if (vnode.vtype === VELEMENT) {
+                        shouldIgnore = false
+                    } else if (vnode.vtype === VCOMPONENT || vnode.vtype === VSTATELESS) {
+                        if (vnode.type.contextTypes) {
+                            shouldIgnore = false
+                        }
+                    }
+                }
                 updates[j] = {
-                    isEqual: true,
+                    shouldIgnore: shouldIgnore,
                     vnode: vnode,
                     newVnode: newVnode,
                     node: childNodes[i],

@@ -32,10 +32,17 @@ function combineMixinToProto(proto, mixin) {
 }
 
 function combineMixinToClass(Component, mixin) {
-	_.extend(Component.propTypes, mixin.propTypes)
-	_.extend(Component.contextTypes, mixin.contextTypes)
+	if (mixin.propTypes) {
+		Component.propTypes = Component.propTypes || {}
+		_.extend(Component.propTypes, mixin.propTypes)
+	}
+	if (mixin.contextTypes) {
+		Component.contextTypes = Component.contextTypes || {}
+		_.extend(Component.contextTypes, mixin.contextTypes)
+	}
 	_.extend(Component, mixin.statics)
 	if (_.isFn(mixin.getDefaultProps)) {
+		Component.defaultProps = Component.defaultProps || {}
 		_.extend(Component.defaultProps, mixin.getDefaultProps())
 	}
 }
@@ -80,9 +87,6 @@ export default function createClass(spec) {
 		this.state = this.getInitialState() || this.state
 	}
 	Klass.displayName = spec.displayName
-	Klass.contextTypes = {}
-	Klass.propTypes = {}
-	Klass.defaultProps = {}
 	let proto = Klass.prototype = new Facade()
 	proto.$getInitialStates = []
 	eachMixin(mixins, mixin => {

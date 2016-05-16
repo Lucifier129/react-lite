@@ -100,27 +100,21 @@ function applyUpdate(data) {
     if (!data) {
         return;
     }
-    var isEqual = data.isEqual;
     var vnode = data.vnode;
-    var newVnode = data.newVnode;
-    var node = data.node;
-    var parentContext = data.parentContext;
-    var index = data.index;
-
-    var newNode = node;
-    if (!isEqual || parentContext) {
+    var newNode = data.node;
+    if (!data.shouldIgnore) {
         if (!vnode.vtype) {
-            newNode.replaceData(0, newNode.length, newVnode);
-            // newNode.nodeValue = newVnode
+            newNode.replaceData(0, newNode.length, data.newVnode);
+            // newNode.nodeValue = data.newVnode
         } else if (vnode.vtype === VELEMENT) {
-                updateVelem(vnode, newVnode, newNode, parentContext);
+                updateVelem(vnode, data.newVnode, newNode, data.parentContext);
             } else if (vnode.vtype === VSTATELESS) {
-                newNode = updateVstateless(vnode, newVnode, newNode, parentContext);
+                newNode = updateVstateless(vnode, data.newVnode, newNode, data.parentContext);
             } else if (vnode.vtype === VCOMPONENT) {
-                newNode = updateVcomponent(vnode, newVnode, newNode, parentContext);
+                newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext);
             }
     }
-    var currentNode = newNode.parentNode.childNodes[index];
+    var currentNode = newNode.parentNode.childNodes[data.index];
     if (currentNode !== newNode) {
         newNode.parentNode.insertBefore(newNode, currentNode);
     }
@@ -249,8 +243,18 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             }
             var _newVnode = newVchildren[j];
             if (_vnode === _newVnode) {
+                var shouldIgnore = true;
+                if (parentContext) {
+                    if (_vnode.vtype === VELEMENT) {
+                        shouldIgnore = false;
+                    } else if (_vnode.vtype === VCOMPONENT || _vnode.vtype === VSTATELESS) {
+                        if (_vnode.type.contextTypes) {
+                            shouldIgnore = false;
+                        }
+                    }
+                }
                 updates[j] = {
-                    isEqual: true,
+                    shouldIgnore: shouldIgnore,
                     vnode: _vnode,
                     newVnode: _newVnode,
                     node: childNodes[i],
@@ -2155,10 +2159,17 @@ function combineMixinToProto(proto, mixin) {
 }
 
 function combineMixinToClass(Component, mixin) {
-	extend(Component.propTypes, mixin.propTypes);
-	extend(Component.contextTypes, mixin.contextTypes);
+	if (mixin.propTypes) {
+		Component.propTypes = Component.propTypes || {};
+		extend(Component.propTypes, mixin.propTypes);
+	}
+	if (mixin.contextTypes) {
+		Component.contextTypes = Component.contextTypes || {};
+		extend(Component.contextTypes, mixin.contextTypes);
+	}
 	extend(Component, mixin.statics);
 	if (isFn(mixin.getDefaultProps)) {
+		Component.defaultProps = Component.defaultProps || {};
 		extend(Component.defaultProps, mixin.getDefaultProps());
 	}
 }
@@ -2204,9 +2215,6 @@ function createClass(spec) {
 		this.state = this.getInitialState() || this.state;
 	}
 	Klass.displayName = spec.displayName;
-	Klass.contextTypes = {};
-	Klass.propTypes = {};
-	Klass.defaultProps = {};
 	var proto = Klass.prototype = new Facade();
 	proto.$getInitialStates = [];
 	eachMixin(mixins, function (mixin) {
