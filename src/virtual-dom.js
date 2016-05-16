@@ -92,6 +92,8 @@ function applyUpdate(data) {
     }
     let vnode = data.vnode
     let newNode = data.node
+
+    // update
     if (!data.shouldIgnore) {
         if (!vnode.vtype) {
             newNode.replaceData(0, newNode.length, data.newVnode)
@@ -104,6 +106,8 @@ function applyUpdate(data) {
             newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext)
         }
     }
+
+    // re-order
     let currentNode = newNode.parentNode.childNodes[data.index]
     if (currentNode !== newNode) {
         newNode.parentNode.insertBefore(newNode, currentNode)
@@ -229,9 +233,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             if (vnode === newVnode) {
                 let shouldIgnore = true
                 if (parentContext) {
-                    if (vnode.vtype === VELEMENT) {
-                        shouldIgnore = false
-                    } else if (vnode.vtype === VCOMPONENT || vnode.vtype === VSTATELESS) {
+                    if (vnode.vtype === VCOMPONENT || vnode.vtype === VSTATELESS) {
                         if (vnode.type.contextTypes) {
                             shouldIgnore = false
                         }
@@ -306,7 +308,6 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             diffVchildren(patches, item.vnode, item.newVnode, item.node, item.parentContext)
         }
     }
-
     
     if (removes) {
         patches.removes.push(removes)

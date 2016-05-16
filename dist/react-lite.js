@@ -106,6 +106,8 @@
       }
       var vnode = data.vnode;
       var newNode = data.node;
+
+      // update
       if (!data.shouldIgnore) {
           if (!vnode.vtype) {
               newNode.replaceData(0, newNode.length, data.newVnode);
@@ -118,6 +120,8 @@
                   newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext);
               }
       }
+
+      // re-order
       var currentNode = newNode.parentNode.childNodes[data.index];
       if (currentNode !== newNode) {
           newNode.parentNode.insertBefore(newNode, currentNode);
@@ -249,9 +253,7 @@
               if (_vnode === _newVnode) {
                   var shouldIgnore = true;
                   if (parentContext) {
-                      if (_vnode.vtype === VELEMENT) {
-                          shouldIgnore = false;
-                      } else if (_vnode.vtype === VCOMPONENT || _vnode.vtype === VSTATELESS) {
+                      if (_vnode.vtype === VCOMPONENT || _vnode.vtype === VSTATELESS) {
                           if (_vnode.type.contextTypes) {
                               shouldIgnore = false;
                           }
