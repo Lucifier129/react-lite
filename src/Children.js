@@ -14,7 +14,7 @@ export function forEach(children, iteratee, context) {
 	}
 	let index = 0
 	if (_.isArr(children)) {
-		_.flattenChildren(children, child => {
+		_.flatEach(children, child => {
 			iteratee.call(context, child, index++)
 		})
 	} else {
@@ -42,7 +42,7 @@ export function map(children, iteratee, context) {
 		store.push(data)
 	})
 	let result = []
-	_.eachItem(store, ({ child, key, index, isEqual }) => {
+	store.forEach(({ child, key, index, isEqual }) => {
 		if (child == null || typeof child === 'boolean') {
 			return
 		}

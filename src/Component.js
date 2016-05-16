@@ -1,5 +1,11 @@
 import * as _ from './util'
-import { renderComponent, batchUpdateDOM, compareTwoVnodes, syncCache } from './virtual-dom'
+import {
+	renderComponent,
+	clearPendingComponents,
+	compareTwoVnodes,
+	getChildContext,
+	syncCache
+} from './virtual-dom'
 
 export let updateQueue = {
 	updaters: [],
@@ -75,7 +81,7 @@ Updater.prototype = {
 		let { state, props } = instance
 		if (pendingStates.length) {
 			state = _.extend({}, state)
-			_.eachItem(pendingStates, nextState => {
+			pendingStates.forEach(nextState => {
 				// replace state
 				if (_.isArr(nextState)) {
 					state = _.extend({}, nextState[0])
@@ -94,7 +100,7 @@ Updater.prototype = {
 		let { pendingCallbacks, instance } = this
 		if (pendingCallbacks.length > 0) {
 			this.pendingCallbacks = []
-			_.eachItem(pendingCallbacks, callback => callback.call(instance))
+			pendingCallbacks.forEach(callback => callback.call(instance))
 		}
 	},
 	addCallback(callback) {
@@ -136,7 +142,6 @@ Component.prototype = {
 		let parentContext = $cache.parentContext
 		let node = $cache.node
 		let vnode = $cache.vnode
-		let hasNewContext = $cache.hasNewContext || !!this.getChildContext
 		$cache.props = $cache.state = $cache.context = null
 		$updater.isPending = true
 		if (this.componentWillUpdate) {
@@ -145,16 +150,15 @@ Component.prototype = {
 		this.state = nextState
 		this.props = nextProps
 		this.context = nextContext
-		let newVnode = renderComponent(this, parentContext)
-		let newNode = compareTwoVnodes(vnode, newVnode, node, newVnode.context, hasNewContext)
+	    let newVnode = renderComponent(this)
+		let newNode = compareTwoVnodes(vnode, newVnode, node, getChildContext(this, parentContext))
 		if (newNode !== node) {
 			newNode.cache = newNode.cache || {}
 			syncCache(newNode.cache, node.cache, newNode)
 		}
 		$cache.vnode = newVnode
 		$cache.node = newNode
-		$cache.hasNewContext = false
-		batchUpdateDOM()
+		clearPendingComponents()
 		if (this.componentDidUpdate) {
 			this.componentDidUpdate(props, state, context)
 		}

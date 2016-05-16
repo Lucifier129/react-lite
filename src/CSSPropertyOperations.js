@@ -30,20 +30,18 @@ export function patchStyle(elemStyle, style, newStyle) {
         return
     }
 
-    let keyMap = {}
     for (let key in style) {
-        if (style.hasOwnProperty(key)) {
-            keyMap[key] = true
-            if (style[key] !== newStyle[key]) {
+        if (newStyle.hasOwnProperty(key)) {
+            if (newStyle[key] !== style[key]) {
                 setStyleValue(elemStyle, key, newStyle[key])
             }
+        } else {
+            elemStyle[key] = ''
         }
     }
     for (let key in newStyle) {
-        if (newStyle.hasOwnProperty(key) && keyMap[key] !== true) {
-            if (style[key] !== newStyle[key]) {
-                setStyleValue(elemStyle, key, newStyle[key])
-            }
+        if (!style.hasOwnProperty(key)) {
+            setStyleValue(elemStyle, key, newStyle[key])
         }
     }
 }

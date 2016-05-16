@@ -1,8 +1,8 @@
 import * as _ from './util'
 import Component from './Component'
 
-function eachMixin (mixins, iteratee) {
-	_.eachItem(mixins, mixin => {
+function eachMixin(mixins, iteratee) {
+	mixins.forEach(mixin => {
 		if (mixin) {
 			if (_.isArr(mixin.mixins)) {
 				eachMixin(mixin.mixins, iteratee)
@@ -32,10 +32,17 @@ function combineMixinToProto(proto, mixin) {
 }
 
 function combineMixinToClass(Component, mixin) {
-	_.extend(Component.propTypes, mixin.propTypes)
-	_.extend(Component.contextTypes, mixin.contextTypes)
+	if (mixin.propTypes) {
+		Component.propTypes = Component.propTypes || {}
+		_.extend(Component.propTypes, mixin.propTypes)
+	}
+	if (mixin.contextTypes) {
+		Component.contextTypes = Component.contextTypes || {}
+		_.extend(Component.contextTypes, mixin.contextTypes)
+	}
 	_.extend(Component, mixin.statics)
 	if (_.isFn(mixin.getDefaultProps)) {
+		Component.defaultProps = Component.defaultProps || {}
 		_.extend(Component.defaultProps, mixin.getDefaultProps())
 	}
 }
@@ -57,7 +64,7 @@ function getInitialState() {
 	let state = {}
 	let setState = this.setState
 	this.setState = Facade
-	_.eachItem(this.$getInitialStates, getInitialState => {
+	this.$getInitialStates.forEach(getInitialState => {
 		if (_.isFn(getInitialState)) {
 			_.extend(state, getInitialState.call(this))
 		}
@@ -80,9 +87,6 @@ export default function createClass(spec) {
 		this.state = this.getInitialState() || this.state
 	}
 	Klass.displayName = spec.displayName
-	Klass.contextTypes = {}
-	Klass.propTypes = {}
-	Klass.defaultProps = {}
 	let proto = Klass.prototype = new Facade()
 	proto.$getInitialStates = []
 	eachMixin(mixins, mixin => {
