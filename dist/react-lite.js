@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.12
+ * react-lite.js v0.15.13
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -1868,7 +1868,7 @@
   }
 
   function unstable_renderSubtreeIntoContainer(parentComponent, subVnode, container, callback) {
-  	var context = parentComponent.vnode ? parentComponent.vnode.context : parentComponent.$cache.parentContext;
+  	var context = parentComponent.$cache.parentContext;
   	return renderTreeIntoContainer(subVnode, container, callback, context);
   }
 

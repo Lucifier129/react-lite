@@ -73,9 +73,7 @@ export function render(vnode, container, callback) {
 }
 
 export function unstable_renderSubtreeIntoContainer(parentComponent, subVnode, container, callback) {
-	let context = parentComponent.vnode
-	? parentComponent.vnode.context
-	: parentComponent.$cache.parentContext
+	let context = parentComponent.$cache.parentContext
 	return renderTreeIntoContainer(subVnode, container, callback, context)
 }
 
