@@ -10,7 +10,7 @@ import {
 } from './constant'
 
 /**
- * current state component's refs property
+ * current stateful component's refs property
  * will attach to every vnode created by calling component.render method
  */
 let refs = null
