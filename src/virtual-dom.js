@@ -185,7 +185,20 @@ function getFlattenChildren(vnode) {
 
 function collectChild(child, children) {
     if (child != null && typeof child !== 'boolean') {
-        children[children.length] = child.vtype ? child : '' + child
+        if (!child.vtype) {
+            // convert immutablejs data
+            if (child.toJS) {
+                child = child.toJS()
+                if (_.isArr(child)) {
+                    _.flatEach(child, collectChild, children)
+                } else {
+                    collectChild(child, children)
+                }
+                return
+            }
+            child = '' + child
+        }
+        children[children.length] = child
     }
 }
 

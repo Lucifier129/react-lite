@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.13
+ * react-lite.js v0.15.14
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -14,7 +14,7 @@ var VCOMPONENT = 4;
 var VCOMMENT = 5;
 
 /**
- * current state component's refs property
+ * current stateful component's refs property
  * will attach to every vnode created by calling component.render method
  */
 var refs = null;
@@ -200,7 +200,20 @@ function getFlattenChildren(vnode) {
 
 function collectChild(child, children) {
     if (child != null && typeof child !== 'boolean') {
-        children[children.length] = child.vtype ? child : '' + child;
+        if (!child.vtype) {
+            // convert immutablejs data
+            if (child.toJS) {
+                child = child.toJS();
+                if (isArr(child)) {
+                    flatEach(child, collectChild, children);
+                } else {
+                    collectChild(child, children);
+                }
+                return;
+            }
+            child = '' + child;
+        }
+        children[children.length] = child;
     }
 }
 
