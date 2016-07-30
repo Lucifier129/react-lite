@@ -6,7 +6,6 @@ import {
     VCOMPONENT,
     VCOMMENT,
     HTML_KEY,
-
 } from './constant'
 
 /**
@@ -37,12 +36,12 @@ export function initVnode(vnode, parentContext, namespaceURI) {
         node = document.createTextNode(vnode)
     } else if (vtype === VELEMENT) { // init element
         node = initVelem(vnode, parentContext, namespaceURI)
-    } else if (vtype === VCOMPONENT) { // init state component
+    } else if (vtype === VCOMPONENT) { // init stateful component
         node = initVcomponent(vnode, parentContext, namespaceURI)
     } else if (vtype === VSTATELESS) { // init stateless component
         node = initVstateless(vnode, parentContext, namespaceURI)
     } else if (vtype === VCOMMENT) { // init comment
-        node = document.createComment(`react-empty: ${ vnode.uid }`)
+        node = document.createComment(`react-text: ${ vnode.uid || _.getUid() }`)
     }
     return node
 }
