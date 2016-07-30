@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.14
+ * react-lite.js v0.15.15
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -49,14 +49,14 @@
           // init element
           node = initVelem(vnode, parentContext, namespaceURI);
       } else if (vtype === VCOMPONENT) {
-          // init state component
+          // init stateful component
           node = initVcomponent(vnode, parentContext, namespaceURI);
       } else if (vtype === VSTATELESS) {
           // init stateless component
           node = initVstateless(vnode, parentContext, namespaceURI);
       } else if (vtype === VCOMMENT) {
           // init comment
-          node = document.createComment('react-empty: ' + vnode.uid);
+          node = document.createComment('react-text: ' + (vnode.uid || getUid()));
       }
       return node;
   }
@@ -1191,6 +1191,7 @@
           profile: 0,
           radioGroup: 0,
           readOnly: HAS_BOOLEAN_VALUE,
+          referrerPolicy: 0,
           rel: 0,
           required: HAS_BOOLEAN_VALUE,
           reversed: HAS_BOOLEAN_VALUE,
@@ -1531,6 +1532,8 @@
       xlinkTitle: 'xlink:title',
       xlinkType: 'xlink:type',
       xmlBase: 'xml:base',
+      xmlns: 0,
+      xmlnsXlink: 'xmlns:xlink',
       xmlLang: 'xml:lang',
       xmlSpace: 'xml:space',
       y: 0,
