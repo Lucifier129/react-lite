@@ -1,4 +1,5 @@
 import Component from './Component'
+import PureComponent from './PureComponent'
 import createClass from './createClass'
 import createElement, { isValidElement, cloneElement, createFactory } from './createElement'
 import * as Children from './Children'
@@ -14,6 +15,7 @@ let React = _.extend({
     createElement,
     createFactory,
     Component,
+    PureComponent,
     createClass,
     Children,
     PropTypes,

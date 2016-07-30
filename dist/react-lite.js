@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.15
+ * react-lite.js v0.15.16
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -2249,6 +2249,45 @@
   	return Klass;
   }
 
+  function shallowEqual(objA, objB) {
+      if (objA === objB) {
+          return true;
+      }
+
+      if (typeof objA !== 'object' || objA === null || typeof objB !== 'object' || objB === null) {
+          return false;
+      }
+
+      var keysA = Object.keys(objA);
+      var keysB = Object.keys(objB);
+
+      if (keysA.length !== keysB.length) {
+          return false;
+      }
+
+      // Test for A's keys different from B.
+      for (var i = 0; i < keysA.length; i++) {
+          if (!objB.hasOwnProperty(keysA[i]) || objA[keysA[i]] !== objB[keysA[i]]) {
+              return false;
+          }
+      }
+
+      return true;
+  }
+
+  function PureComponent(props, context) {
+  	Component.call(this, props, context);
+  }
+
+  PureComponent.prototype = Object.create(Component.prototype);
+  PureComponent.prototype.constructor = PureComponent;
+  PureComponent.prototype.isPureReactComponent = true;
+  PureComponent.prototype.shouldComponentUpdate = shallowCompare;
+
+  function shallowCompare(nextProps, nextState) {
+  	return !shallowEqual(this.props, nextProps) || !shallowEqual(this.state, nextState);
+  }
+
   var React = extend({
       version: '0.15.1',
       cloneElement: cloneElement,
@@ -2256,6 +2295,7 @@
       createElement: createElement,
       createFactory: createFactory,
       Component: Component,
+      PureComponent: PureComponent,
       createClass: createClass,
       Children: Children,
       PropTypes: PropTypes,
