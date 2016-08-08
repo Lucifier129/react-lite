@@ -228,7 +228,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
     if (vchildrenLen === 0) {
         if (newVchildrenLen > 0) {
             for (var i = 0; i < newVchildrenLen; i++) {
-                patches.creates.push({
+                addItem(patches.creates, {
                     vnode: newVchildren[i],
                     parentNode: node,
                     parentContext: parentContext,
@@ -239,7 +239,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
         return;
     } else if (newVchildrenLen === 0) {
         for (var i = 0; i < vchildrenLen; i++) {
-            patches.removes.push({
+            addItem(patches.removes, {
                 vnode: vchildren[i],
                 node: childNodes[i]
             });
@@ -310,7 +310,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             if (!removes) {
                 removes = [];
             }
-            removes.push({
+            addItem(removes, {
                 vnode: _vnode2,
                 node: childNodes[i]
             });
@@ -323,7 +323,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             if (!creates) {
                 creates = [];
             }
-            creates.push({
+            addItem(creates, {
                 vnode: newVchildren[i],
                 parentNode: node,
                 parentContext: parentContext,
@@ -335,12 +335,12 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
     }
 
     if (removes) {
-        patches.removes.push(removes);
+        addItem(patches.removes, removes);
     }
     if (creates) {
-        patches.creates.push(creates);
+        addItem(patches.creates, creates);
     }
-    patches.updates.push(updates);
+    addItem(patches.updates, updates);
 }
 
 function updateVelem(velem, newVelem, node) {
@@ -436,7 +436,7 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
     cache.vnode = vnode;
     cache.node = node;
     cache.isMounted = true;
-    pendingComponents.push(component);
+    addItem(pendingComponents, component);
     attachRef(vcomponent.refs, vcomponent.ref, component);
     return node;
 }
@@ -605,7 +605,7 @@ var updateQueue = {
 	updaters: [],
 	isPending: false,
 	add: function add(updater) {
-		this.updaters.push(updater);
+		addItem(this.updaters, updater);
 	},
 	batchUpdate: function batchUpdate() {
 		if (this.isPending) {
@@ -661,7 +661,7 @@ Updater.prototype = {
 	},
 	addState: function addState(nextState) {
 		if (nextState) {
-			this.pendingStates.push(nextState);
+			addItem(this.pendingStates, nextState);
 			if (!this.isPending) {
 				this.emitUpdate();
 			}
@@ -672,7 +672,7 @@ Updater.prototype = {
 
 		pendingStates.pop();
 		// push special params to point out should replace state
-		pendingStates.push([nextState]);
+		addItem(pendingStates, [nextState]);
 	},
 	getState: function getState() {
 		var instance = this.instance;
@@ -710,7 +710,7 @@ Updater.prototype = {
 	},
 	addCallback: function addCallback(callback) {
 		if (isFn(callback)) {
-			this.pendingCallbacks.push(callback);
+			addItem(this.pendingCallbacks, callback);
 		}
 	}
 };
@@ -1695,6 +1695,10 @@ function pipe(fn1, fn2) {
     };
 }
 
+function addItem(list, item) {
+    list[list.length] = item;
+}
+
 function flatEach(list, iteratee, a) {
     var len = list.length;
     var i = -1;
@@ -2084,7 +2088,7 @@ function map(children, iteratee, context) {
 			keyMap[key] = 0;
 		}
 		data.index = keyMap[key];
-		store.push(data);
+		addItem(store, data);
 	});
 	var result = [];
 	store.forEach(function (_ref) {
@@ -2097,7 +2101,7 @@ function map(children, iteratee, context) {
 			return;
 		}
 		if (!isValidElement(child) || key == null) {
-			result.push(child);
+			addItem(result, child);
 			return;
 		}
 		if (keyMap[key] !== 0) {
@@ -2107,7 +2111,7 @@ function map(children, iteratee, context) {
 			key = escapeUserProvidedKey(child.key || '') + '/' + key;
 		}
 		child = cloneElement(child, { key: key });
-		result.push(child);
+		addItem(result, child);
 	});
 	return result;
 }
@@ -2165,7 +2169,7 @@ function combineMixinToProto(proto, mixin) {
 		}
 		var value = mixin[key];
 		if (key === 'getInitialState') {
-			proto.$getInitialStates.push(value);
+			addItem(proto.$getInitialStates, value);
 			continue;
 		}
 		var curValue = proto[key];
