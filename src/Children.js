@@ -39,7 +39,7 @@ export function map(children, iteratee, context) {
 			keyMap[key] = 0
 		}
 		data.index = keyMap[key]
-		store.push(data)
+		_.addItem(store, data)
 	})
 	let result = []
 	store.forEach(({ child, key, index, isEqual }) => {
@@ -47,7 +47,7 @@ export function map(children, iteratee, context) {
 			return
 		}
 		if (!isValidElement(child) || key == null) {
-			result.push(child)
+			_.addItem(result, child)
 			return
 		}
 		if (keyMap[key] !== 0) {
@@ -57,7 +57,7 @@ export function map(children, iteratee, context) {
 			key = escapeUserProvidedKey(child.key || '') + '/' + key
 		}
 		child = cloneElement(child, { key })
-		result.push(child)
+		_.addItem(result, child)
 	})
 	return result
 }

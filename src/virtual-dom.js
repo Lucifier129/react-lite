@@ -210,7 +210,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
     if (vchildrenLen === 0) {
         if (newVchildrenLen > 0) {
             for (let i = 0; i < newVchildrenLen; i++) {
-                patches.creates.push({
+                _.addItem(patches.creates, {
                     vnode: newVchildren[i],
                     parentNode: node,
                     parentContext: parentContext,
@@ -221,7 +221,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
         return
     } else if (newVchildrenLen === 0) {
         for (let i = 0; i < vchildrenLen; i++) {
-            patches.removes.push({
+            _.addItem(patches.removes, {
                 vnode: vchildren[i],
                 node: childNodes[i],
             })
@@ -297,7 +297,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             if (!removes) {
                 removes = []
             }
-            removes.push({
+            _.addItem(removes, {
                 vnode: vnode,
                 node: childNodes[i]
             })
@@ -310,7 +310,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             if (!creates) {
                 creates = []
             }
-            creates.push({
+            _.addItem(creates, {
                 vnode: newVchildren[i],
                 parentNode: node,
                 parentContext: parentContext,
@@ -322,12 +322,12 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
     }
     
     if (removes) {
-        patches.removes.push(removes)
+        _.addItem(patches.removes, removes)
     }
     if (creates) {
-        patches.creates.push(creates)
+        _.addItem(patches.creates, creates)
     }
-    patches.updates.push(updates)
+    _.addItem(patches.updates, updates)
 }
 
 function updateVelem(velem, newVelem, node) {
@@ -414,7 +414,7 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
     cache.vnode = vnode
     cache.node = node
     cache.isMounted = true
-    pendingComponents.push(component)
+    _.addItem(pendingComponents, component)
     attachRef(vcomponent.refs, vcomponent.ref, component)
     return node
 }

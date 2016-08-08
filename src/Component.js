@@ -11,7 +11,7 @@ export let updateQueue = {
 	updaters: [],
 	isPending: false,
 	add(updater) {
-		this.updaters.push(updater)
+		_.addItem(this.updaters, updater)
 	},
 	batchUpdate() {
 		if (this.isPending) {
@@ -64,7 +64,7 @@ Updater.prototype = {
 	},
 	addState(nextState) {
 		if (nextState) {
-			this.pendingStates.push(nextState)
+			_.addItem(this.pendingStates, nextState)
 			if (!this.isPending) {
 				this.emitUpdate()
 			}
@@ -74,7 +74,7 @@ Updater.prototype = {
 		let { pendingStates } = this
 		pendingStates.pop()
 		// push special params to point out should replace state
-		pendingStates.push([nextState])
+		_.addItem(pendingStates, [nextState])
 	},
 	getState() {
 		let { instance, pendingStates } = this
@@ -105,7 +105,7 @@ Updater.prototype = {
 	},
 	addCallback(callback) {
 		if (_.isFn(callback)) {
-			this.pendingCallbacks.push(callback)
+			_.addItem(this.pendingCallbacks, callback)
 		}
 	}
 }

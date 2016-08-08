@@ -19,7 +19,7 @@ function combineMixinToProto(proto, mixin) {
 		}
 		let value = mixin[key]
 		if (key === 'getInitialState') {
-			proto.$getInitialStates.push(value)
+			_.addItem(proto.$getInitialStates, value)
 			continue
 		}
 		let curValue = proto[key]
