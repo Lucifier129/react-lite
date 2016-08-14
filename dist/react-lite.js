@@ -751,7 +751,7 @@
   		}
   		var nextProps = $cache.props || props;
   		var nextState = $cache.state || state;
-  		var nextContext = $cache.context || {};
+  		var nextContext = $cache.context || context;
   		var parentContext = $cache.parentContext;
   		var node = $cache.node;
   		var vnode = $cache.vnode;
