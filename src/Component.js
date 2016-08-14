@@ -138,7 +138,7 @@ Component.prototype = {
 		}
 		let nextProps = $cache.props || props
 		let nextState = $cache.state || state
-		let nextContext = $cache.context || {}
+		let nextContext = $cache.context || context
 		let parentContext = $cache.parentContext
 		let node = $cache.node
 		let vnode = $cache.vnode
