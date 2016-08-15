@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.16
+ * react-lite.js v0.15.17
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
