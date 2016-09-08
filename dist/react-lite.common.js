@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.17
+ * react-lite.js v0.15.18
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -683,15 +683,19 @@ Updater.prototype = {
 		if (pendingStates.length) {
 			state = extend({}, state);
 			pendingStates.forEach(function (nextState) {
-				// replace state
-				if (isArr(nextState)) {
-					state = extend({}, nextState[0]);
-					return;
+				var isReplace = isArr(nextState);
+				if (isReplace) {
+					nextState = nextState[0];
 				}
 				if (isFn(nextState)) {
 					nextState = nextState.call(instance, state, props);
 				}
-				extend(state, nextState);
+				// replace state
+				if (isReplace) {
+					state = extend({}, nextState[0]);
+				} else {
+					extend(state, nextState);
+				}
 			});
 			pendingStates.length = 0;
 		}

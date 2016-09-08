@@ -82,15 +82,19 @@ Updater.prototype = {
 		if (pendingStates.length) {
 			state = _.extend({}, state)
 			pendingStates.forEach(nextState => {
-				// replace state
-				if (_.isArr(nextState)) {
-					state = _.extend({}, nextState[0])
-					return
+				let isReplace = _.isArr(nextState)
+				if (isReplace) {
+					nextState = nextState[0]
 				}
 				if (_.isFn(nextState)) {
 					nextState = nextState.call(instance, state, props)
 				}
-				_.extend(state, nextState)
+				// replace state
+				if (isReplace) {
+					state = _.extend({}, nextState[0])
+				} else {
+					_.extend(state, nextState)
+				}
 			})
 			pendingStates.length = 0
 		}
