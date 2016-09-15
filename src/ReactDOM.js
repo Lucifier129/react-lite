@@ -1,6 +1,6 @@
 import * as _ from './util'
 import { COMPONENT_ID, VELEMENT, VCOMPONENT } from './constant'
-import { initVnode, destroyVnode, clearPendingComponents, compareTwoVnodes } from './virtual-dom'
+import { initVnode, destroyVnode, clearPending, compareTwoVnodes } from './virtual-dom'
 import { updateQueue } from './Component'
 
 let pendingRendering = {}
@@ -43,7 +43,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	vnodeStore[id] = vnode
 	let isPending = updateQueue.isPending
 	updateQueue.isPending = true
-	clearPendingComponents()
+	clearPending()
 	argsCache = pendingRendering[id]
 	delete pendingRendering[id]
 

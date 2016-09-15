@@ -107,14 +107,13 @@ function applyUpdate(data) {
     if (!data.shouldIgnore) {
         if (!vnode.vtype) {
             newNode.replaceData(0, newNode.length, data.newVnode);
-            // newNode.nodeValue = data.newVnode
         } else if (vnode.vtype === VELEMENT) {
-                updateVelem(vnode, data.newVnode, newNode, data.parentContext);
-            } else if (vnode.vtype === VSTATELESS) {
-                newNode = updateVstateless(vnode, data.newVnode, newNode, data.parentContext);
-            } else if (vnode.vtype === VCOMPONENT) {
-                newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext);
-            }
+            updateVelem(vnode, data.newVnode, newNode, data.parentContext);
+        } else if (vnode.vtype === VSTATELESS) {
+            newNode = updateVstateless(vnode, data.newVnode, newNode, data.parentContext);
+        } else if (vnode.vtype === VCOMPONENT) {
+            newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext);
+        }
     }
 
     // re-order
@@ -173,7 +172,10 @@ function initVelem(velem, parentContext, namespaceURI) {
     var isCustomComponent = type.indexOf('-') >= 0 || props.is != null;
     setProps(node, props, isCustomComponent);
 
-    attachRef(velem.refs, velem.ref, node);
+    if (velem.refs && velem.ref != null) {
+        addItem(pendingRefs, velem);
+        addItem(pendingRefs, node);
+    }
 
     return node;
 }
@@ -437,7 +439,12 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
     cache.node = node;
     cache.isMounted = true;
     addItem(pendingComponents, component);
-    attachRef(vcomponent.refs, vcomponent.ref, component);
+
+    if (vcomponent.refs && vcomponent.ref != null) {
+        addItem(pendingRefs, vcomponent);
+        addItem(pendingRefs, component);
+    }
+
     return node;
 }
 
@@ -519,7 +526,6 @@ function getChildContext(component, parentContext) {
 }
 
 var pendingComponents = [];
-
 function clearPendingComponents() {
     var len = pendingComponents.length;
     if (!len) {
@@ -537,6 +543,26 @@ function clearPendingComponents() {
         updater.isPending = false;
         updater.emitUpdate();
     }
+}
+
+var pendingRefs = [];
+function clearPendingRefs() {
+    var len = pendingRefs.length;
+    if (!len) {
+        return;
+    }
+    var list = pendingRefs;
+    pendingRefs = [];
+    for (var i = 0; i < len; i += 2) {
+        var vnode = list[i];
+        var refValue = list[i + 1];
+        attachRef(vnode.refs, vnode.ref, refValue);
+    }
+}
+
+function clearPending() {
+    clearPendingRefs();
+    clearPendingComponents();
 }
 
 function compareTwoVnodes(vnode, newVnode, node, parentContext) {
@@ -594,6 +620,7 @@ function syncCache(cache, oldCache, node) {
         }
         var value = oldCache[key];
         cache[key] = value;
+
         // is component, update component.$cache.node
         if (value.forceUpdate) {
             value.$cache.node = node;
@@ -771,7 +798,7 @@ Component.prototype = {
 		}
 		$cache.vnode = newVnode;
 		$cache.node = newNode;
-		clearPendingComponents();
+		clearPending();
 		if (this.componentDidUpdate) {
 			this.componentDidUpdate(props, state, context);
 		}
@@ -1858,7 +1885,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	vnodeStore[id] = vnode;
 	var isPending = updateQueue.isPending;
 	updateQueue.isPending = true;
-	clearPendingComponents();
+	clearPending();
 	argsCache = pendingRendering[id];
 	delete pendingRendering[id];
 

@@ -1,7 +1,7 @@
 import * as _ from './util'
 import {
 	renderComponent,
-	clearPendingComponents,
+	clearPending,
 	compareTwoVnodes,
 	getChildContext,
 	syncCache
@@ -162,7 +162,7 @@ Component.prototype = {
 		}
 		$cache.vnode = newVnode
 		$cache.node = newNode
-		clearPendingComponents()
+		clearPending()
 		if (this.componentDidUpdate) {
 			this.componentDidUpdate(props, state, context)
 		}

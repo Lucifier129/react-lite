@@ -334,7 +334,6 @@
 	};
 
 	var num = 10;
-<<<<<<< HEAD
 	update();
 
 	// const context = {
@@ -362,85 +361,6 @@
 	//         super(props)
 	//     }
 
-=======
-	// update()
-
-	var SearchView = (function (_React$Component) {
-		_inherits(SearchView, _React$Component);
-
-		//构造函数
-
-		function SearchView(props) {
-			_classCallCheck(this, SearchView);
-
-			_get(Object.getPrototypeOf(SearchView.prototype), 'constructor', this).call(this, props);
-			this.clickAction = this.clickAction.bind(this);
-			this.handleTouch = this.handleTouch.bind(this);
-			this.state = {
-				text: 'default'
-			};
-		}
-
-		_createClass(SearchView, [{
-			key: 'componentDidMount',
-			value: function componentDidMount() {
-				alert('done');
-			}
-		}, {
-			key: 'clickAction',
-			value: function clickAction() {
-				alert('1123 click');
-			}
-		}, {
-			key: 'handleTouch',
-			value: function handleTouch() {
-				alert('12312 touch');
-			}
-		}, {
-			key: 'render',
-			value: function render() {
-				return React.createElement(
-					'div',
-					{ className: '', onClick: this.clickAction, style: {
-							height: 400,
-							background: '#eaeaea'
-						} },
-					JSON.stringify(this.state.text)
-				);
-			}
-		}]);
-
-		return SearchView;
-	})(React.Component);
-
-	ReactDOM.render(React.createElement(SearchView, null), document.getElementById('container'));
-
-	// const context = {
-	//     THIS_IS_IMPORTANT: function() {}
-	// }
-
-	// class ContextProvider extends React.Component {
-	//     static childContextTypes = context;
-
-	//     getChildContext() {
-	//         return this.props.context
-	//     }
-
-	//     render() {
-	//         return this.props.children
-	//     }
-	// }
-
-	// class Test extends React.Component {
-
-	//     static contextTypes = context;
-
-	//     // We added THIS constructor
-	//     constructor(props) {
-	//         super(props)
-	//     }
-
->>>>>>> dev
 	//     render() {
 	//         console.info('This should NOT be undefined:', this.context.THIS_IS_IMPORTANT)
 	//         return <div>Test1</div>

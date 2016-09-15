@@ -96,7 +96,6 @@ function applyUpdate(data) {
     if (!data.shouldIgnore) {
         if (!vnode.vtype) {
             newNode.replaceData(0, newNode.length, data.newVnode)
-            // newNode.nodeValue = data.newVnode
         } else if (vnode.vtype === VELEMENT) {
             updateVelem(vnode, data.newVnode, newNode, data.parentContext)
         } else if (vnode.vtype === VSTATELESS) {
@@ -158,7 +157,10 @@ function initVelem(velem, parentContext, namespaceURI) {
     let isCustomComponent = type.indexOf('-') >= 0 || props.is != null
     _.setProps(node, props, isCustomComponent)
 
-    attachRef(velem.refs, velem.ref, node)
+    if (velem.refs && velem.ref != null) {
+        _.addItem(pendingRefs, velem)
+        _.addItem(pendingRefs, node)
+    }
 
     return node
 }
@@ -320,7 +322,7 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             diffVchildren(patches, item.vnode, item.newVnode, item.node, item.parentContext)
         }
     }
-    
+
     if (removes) {
         _.addItem(patches.removes, removes)
     }
@@ -415,7 +417,12 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
     cache.node = node
     cache.isMounted = true
     _.addItem(pendingComponents, component)
-    attachRef(vcomponent.refs, vcomponent.ref, component)
+
+    if (vcomponent.refs && vcomponent.ref != null) {
+        _.addItem(pendingRefs, vcomponent)
+        _.addItem(pendingRefs, component)
+    }
+
     return node
 }
 
@@ -495,7 +502,7 @@ export function getChildContext(component, parentContext) {
 
 
 let pendingComponents = []
-export function clearPendingComponents() {
+function clearPendingComponents() {
     let len = pendingComponents.length
     if (!len) {
         return
@@ -512,6 +519,26 @@ export function clearPendingComponents() {
         updater.isPending = false
         updater.emitUpdate()
     }
+}
+
+let pendingRefs = []
+function clearPendingRefs() {
+    let len = pendingRefs.length
+    if (!len) {
+        return
+    }
+    let list = pendingRefs
+    pendingRefs = []
+    for (let i = 0; i < len; i += 2) {
+        let vnode = list[i]
+        let refValue = list[i + 1]
+        attachRef(vnode.refs, vnode.ref, refValue)
+    }
+}
+
+export function clearPending() {
+    clearPendingRefs()
+    clearPendingComponents()
 }
 
 export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
@@ -533,7 +560,8 @@ export function compareTwoVnodes(vnode, newVnode, node, parentContext) {
 }
 
 function getDOMNode() {
-    return this }
+    return this
+}
 
 function attachRef(refs, refKey, refValue) {
     if (!refs || refKey == null || !refValue) {
@@ -568,7 +596,8 @@ export function syncCache(cache, oldCache, node) {
         }
         let value = oldCache[key]
         cache[key] = value
-            // is component, update component.$cache.node
+
+        // is component, update component.$cache.node
         if (value.forceUpdate) {
             value.$cache.node = node
         }
