@@ -8,16 +8,17 @@
  *
 * @providesModule shallowCompare
 */
-'use strict';
-
-var shallowEqual = require('./utils/shallowEqual');
+var shallowEqual = require('./utils/shallowEqual')
 
 /**
  * Does a shallow comparison for props and state.
  * See ReactComponentWithPureRenderMixin
  */
 function shallowCompare(instance, nextProps, nextState) {
-  return !shallowEqual(instance.props, nextProps) || !shallowEqual(instance.state, nextState);
+  return (
+    !shallowEqual(instance.props, nextProps) ||
+    !shallowEqual(instance.state, nextState)
+  );
 }
 
 module.exports = shallowCompare;

@@ -9,10 +9,8 @@
  * @providesModule LinkedStateMixin
  * @typechecks static-only
  */
-'use strict';
-
-var ReactLink = require('./ReactLink');
-var ReactStateSetters = require('./ReactStateSetters');
+var ReactLink = require('./ReactLink')
+var ReactStateSetters = require('./ReactStateSetters')
 
 /**
  * A simple mixin around ReactLink.forState().
@@ -27,9 +25,12 @@ var LinkedStateMixin = {
    * if you're using Google Closure Compiler advanced mode.
    * @return {ReactLink} ReactLink instance linking to the state.
    */
-  linkState: function linkState(key) {
-    return new ReactLink(this.state[key], ReactStateSetters.createStateKeySetter(this, key));
-  }
+  linkState: function(key) {
+    return new ReactLink(
+      this.state[key],
+      ReactStateSetters.createStateKeySetter(this, key)
+    );
+  },
 };
 
 module.exports = LinkedStateMixin;

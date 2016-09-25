@@ -8,9 +8,7 @@
  *
  * @providesModule flattenChildren
  */
-'use strict';
-
-var traverseAllChildren = require('./traverseAllChildren');
+var traverseAllChildren = require('./traverseAllChildren')
 
 /**
  * @param {function} traverseContext Context passed through traversal.
@@ -20,7 +18,7 @@ var traverseAllChildren = require('./traverseAllChildren');
 function flattenSingleChildIntoContext(traverseContext, child, name) {
   // We found a component instance.
   var result = traverseContext;
-  var keyUnique = result[name] === undefined;
+  var keyUnique = (result[name] === undefined);
   if (keyUnique && child != null) {
     result[name] = child;
   }

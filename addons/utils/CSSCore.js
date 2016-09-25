@@ -12,7 +12,7 @@
 
 'use strict';
 
-var invariant = function invariant() {};
+var invariant = function() {}
 
 /**
  * The CSSCore module specifies the API (and implements most of the methods)
@@ -31,7 +31,7 @@ var CSSCore = {
    * @param {string} className the CSS className
    * @return {DOMElement} the element passed in
    */
-  addClass: function addClass(element, className) {
+  addClass: function (element, className) {
     !!/\s/.test(className) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'CSSCore.addClass takes only a single class name. "%s" contains ' + 'multiple classes.', className) : invariant(false) : undefined;
 
     if (className) {
@@ -51,7 +51,7 @@ var CSSCore = {
    * @param {string} className the CSS className
    * @return {DOMElement} the element passed in
    */
-  removeClass: function removeClass(element, className) {
+  removeClass: function (element, className) {
     !!/\s/.test(className) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'CSSCore.removeClass takes only a single class name. "%s" contains ' + 'multiple classes.', className) : invariant(false) : undefined;
 
     if (className) {
@@ -73,7 +73,7 @@ var CSSCore = {
    * @param {*} bool condition to whether to add or remove the class
    * @return {DOMElement} the element passed in
    */
-  conditionClass: function conditionClass(element, className, bool) {
+  conditionClass: function (element, className, bool) {
     return (bool ? CSSCore.addClass : CSSCore.removeClass)(element, className);
   },
 
@@ -84,7 +84,7 @@ var CSSCore = {
    * @param {string} className the CSS className
    * @return {boolean} true if the element has the class, false if not
    */
-  hasClass: function hasClass(element, className) {
+  hasClass: function (element, className) {
     !!/\s/.test(className) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'CSS.hasClass takes only a single class name.') : invariant(false) : undefined;
     if (element.classList) {
       return !!className && element.classList.contains(className);

@@ -12,7 +12,7 @@
 
 'use strict';
 
-var flattenChildren = require('./utils/flattenChildren');
+var flattenChildren = require('./utils/flattenChildren')
 
 var ReactTransitionChildMapping = {
   /**
@@ -22,7 +22,7 @@ var ReactTransitionChildMapping = {
    * @param {*} children `this.props.children`
    * @return {object} Mapping of key to child
    */
-  getChildMapping: function getChildMapping(children) {
+  getChildMapping: function(children) {
     if (!children) {
       return children;
     }
@@ -46,7 +46,7 @@ var ReactTransitionChildMapping = {
    * @return {object} a key set that contains all keys in `prev` and all keys
    * in `next` in a reasonable order.
    */
-  mergeChildMappings: function mergeChildMappings(prev, next) {
+  mergeChildMappings: function(prev, next) {
     prev = prev || {};
     next = next || {};
 
@@ -80,7 +80,9 @@ var ReactTransitionChildMapping = {
       if (nextKeysPending.hasOwnProperty(nextKey)) {
         for (i = 0; i < nextKeysPending[nextKey].length; i++) {
           var pendingNextKey = nextKeysPending[nextKey][i];
-          childMapping[nextKeysPending[nextKey][i]] = getValueForKey(pendingNextKey);
+          childMapping[nextKeysPending[nextKey][i]] = getValueForKey(
+            pendingNextKey
+          );
         }
       }
       childMapping[nextKey] = getValueForKey(nextKey);
@@ -92,7 +94,7 @@ var ReactTransitionChildMapping = {
     }
 
     return childMapping;
-  }
+  },
 };
 
 module.exports = ReactTransitionChildMapping;

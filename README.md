@@ -56,7 +56,8 @@ learn react-lite from [React official documentation](http://facebook.github.io/r
 
 just the same as what react does, see some demos below(I just add the alias to webpack.config.js, no need to do anything else):
 
-- works with react-bootstrap: [doc demo](http://react-lite-with-bootstrap.herokuapp.com/)
+- works with material-ui: [docs demo](https://lucifier129.github.io/material-ui/build)
+- works with react-bootstrap: [docs demo](http://react-lite-with-bootstrap.herokuapp.com/)
 - works with ant-design: [demo](http://lucifier129.github.io/ant-design/)
 - works with react-router: [examples](http://react-lite-with-react-router.coding.io/)
 - works with redux:
@@ -83,7 +84,7 @@ via react-lite:
 - can not use react-dev-tool inspect react-lite, should switch to regular react for debugging
 - react-lite only works with a JSX toolchain([issue](https://github.com/Lucifier129/react-lite/issues/51))
 - unlike react, `event` object in react-lite is always persistent, and `event.persist` is set as no-op to avoid throwing error.
-- react-lite can't work with `react-tap-event-plugin`, please use `fastclick` instead.
+- react-lite can't work with `react-tap-event-plugin`, please use `fastclick` instead. or add alias `'react-tap-event-plugin': 'react-lite/lib/react-tap-event-plugin'`, just like [here](https://github.com/Lucifier129/material-ui/blob/master/docs/webpack-production.config.js#L21)
 
 ## Test
 react-lite reuses react's unitest(170), you can see them in `__test__`, and run the tests with:

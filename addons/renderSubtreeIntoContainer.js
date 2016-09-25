@@ -10,6 +10,6 @@
 */
 
 'use strict';
-var React = require('../dist/react-lite.common');
-var unstable_renderSubtreeIntoContainer = React.unstable_renderSubtreeIntoContainer;
-module.exports = unstable_renderSubtreeIntoContainer;
+var React = require('../dist/react-lite.common')
+var unstable_renderSubtreeIntoContainer = React.unstable_renderSubtreeIntoContainer
+module.exports = unstable_renderSubtreeIntoContainer

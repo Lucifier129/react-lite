@@ -22,7 +22,7 @@ var EVENT_NAME_MAP = {
     'WebkitTransition': 'webkitTransitionEnd',
     'MozTransition': 'mozTransitionEnd',
     'OTransition': 'oTransitionEnd',
-    'msTransition': 'MSTransitionEnd'
+    'msTransition': 'MSTransitionEnd',
   },
 
   animationend: {
@@ -30,8 +30,8 @@ var EVENT_NAME_MAP = {
     'WebkitAnimation': 'webkitAnimationEnd',
     'MozAnimation': 'mozAnimationEnd',
     'OAnimation': 'oAnimationEnd',
-    'msAnimation': 'MSAnimationEnd'
-  }
+    'msAnimation': 'MSAnimationEnd',
+  },
 };
 
 var endEvents = [];
@@ -80,26 +80,26 @@ function removeEventListener(node, eventName, eventListener) {
 }
 
 var ReactTransitionEvents = {
-  addEndEventListener: function addEndEventListener(node, eventListener) {
+  addEndEventListener: function(node, eventListener) {
     if (endEvents.length === 0) {
       // If CSS transitions are not supported, trigger an "end animation"
       // event immediately.
       window.setTimeout(eventListener, 0);
       return;
     }
-    endEvents.forEach(function (endEvent) {
+    endEvents.forEach(function(endEvent) {
       addEventListener(node, endEvent, eventListener);
     });
   },
 
-  removeEndEventListener: function removeEndEventListener(node, eventListener) {
+  removeEndEventListener: function(node, eventListener) {
     if (endEvents.length === 0) {
       return;
     }
-    endEvents.forEach(function (endEvent) {
+    endEvents.forEach(function(endEvent) {
       removeEventListener(node, endEvent, eventListener);
     });
-  }
+  },
 };
 
 module.exports = ReactTransitionEvents;

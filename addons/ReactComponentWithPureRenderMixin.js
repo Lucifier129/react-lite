@@ -8,9 +8,7 @@
  *
  * @providesModule ReactComponentWithPureRenderMixin
  */
-'use strict';
-
-var shallowCompare = require('./shallowCompare');
+var shallowCompare = require('./shallowCompare')
 
 /**
  * If your React component's render function is "pure", e.g. it will render the
@@ -37,9 +35,9 @@ var shallowCompare = require('./shallowCompare');
  * use `forceUpdate()` when you know deep data structures have changed.
  */
 var ReactComponentWithPureRenderMixin = {
-  shouldComponentUpdate: function shouldComponentUpdate(nextProps, nextState) {
+  shouldComponentUpdate: function(nextProps, nextState) {
     return shallowCompare(this, nextProps, nextState);
-  }
+  },
 };
 
 module.exports = ReactComponentWithPureRenderMixin;

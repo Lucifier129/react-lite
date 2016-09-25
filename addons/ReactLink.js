@@ -32,9 +32,7 @@
  * We have provided some sugary mixins to make the creation and
  * consumption of ReactLink easier; see LinkedValueUtils and LinkedStateMixin.
  */
-'use strict';
-
-var React = require('../dist/react-lite.common');
+var React = require('../dist/react-lite.common')
 
 /**
  * @param {*} value current value of the link
@@ -55,14 +53,16 @@ function ReactLink(value, requestChange) {
  */
 function createLinkTypeChecker(linkType) {
   var shapes = {
-    value: typeof linkType === 'undefined' ? React.PropTypes.any.isRequired : linkType.isRequired,
-    requestChange: React.PropTypes.func.isRequired
+    value: typeof linkType === 'undefined' ?
+      React.PropTypes.any.isRequired :
+      linkType.isRequired,
+    requestChange: React.PropTypes.func.isRequired,
   };
   return React.PropTypes.shape(shapes);
 }
 
 ReactLink.PropTypes = {
-  link: createLinkTypeChecker
+  link: createLinkTypeChecker,
 };
 
 module.exports = ReactLink;

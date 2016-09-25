@@ -8,13 +8,11 @@
  *
  * @providesModule traverseAllChildren
  */
-'use strict';
+var React = require('../../dist/react-lite.common')
+var isValidElement = React.isValidElement
+var getIteratorFn = require('./getIteratorFn')
 
-var React = require('../../dist/react-lite.common');
-var isValidElement = React.isValidElement;
-var getIteratorFn = require('./getIteratorFn');
-
-var invariant = function invariant() {};
+var invariant = function() {}
 var SEPARATOR = '.';
 var SUBSEPARATOR = ':';
 
@@ -26,7 +24,7 @@ var SUBSEPARATOR = ':';
 var userProvidedKeyEscaperLookup = {
   '=': '=0',
   '.': '=1',
-  ':': '=2'
+  ':': '=2',
 };
 
 var userProvidedKeyEscapeRegex = /[=.:]/g;
@@ -60,7 +58,10 @@ function getComponentKey(component, index) {
  * @return {string} An escaped string.
  */
 function escapeUserProvidedKey(text) {
-  return ('' + text).replace(userProvidedKeyEscapeRegex, userProvidedKeyEscaper);
+  return ('' + text).replace(
+    userProvidedKeyEscapeRegex,
+    userProvidedKeyEscaper
+  );
 }
 
 /**
@@ -82,7 +83,12 @@ function wrapUserProvidedKey(key) {
  * process.
  * @return {!number} The number of children in this subtree.
  */
-function traverseAllChildrenImpl(children, nameSoFar, callback, traverseContext) {
+function traverseAllChildrenImpl(
+  children,
+  nameSoFar,
+  callback,
+  traverseContext
+) {
   var type = typeof children;
 
   if (type === 'undefined' || type === 'boolean') {
@@ -90,11 +96,17 @@ function traverseAllChildrenImpl(children, nameSoFar, callback, traverseContext)
     children = null;
   }
 
-  if (children === null || type === 'string' || type === 'number' || isValidElement(children)) {
-    callback(traverseContext, children,
-    // If it's the only child, treat the name as if it was wrapped in an array
-    // so that it's consistent if the number of children grows.
-    nameSoFar === '' ? SEPARATOR + getComponentKey(children, 0) : nameSoFar);
+  if (children === null ||
+      type === 'string' ||
+      type === 'number' ||
+      isValidElement(children)) {
+    callback(
+      traverseContext,
+      children,
+      // If it's the only child, treat the name as if it was wrapped in an array
+      // so that it's consistent if the number of children grows.
+      nameSoFar === '' ? SEPARATOR + getComponentKey(children, 0) : nameSoFar
+    );
     return 1;
   }
 
@@ -107,7 +119,12 @@ function traverseAllChildrenImpl(children, nameSoFar, callback, traverseContext)
     for (var i = 0; i < children.length; i++) {
       child = children[i];
       nextName = nextNamePrefix + getComponentKey(child, i);
-      subtreeCount += traverseAllChildrenImpl(child, nextName, callback, traverseContext);
+      subtreeCount += traverseAllChildrenImpl(
+        child,
+        nextName,
+        callback,
+        traverseContext
+      );
     }
   } else {
     var iteratorFn = getIteratorFn(children);
@@ -119,7 +136,12 @@ function traverseAllChildrenImpl(children, nameSoFar, callback, traverseContext)
         while (!(step = iterator.next()).done) {
           child = step.value;
           nextName = nextNamePrefix + getComponentKey(child, ii++);
-          subtreeCount += traverseAllChildrenImpl(child, nextName, callback, traverseContext);
+          subtreeCount += traverseAllChildrenImpl(
+            child,
+            nextName,
+            callback,
+            traverseContext
+          );
         }
       } else {
         // Iterator will provide entry [k,v] tuples rather than values.
@@ -127,15 +149,31 @@ function traverseAllChildrenImpl(children, nameSoFar, callback, traverseContext)
           var entry = step.value;
           if (entry) {
             child = entry[1];
-            nextName = nextNamePrefix + wrapUserProvidedKey(entry[0]) + SUBSEPARATOR + getComponentKey(child, 0);
-            subtreeCount += traverseAllChildrenImpl(child, nextName, callback, traverseContext);
+            nextName = (
+              nextNamePrefix +
+              wrapUserProvidedKey(entry[0]) + SUBSEPARATOR +
+              getComponentKey(child, 0)
+            );
+            subtreeCount += traverseAllChildrenImpl(
+              child,
+              nextName,
+              callback,
+              traverseContext
+            );
           }
         }
       }
     } else if (type === 'object') {
       var addendum = '';
       var childrenString = String(children);
-      invariant(false, 'Objects are not valid as a React child (found: %s).%s', childrenString === '[object Object]' ? 'object with keys {' + Object.keys(children).join(', ') + '}' : childrenString, addendum);
+      invariant(
+        false,
+        'Objects are not valid as a React child (found: %s).%s',
+        childrenString === '[object Object]' ?
+          'object with keys {' + Object.keys(children).join(', ') + '}' :
+          childrenString,
+        addendum
+      );
     }
   }
 

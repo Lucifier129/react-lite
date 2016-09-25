@@ -9,15 +9,13 @@
  * @typechecks
  * @providesModule ReactCSSTransitionGroupChild
  */
-'use strict';
+var React = require('../dist/react-lite.common')
+var ReactDOM = React
+var Children = ReactDOM.Children
+var CSSCore = require('./utils/CSSCore')
+var ReactTransitionEvents = require('./ReactTransitionEvents')
 
-var React = require('../dist/react-lite.common');
-var ReactDOM = React;
-var Children = ReactDOM.Children;
-var CSSCore = require('./utils/CSSCore');
-var ReactTransitionEvents = require('./ReactTransitionEvents');
-
-var onlyChild = Children.only;
+var onlyChild = Children.only
 
 // We don't remove the element from the DOM until we receive an animationend or
 // transitionend event. If the user screws up and forgets to add an animation
@@ -29,18 +27,22 @@ var ReactCSSTransitionGroupChild = React.createClass({
   displayName: 'ReactCSSTransitionGroupChild',
 
   propTypes: {
-    name: React.PropTypes.oneOfType([React.PropTypes.string, React.PropTypes.shape({
-      enter: React.PropTypes.string,
-      leave: React.PropTypes.string,
-      active: React.PropTypes.string
-    }), React.PropTypes.shape({
-      enter: React.PropTypes.string,
-      enterActive: React.PropTypes.string,
-      leave: React.PropTypes.string,
-      leaveActive: React.PropTypes.string,
-      appear: React.PropTypes.string,
-      appearActive: React.PropTypes.string
-    })]).isRequired,
+    name: React.PropTypes.oneOfType([
+      React.PropTypes.string,
+      React.PropTypes.shape({
+        enter: React.PropTypes.string,
+        leave: React.PropTypes.string,
+        active: React.PropTypes.string,
+      }),
+      React.PropTypes.shape({
+        enter: React.PropTypes.string,
+        enterActive: React.PropTypes.string,
+        leave: React.PropTypes.string,
+        leaveActive: React.PropTypes.string,
+        appear: React.PropTypes.string,
+        appearActive: React.PropTypes.string,
+      }),
+    ]).isRequired,
 
     // Once we require timeouts to be specified, we can remove the
     // boolean flags (appear etc.) and just accept a number
@@ -50,10 +52,10 @@ var ReactCSSTransitionGroupChild = React.createClass({
     leave: React.PropTypes.bool,
     appearTimeout: React.PropTypes.number,
     enterTimeout: React.PropTypes.number,
-    leaveTimeout: React.PropTypes.number
+    leaveTimeout: React.PropTypes.number,
   },
 
-  transition: function transition(animationType, finishCallback, userSpecifiedDelay) {
+  transition: function(animationType, finishCallback, userSpecifiedDelay) {
     var node = ReactDOM.findDOMNode(this);
 
     if (!node) {
@@ -67,7 +69,7 @@ var ReactCSSTransitionGroupChild = React.createClass({
     var activeClassName = this.props.name[animationType + 'Active'] || className + '-active';
     var timeout = null;
 
-    var endListener = function endListener(e) {
+    var endListener = function(e) {
       if (e && e.target !== node) {
         return;
       }
@@ -102,7 +104,7 @@ var ReactCSSTransitionGroupChild = React.createClass({
     }
   },
 
-  queueClass: function queueClass(className) {
+  queueClass: function(className) {
     this.classNameQueue.push(className);
 
     if (!this.timeout) {
@@ -110,29 +112,31 @@ var ReactCSSTransitionGroupChild = React.createClass({
     }
   },
 
-  flushClassNameQueue: function flushClassNameQueue() {
+  flushClassNameQueue: function() {
     if (this.isMounted()) {
-      this.classNameQueue.forEach(CSSCore.addClass.bind(CSSCore, ReactDOM.findDOMNode(this)));
+      this.classNameQueue.forEach(
+        CSSCore.addClass.bind(CSSCore, ReactDOM.findDOMNode(this))
+      );
     }
     this.classNameQueue.length = 0;
     this.timeout = null;
   },
 
-  componentWillMount: function componentWillMount() {
+  componentWillMount: function() {
     this.classNameQueue = [];
     this.transitionTimeouts = [];
   },
 
-  componentWillUnmount: function componentWillUnmount() {
+  componentWillUnmount: function() {
     if (this.timeout) {
       clearTimeout(this.timeout);
     }
-    this.transitionTimeouts.forEach(function (timeout) {
+    this.transitionTimeouts.forEach(function(timeout) {
       clearTimeout(timeout);
     });
   },
 
-  componentWillAppear: function componentWillAppear(done) {
+  componentWillAppear: function(done) {
     if (this.props.appear) {
       this.transition('appear', done, this.props.appearTimeout);
     } else {
@@ -140,7 +144,7 @@ var ReactCSSTransitionGroupChild = React.createClass({
     }
   },
 
-  componentWillEnter: function componentWillEnter(done) {
+  componentWillEnter: function(done) {
     if (this.props.enter) {
       this.transition('enter', done, this.props.enterTimeout);
     } else {
@@ -148,7 +152,7 @@ var ReactCSSTransitionGroupChild = React.createClass({
     }
   },
 
-  componentWillLeave: function componentWillLeave(done) {
+  componentWillLeave: function(done) {
     if (this.props.leave) {
       this.transition('leave', done, this.props.leaveTimeout);
     } else {
@@ -156,9 +160,9 @@ var ReactCSSTransitionGroupChild = React.createClass({
     }
   },
 
-  render: function render() {
+  render: function() {
     return onlyChild(this.props.children);
-  }
+  },
 });
 
 module.exports = ReactCSSTransitionGroupChild;

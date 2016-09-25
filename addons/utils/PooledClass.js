@@ -11,7 +11,7 @@
 
 'use strict';
 
-var invariant = function invariant() {};
+var invariant = function() {}
 
 /**
  * Static poolers. Several custom versions for each potential number of
@@ -20,7 +20,7 @@ var invariant = function invariant() {};
  * the Class itself, not an instance. If any others are needed, simply add them
  * here, or in their own files.
  */
-var oneArgumentPooler = function oneArgumentPooler(copyFieldsFrom) {
+var oneArgumentPooler = function(copyFieldsFrom) {
   var Klass = this;
   if (Klass.instancePool.length) {
     var instance = Klass.instancePool.pop();
@@ -31,7 +31,7 @@ var oneArgumentPooler = function oneArgumentPooler(copyFieldsFrom) {
   }
 };
 
-var twoArgumentPooler = function twoArgumentPooler(a1, a2) {
+var twoArgumentPooler = function(a1, a2) {
   var Klass = this;
   if (Klass.instancePool.length) {
     var instance = Klass.instancePool.pop();
@@ -42,7 +42,7 @@ var twoArgumentPooler = function twoArgumentPooler(a1, a2) {
   }
 };
 
-var threeArgumentPooler = function threeArgumentPooler(a1, a2, a3) {
+var threeArgumentPooler = function(a1, a2, a3) {
   var Klass = this;
   if (Klass.instancePool.length) {
     var instance = Klass.instancePool.pop();
@@ -53,7 +53,7 @@ var threeArgumentPooler = function threeArgumentPooler(a1, a2, a3) {
   }
 };
 
-var fourArgumentPooler = function fourArgumentPooler(a1, a2, a3, a4) {
+var fourArgumentPooler = function(a1, a2, a3, a4) {
   var Klass = this;
   if (Klass.instancePool.length) {
     var instance = Klass.instancePool.pop();
@@ -64,7 +64,7 @@ var fourArgumentPooler = function fourArgumentPooler(a1, a2, a3, a4) {
   }
 };
 
-var fiveArgumentPooler = function fiveArgumentPooler(a1, a2, a3, a4, a5) {
+var fiveArgumentPooler = function(a1, a2, a3, a4, a5) {
   var Klass = this;
   if (Klass.instancePool.length) {
     var instance = Klass.instancePool.pop();
@@ -75,9 +75,12 @@ var fiveArgumentPooler = function fiveArgumentPooler(a1, a2, a3, a4, a5) {
   }
 };
 
-var standardReleaser = function standardReleaser(instance) {
+var standardReleaser = function(instance) {
   var Klass = this;
-  invariant(instance instanceof Klass, 'Trying to release an instance into a pool of a different type.');
+  invariant(
+    instance instanceof Klass,
+    'Trying to release an instance into a pool of a different type.'
+  );
   instance.destructor();
   if (Klass.instancePool.length < Klass.poolSize) {
     Klass.instancePool.push(instance);
@@ -96,7 +99,7 @@ var DEFAULT_POOLER = oneArgumentPooler;
  * @param {Function} CopyConstructor Constructor that can be used to reset.
  * @param {Function} pooler Customizable pooler.
  */
-var addPoolingTo = function addPoolingTo(CopyConstructor, pooler) {
+var addPoolingTo = function(CopyConstructor, pooler) {
   var NewKlass = CopyConstructor;
   NewKlass.instancePool = [];
   NewKlass.getPooled = pooler || DEFAULT_POOLER;
@@ -113,7 +116,7 @@ var PooledClass = {
   twoArgumentPooler: twoArgumentPooler,
   threeArgumentPooler: threeArgumentPooler,
   fourArgumentPooler: fourArgumentPooler,
-  fiveArgumentPooler: fiveArgumentPooler
+  fiveArgumentPooler: fiveArgumentPooler,
 };
 
 module.exports = PooledClass;

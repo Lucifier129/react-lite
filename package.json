@@ -1,13 +1,13 @@
 {
   "name": "react-lite",
-  "version": "0.15.20",
+  "version": "0.15.21",
   "description": "an implementation of React that optimizes for small script size",
   "main": "dist/react-lite.common.js",
   "jsnext:main": "src/index.js",
   "scripts": {
     "test": "jest",
-    "build:addons": "node_modules/.bin/babel ./addons --out-dir ./lib && babel ./src --out-dir ./lib",
-    "build": "node build.js",
+    "build:addons": "babel ./addons --out-dir ./lib",
+    "build": "node build.js && npm run build:addons",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -34,9 +34,6 @@
     "url": "https://github.com/Lucifier129/react-lite/issues"
   },
   "homepage": "https://github.com/Lucifier129/react-lite",
-  "peerDependencies": {
-    "fastclick": "^1.0.6"
-  },
   "devDependencies": {
     "babel": "^5.8.35",
     "babel-core": "^5.8.25",

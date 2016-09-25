@@ -8,14 +8,12 @@
  *
  * @providesModule ReactFragment
  */
-'use strict';
-
-var React = require('../dist/react-lite.common');
-var isValidElement = React.isValidElement;
-var ReactChildren = require('./ReactChildren');
-var emptyFunction = require('./utils/emptyFunction');
-var invariant = function invariant() {};
-var warning = function warning() {};
+var React = require('../dist/react-lite.common')
+var isValidElement = React.isValidElement
+var ReactChildren = require('./ReactChildren')
+var emptyFunction = require('./utils/emptyFunction')
+var invariant = function() {}
+var warning = function() {}
 /**
  * We used to allow keyed objects to serve as a collection of ReactElements,
  * or nested sets. This allowed us a way to explicitly key a set a fragment of
@@ -31,26 +29,43 @@ var warnedAboutNumeric = false;
 var ReactFragment = {
   // Wrap a keyed object in an opaque proxy that warns you if you access any
   // of its properties.
-  create: function create(object) {
+  create: function(object) {
     if (typeof object !== 'object' || !object || Array.isArray(object)) {
-      warning(false, 'React.addons.createFragment only accepts a single object. Got: %s', object);
+      warning(
+        false,
+        'React.addons.createFragment only accepts a single object. Got: %s',
+        object
+      );
       return object;
     }
     if (isValidElement(object)) {
-      warning(false, 'React.addons.createFragment does not accept a ReactElement ' + 'without a wrapper object.');
+      warning(
+        false,
+        'React.addons.createFragment does not accept a ReactElement ' +
+        'without a wrapper object.'
+      );
       return object;
     }
 
-    invariant(object.nodeType !== 1, 'React.addons.createFragment(...): Encountered an invalid child; DOM ' + 'elements are not valid children of React components.');
+    invariant(
+      object.nodeType !== 1,
+      'React.addons.createFragment(...): Encountered an invalid child; DOM ' +
+      'elements are not valid children of React components.'
+    );
 
     var result = [];
 
     for (var key in object) {
-      ReactChildren.mapIntoWithKeyPrefixInternal(object[key], result, key, emptyFunction.thatReturnsArgument);
+      ReactChildren.mapIntoWithKeyPrefixInternal(
+        object[key],
+        result,
+        key,
+        emptyFunction.thatReturnsArgument
+      );
     }
 
     return result;
-  }
+  },
 };
 
 module.exports = ReactFragment;

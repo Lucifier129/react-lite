@@ -15,21 +15,19 @@
  * functionality we've built and think might be useful but doesn't have a good
  * place to live inside React core.
  */
-'use strict';
+var React = require('../dist/react-lite.common')
+var LinkedStateMixin = require('./LinkedStateMixin')
+var ReactComponentWithPureRenderMixin = require('./ReactComponentWithPureRenderMixin')
+var ReactCSSTransitionGroup = require('./ReactCSSTransitionGroup')
+var ReactFragment = require('./ReactFragment')
+var ReactTransitionGroup = require('./ReactTransitionGroup')
+var ReactUpdates = React
+var shallowCompare = require('./shallowCompare')
+var update = require('./update')
 
-var React = require('../dist/react-lite.common');
-var LinkedStateMixin = require('./LinkedStateMixin');
-var ReactComponentWithPureRenderMixin = require('./ReactComponentWithPureRenderMixin');
-var ReactCSSTransitionGroup = require('./ReactCSSTransitionGroup');
-var ReactFragment = require('./ReactFragment');
-var ReactTransitionGroup = require('./ReactTransitionGroup');
-var ReactUpdates = React;
-var shallowCompare = require('./shallowCompare');
-var update = require('./update');
+var warning = function() {}
 
-var warning = function warning() {};
-
-var cloneWithProps = React.cloneElement;
+var cloneWithProps = React.cloneElement
 
 var warnedAboutBatchedUpdates = false;
 
@@ -38,13 +36,13 @@ React.addons = {
   LinkedStateMixin: LinkedStateMixin,
   PureRenderMixin: ReactComponentWithPureRenderMixin,
   TransitionGroup: ReactTransitionGroup,
-  batchedUpdates: function batchedUpdates() {
+  batchedUpdates: function() {
     return ReactUpdates.batchedUpdates.apply(this, arguments);
   },
   cloneWithProps: cloneWithProps,
   createFragment: ReactFragment.create,
   shallowCompare: shallowCompare,
-  update: update
+  update: update,
 };
 
 module.exports = React;
