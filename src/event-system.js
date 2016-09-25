@@ -22,7 +22,12 @@ export const notBubbleEvents = {
 }
 
 export function getEventName(key) {
-	key = key === 'onDoubleClick' ? 'ondblclick' : key
+	if (key === 'onDoubleClick') {
+		key = 'ondblclick'
+	} else if (key === 'onTouchTap') {
+		key = 'onclick'
+	}
+	
 	return key.toLowerCase()
 }
 
@@ -39,15 +44,13 @@ let eventTypes = {}
 export function addEvent(elem, eventType, listener) {
 	eventType = getEventName(eventType)
 
-	if (notBubbleEvents[eventType] === 1) {
-		elem[eventType] = listener
-		return
-	}
-
 	let eventStore = elem.eventStore || (elem.eventStore = {})
 	eventStore[eventType] = listener
 
-	if (!eventTypes[eventType]) {
+	if (notBubbleEvents[eventType] === 1) {
+		elem[eventType] = dispatchEvent
+		return
+	} else if (!eventTypes[eventType]) {
 		// onclick -> click
 		document.addEventListener(eventType.substr(2), dispatchEvent, false)
 		eventTypes[eventType] = true
@@ -55,6 +58,7 @@ export function addEvent(elem, eventType, listener) {
 
 	if (inMobile && eventType === ON_CLICK_KEY) {
 	    elem.addEventListener('click', emptyFunction, false)
+	    return
 	}
 
 	let nodeName = elem.nodeName
@@ -66,16 +70,16 @@ export function addEvent(elem, eventType, listener) {
 
 export function removeEvent(elem, eventType) {
 	eventType = getEventName(eventType)
-	if (notBubbleEvents[eventType] === 1) {
-		elem[eventType] = null
-		return
-	}
 
 	let eventStore = elem.eventStore || (elem.eventStore = {})
 	delete eventStore[eventType]
 
-	if (inMobile && eventType === ON_CLICK_KEY) {
+	if (notBubbleEvents[eventType] === 1) {
+		elem[eventType] = null
+		return
+	} else if (inMobile && eventType === ON_CLICK_KEY) {
 	    elem.removeEventListener('click', emptyFunction, false)
+	    return
 	}
 
 	let nodeName = elem.nodeName

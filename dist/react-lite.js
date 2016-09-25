@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.19
+ * react-lite.js v0.15.20
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -117,6 +117,14 @@
               newNode = updateVstateless(vnode, data.newVnode, newNode, data.parentContext);
           } else if (vnode.vtype === VCOMPONENT) {
               newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext);
+          }
+      } else {
+          // vnode is equal to newVnode, just update refs
+          if (vnode.vtype === VCOMPONENT) {
+              var component = newNode.cache[vnode.uid];
+              updateRef(vnode.refs, vnode.ref, component);
+          } else if (vnode.vtype === VELEMENT) {
+              updateRef(vnode.refs, vnode.ref, newNode);
           }
       }
 
@@ -353,8 +361,10 @@
       var isCustomComponent = velem.type.indexOf('-') >= 0 || velem.props.is != null;
       patchProps(node, velem.props, newVelem.props, isCustomComponent);
       if (velem.ref !== newVelem.ref) {
-          detachRef(velem.refs, velem.ref);
+          detachRef(velem.refs, velem.ref, node);
           attachRef(newVelem.refs, newVelem.ref, node);
+      } else {
+          updateRef(newVelem.refs, newVelem.ref, node);
       }
       return node;
   }
@@ -367,7 +377,7 @@
       for (var i = 0, len = vchildren.length; i < len; i++) {
           destroyVnode(vchildren[i], childNodes[i]);
       }
-      detachRef(velem.refs, velem.ref);
+      detachRef(velem.refs, velem.ref, node);
       node.eventStore = node.vchildren = null;
   }
 
@@ -469,12 +479,16 @@
           component.componentWillReceiveProps(nextProps, componentContext);
           updater.isPending = false;
       }
-      updater.emitUpdate(nextProps, componentContext);
 
       if (vcomponent.ref !== newVcomponent.ref) {
-          detachRef(vcomponent.refs, vcomponent.ref);
+          detachRef(vcomponent.refs, vcomponent.ref, component);
           attachRef(newVcomponent.refs, newVcomponent.ref, component);
+      } else {
+          updateRef(newVcomponent.refs, newVcomponent.ref, component);
       }
+
+      updater.emitUpdate(nextProps, componentContext);
+
       return cache.node;
   }
 
@@ -483,7 +497,7 @@
       var component = node.cache[uid];
       var cache = component.$cache;
       delete node.cache[uid];
-      detachRef(vcomponent.refs, vcomponent.ref);
+      detachRef(vcomponent.refs, vcomponent.ref, component);
       component.setState = component.forceUpdate = noop;
       if (component.componentWillUnmount) {
           component.componentWillUnmount();
@@ -606,14 +620,27 @@
       }
   }
 
-  function detachRef(refs, refKey) {
+  function detachRef(refs, refKey, refValue) {
       if (!refs || refKey == null) {
           return;
       }
       if (isFn(refKey)) {
           refKey(null);
-      } else {
+      } else if (refs[refKey] === refValue) {
           delete refs[refKey];
+      }
+  }
+
+  function updateRef(refs, refKey, refValue) {
+      if (!refs || refKey == null) {
+          return;
+      }
+
+      if (isFn(refKey)) {
+          refKey(null);
+          refKey(refValue);
+      } else if (refs[refKey] !== refValue) {
+          refs[refKey] = refValue;
       }
   }
 
@@ -872,7 +899,12 @@
   };
 
   function getEventName(key) {
-  	key = key === 'onDoubleClick' ? 'ondblclick' : key;
+  	if (key === 'onDoubleClick') {
+  		key = 'ondblclick';
+  	} else if (key === 'onTouchTap') {
+  		key = 'onclick';
+  	}
+
   	return key.toLowerCase();
   }
 
@@ -889,15 +921,13 @@
   function addEvent(elem, eventType, listener) {
   	eventType = getEventName(eventType);
 
-  	if (notBubbleEvents[eventType] === 1) {
-  		elem[eventType] = listener;
-  		return;
-  	}
-
   	var eventStore = elem.eventStore || (elem.eventStore = {});
   	eventStore[eventType] = listener;
 
-  	if (!eventTypes[eventType]) {
+  	if (notBubbleEvents[eventType] === 1) {
+  		elem[eventType] = dispatchEvent;
+  		return;
+  	} else if (!eventTypes[eventType]) {
   		// onclick -> click
   		document.addEventListener(eventType.substr(2), dispatchEvent, false);
   		eventTypes[eventType] = true;
@@ -905,6 +935,7 @@
 
   	if (inMobile && eventType === ON_CLICK_KEY) {
   		elem.addEventListener('click', emptyFunction, false);
+  		return;
   	}
 
   	var nodeName = elem.nodeName;
@@ -916,16 +947,16 @@
 
   function removeEvent(elem, eventType) {
   	eventType = getEventName(eventType);
-  	if (notBubbleEvents[eventType] === 1) {
-  		elem[eventType] = null;
-  		return;
-  	}
 
   	var eventStore = elem.eventStore || (elem.eventStore = {});
   	delete eventStore[eventType];
 
-  	if (inMobile && eventType === ON_CLICK_KEY) {
+  	if (notBubbleEvents[eventType] === 1) {
+  		elem[eventType] = null;
+  		return;
+  	} else if (inMobile && eventType === ON_CLICK_KEY) {
   		elem.removeEventListener('click', emptyFunction, false);
+  		return;
   	}
 
   	var nodeName = elem.nodeName;

@@ -103,6 +103,14 @@ function applyUpdate(data) {
         } else if (vnode.vtype === VCOMPONENT) {
             newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext)
         }
+    } else {
+        // vnode is equal to newVnode, just update refs
+        if (vnode.vtype === VCOMPONENT) {
+            let component = newNode.cache[vnode.uid]
+            updateRef(vnode.refs, vnode.ref, component)
+        } else if (vnode.vtype === VELEMENT) {
+            updateRef(vnode.refs, vnode.ref, newNode)
+        }
     }
 
     // re-order
@@ -336,8 +344,10 @@ function updateVelem(velem, newVelem, node) {
     let isCustomComponent = velem.type.indexOf('-') >= 0 || velem.props.is != null
     _.patchProps(node, velem.props, newVelem.props, isCustomComponent)
     if (velem.ref !== newVelem.ref) {
-        detachRef(velem.refs, velem.ref)
+        detachRef(velem.refs, velem.ref, node)
         attachRef(newVelem.refs, newVelem.ref, node)
+    } else {
+        updateRef(newVelem.refs, newVelem.ref, node)
     }
     return node
 }
@@ -348,7 +358,7 @@ function destroyVelem(velem, node) {
     for (let i = 0, len = vchildren.length; i < len; i++) {
         destroyVnode(vchildren[i], childNodes[i])
     }
-    detachRef(velem.refs, velem.ref)
+    detachRef(velem.refs, velem.ref, node)
     node.eventStore = node.vchildren = null
 }
 
@@ -440,12 +450,16 @@ function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
         component.componentWillReceiveProps(nextProps, componentContext)
         updater.isPending = false
     }
-    updater.emitUpdate(nextProps, componentContext)
 
     if (vcomponent.ref !== newVcomponent.ref) {
-        detachRef(vcomponent.refs, vcomponent.ref)
+        detachRef(vcomponent.refs, vcomponent.ref, component)
         attachRef(newVcomponent.refs, newVcomponent.ref, component)
+    } else {
+        updateRef(newVcomponent.refs, newVcomponent.ref, component)
     }
+
+    updater.emitUpdate(nextProps, componentContext)
+    
     return cache.node
 }
 
@@ -454,7 +468,7 @@ function destroyVcomponent(vcomponent, node) {
     let component = node.cache[uid]
     let cache = component.$cache
     delete node.cache[uid]
-    detachRef(vcomponent.refs, vcomponent.ref)
+    detachRef(vcomponent.refs, vcomponent.ref, component)
     component.setState = component.forceUpdate = _.noop
     if (component.componentWillUnmount) {
         component.componentWillUnmount()
@@ -578,14 +592,27 @@ function attachRef(refs, refKey, refValue) {
     }
 }
 
-function detachRef(refs, refKey) {
+function detachRef(refs, refKey, refValue) {
     if (!refs || refKey == null) {
         return
     }
     if (_.isFn(refKey)) {
         refKey(null)
-    } else {
+    } else if (refs[refKey] === refValue) {
         delete refs[refKey]
+    }
+}
+
+function updateRef(refs, refKey, refValue) {
+    if (!refs || refKey == null) {
+        return
+    }
+
+    if (_.isFn(refKey)) {
+        refKey(null)
+        refKey(refValue)
+    } else if (refs[refKey] !== refValue) {
+        refs[refKey] = refValue
     }
 }
 
