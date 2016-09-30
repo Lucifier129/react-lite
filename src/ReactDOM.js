@@ -20,9 +20,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 		} else {
 			argsCache.vnode = vnode
 			argsCache.parentContext = parentContext
-			if (argsCache.callback) {
-				argsCache.callback = argsCache.callback ? _.pipe(argsCache.callback, callback) : callback
-			}
+			argsCache.callback = argsCache.callback ? _.pipe(argsCache.callback, callback) : callback
 		}
 		return
 	}
@@ -48,8 +46,8 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	delete pendingRendering[id]
 
 	let result = null
-	if (_.isArr(argsCache)) {
-		result = renderTreeIntoContainer(argsCache.vnode, container, argsCache.parentContext, argsCache.callback)
+	if (typeof argsCache === 'object') {
+		result = renderTreeIntoContainer(argsCache.vnode, container, argsCache.callback, argsCache.parentContext)
 	} else if (vnode.vtype === VELEMENT) {
 		result = rootNode
 	} else if (vnode.vtype === VCOMPONENT) {

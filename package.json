@@ -1,6 +1,6 @@
 {
   "name": "react-lite",
-  "version": "0.15.21",
+  "version": "0.15.22",
   "description": "an implementation of React that optimizes for small script size",
   "main": "dist/react-lite.common.js",
   "jsnext:main": "src/index.js",
@@ -8,7 +8,7 @@
     "test": "jest",
     "build:addons": "babel ./addons --out-dir ./lib",
     "build": "node build.js && npm run build:addons",
-    "prepublish": "npm run build"
+    "prepublish": "npm test && npm run build"
   },
   "repository": {
     "type": "git",

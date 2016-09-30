@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.21
+ * react-lite.js v0.15.22
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -1893,9 +1893,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 		} else {
 			argsCache.vnode = vnode;
 			argsCache.parentContext = parentContext;
-			if (argsCache.callback) {
-				argsCache.callback = argsCache.callback ? pipe(argsCache.callback, callback) : callback;
-			}
+			argsCache.callback = argsCache.callback ? pipe(argsCache.callback, callback) : callback;
 		}
 		return;
 	}
@@ -1921,8 +1919,8 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	delete pendingRendering[id];
 
 	var result = null;
-	if (isArr(argsCache)) {
-		result = renderTreeIntoContainer(argsCache.vnode, container, argsCache.parentContext, argsCache.callback);
+	if (typeof argsCache === 'object') {
+		result = renderTreeIntoContainer(argsCache.vnode, container, argsCache.callback, argsCache.parentContext);
 	} else if (vnode.vtype === VELEMENT) {
 		result = rootNode;
 	} else if (vnode.vtype === VCOMPONENT) {
