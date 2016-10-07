@@ -123,8 +123,11 @@ export default function Component(props, context) {
 	this.context = context
 }
 
+const ReactComponentSymbol = {}
+
 Component.prototype = {
 	constructor: Component,
+	isReactComponent: ReactComponentSymbol,
 	// getChildContext: _.noop,
 	// componentWillUpdate: _.noop,
 	// componentDidUpdate: _.noop,

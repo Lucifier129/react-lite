@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.22
+ * react-lite.js v0.15.23
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -781,8 +781,11 @@ function Component(props, context) {
 	this.context = context;
 }
 
+var ReactComponentSymbol = {};
+
 Component.prototype = {
 	constructor: Component,
+	isReactComponent: ReactComponentSymbol,
 	// getChildContext: _.noop,
 	// componentWillUpdate: _.noop,
 	// componentDidUpdate: _.noop,
