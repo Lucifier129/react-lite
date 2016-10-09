@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.23
+ * react-lite.js v0.15.24
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -882,33 +882,33 @@
   }
 
   // event config
-  var notBubbleEvents = {
-  	onmouseleave: 1,
-  	onmouseenter: 1,
-  	onload: 1,
-  	onunload: 1,
-  	onscroll: 1,
-  	onfocus: 1,
-  	onblur: 1,
-  	onrowexit: 1,
-  	onbeforeunload: 1,
-  	onstop: 1,
-  	ondragdrop: 1,
-  	ondragenter: 1,
-  	ondragexit: 1,
-  	ondraggesture: 1,
-  	ondragover: 1,
-  	oncontextmenu: 1
+  var unbubbleEvents = {
+      onmouseleave: 1,
+      onmouseenter: 1,
+      onload: 1,
+      onunload: 1,
+      onscroll: 1,
+      onfocus: 1,
+      onblur: 1,
+      onrowexit: 1,
+      onbeforeunload: 1,
+      onstop: 1,
+      ondragdrop: 1,
+      ondragenter: 1,
+      ondragexit: 1,
+      ondraggesture: 1,
+      ondragover: 1,
+      oncontextmenu: 1
   };
 
   function getEventName(key) {
-  	if (key === 'onDoubleClick') {
-  		key = 'ondblclick';
-  	} else if (key === 'onTouchTap') {
-  		key = 'onclick';
-  	}
+      if (key === 'onDoubleClick') {
+          key = 'ondblclick';
+      } else if (key === 'onTouchTap') {
+          key = 'onclick';
+      }
 
-  	return key.toLowerCase();
+      return key.toLowerCase();
   }
 
   // Mobile Safari does not fire properly bubble click events on
@@ -922,101 +922,120 @@
   var eventTypes = {};
 
   function addEvent(elem, eventType, listener) {
-  	eventType = getEventName(eventType);
+      eventType = getEventName(eventType);
 
-  	var eventStore = elem.eventStore || (elem.eventStore = {});
-  	eventStore[eventType] = listener;
+      var eventStore = elem.eventStore || (elem.eventStore = {});
+      eventStore[eventType] = listener;
 
-  	if (notBubbleEvents[eventType] === 1) {
-  		elem[eventType] = dispatchEvent;
-  		return;
-  	} else if (!eventTypes[eventType]) {
-  		// onclick -> click
-  		document.addEventListener(eventType.substr(2), dispatchEvent, false);
-  		eventTypes[eventType] = true;
-  	}
+      if (unbubbleEvents[eventType] === 1) {
+          elem[eventType] = dispatchUnbubbleEvent;
+          return;
+      } else if (!eventTypes[eventType]) {
+          // onclick -> click
+          document.addEventListener(eventType.substr(2), dispatchEvent, false);
+          eventTypes[eventType] = true;
+      }
 
-  	if (inMobile && eventType === ON_CLICK_KEY) {
-  		elem.addEventListener('click', emptyFunction, false);
-  		return;
-  	}
+      if (inMobile && eventType === ON_CLICK_KEY) {
+          elem.addEventListener('click', emptyFunction, false);
+          return;
+      }
 
-  	var nodeName = elem.nodeName;
+      var nodeName = elem.nodeName;
 
-  	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
-  		addEvent(elem, 'oninput', listener);
-  	}
+      if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
+          addEvent(elem, 'oninput', listener);
+      }
   }
 
   function removeEvent(elem, eventType) {
-  	eventType = getEventName(eventType);
+      eventType = getEventName(eventType);
 
-  	var eventStore = elem.eventStore || (elem.eventStore = {});
-  	delete eventStore[eventType];
+      var eventStore = elem.eventStore || (elem.eventStore = {});
+      delete eventStore[eventType];
 
-  	if (notBubbleEvents[eventType] === 1) {
-  		elem[eventType] = null;
-  		return;
-  	} else if (inMobile && eventType === ON_CLICK_KEY) {
-  		elem.removeEventListener('click', emptyFunction, false);
-  		return;
-  	}
+      if (unbubbleEvents[eventType] === 1) {
+          elem[eventType] = null;
+          return;
+      } else if (inMobile && eventType === ON_CLICK_KEY) {
+          elem.removeEventListener('click', emptyFunction, false);
+          return;
+      }
 
-  	var nodeName = elem.nodeName;
+      var nodeName = elem.nodeName;
 
-  	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
-  		delete eventStore['oninput'];
-  	}
+      if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
+          delete eventStore['oninput'];
+      }
   }
 
   function dispatchEvent(event) {
-  	var target = event.target;
-  	var type = event.type;
+      var target = event.target;
+      var type = event.type;
 
-  	var eventType = 'on' + type;
-  	var syntheticEvent = undefined;
+      var eventType = 'on' + type;
+      var syntheticEvent = undefined;
 
-  	updateQueue.isPending = true;
-  	while (target) {
-  		var _target = target;
-  		var eventStore = _target.eventStore;
+      updateQueue.isPending = true;
+      while (target) {
+          var _target = target;
+          var eventStore = _target.eventStore;
 
-  		var listener = eventStore && eventStore[eventType];
-  		if (!listener) {
-  			target = target.parentNode;
-  			continue;
-  		}
-  		if (!syntheticEvent) {
-  			syntheticEvent = createSyntheticEvent(event);
-  		}
-  		syntheticEvent.currentTarget = target;
-  		listener.call(target, syntheticEvent);
-  		if (syntheticEvent.$cancalBubble) {
-  			break;
-  		}
-  		target = target.parentNode;
-  	}
-  	updateQueue.isPending = false;
-  	updateQueue.batchUpdate();
+          var listener = eventStore && eventStore[eventType];
+          if (!listener) {
+              target = target.parentNode;
+              continue;
+          }
+          if (!syntheticEvent) {
+              syntheticEvent = createSyntheticEvent(event);
+          }
+          syntheticEvent.currentTarget = target;
+          listener.call(target, syntheticEvent);
+          if (syntheticEvent.$cancalBubble) {
+              break;
+          }
+          target = target.parentNode;
+      }
+      updateQueue.isPending = false;
+      updateQueue.batchUpdate();
+  }
+
+  function dispatchUnbubbleEvent(event) {
+      var target = event.currentTarget || event.target;
+      var eventType = 'on' + event.type;
+      var syntheticEvent = createSyntheticEvent(event);
+
+      syntheticEvent.currentTarget = target;
+      updateQueue.isPending = true;
+
+      var eventStore = target.eventStore;
+
+      var listener = eventStore && eventStore[eventType];
+      if (listener) {
+          listener.call(target, syntheticEvent);
+      }
+
+      updateQueue.isPending = false;
+      updateQueue.batchUpdate();
   }
 
   function createSyntheticEvent(nativeEvent) {
-  	var syntheticEvent = {};
-  	var cancalBubble = function cancalBubble() {
-  		return syntheticEvent.$cancalBubble = true;
-  	};
-  	syntheticEvent.nativeEvent = nativeEvent;
-  	syntheticEvent.persist = noop;
-  	for (var key in nativeEvent) {
-  		if (typeof nativeEvent[key] !== 'function') {
-  			syntheticEvent[key] = nativeEvent[key];
-  		} else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
-  			syntheticEvent[key] = cancalBubble;
-  		} else {
-  			syntheticEvent[key] = nativeEvent[key].bind(nativeEvent);
-  		}
-  	}
-  	return syntheticEvent;
+      var syntheticEvent = {};
+      var cancalBubble = function cancalBubble() {
+          return syntheticEvent.$cancalBubble = true;
+      };
+      syntheticEvent.nativeEvent = nativeEvent;
+      syntheticEvent.persist = noop;
+      for (var key in nativeEvent) {
+          if (typeof nativeEvent[key] !== 'function') {
+              syntheticEvent[key] = nativeEvent[key];
+          } else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
+              syntheticEvent[key] = cancalBubble;
+          } else {
+              syntheticEvent[key] = nativeEvent[key].bind(nativeEvent);
+          }
+      }
+      return syntheticEvent;
   }
 
   function setStyle(elemStyle, styles) {

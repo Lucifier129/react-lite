@@ -108,6 +108,9 @@ const Counter = React.createClass({
 						type="text" 
 						value={this.state.text}
 						onChange={this.handleChange}
+						onFocus={event => {
+							COUNT('INCREMENT')
+						}}
 						ref={ this.getInput } 
 						id="myinput" 
 						name="myinput" />

@@ -195,6 +195,9 @@
 						type: 'text',
 						value: this.state.text,
 						onChange: this.handleChange,
+						onFocus: function (event) {
+							COUNT('INCREMENT');
+						},
 						ref: this.getInput,
 						id: 'myinput',
 						name: 'myinput' })

@@ -2,7 +2,7 @@ import { updateQueue } from './Component'
 import * as _ from './util'
 
 // event config
-export const notBubbleEvents = {
+export const unbubbleEvents = {
     onmouseleave: 1,
     onmouseenter: 1,
     onload: 1,
@@ -22,13 +22,13 @@ export const notBubbleEvents = {
 }
 
 export function getEventName(key) {
-	if (key === 'onDoubleClick') {
-		key = 'ondblclick'
-	} else if (key === 'onTouchTap') {
-		key = 'onclick'
-	}
-	
-	return key.toLowerCase()
+    if (key === 'onDoubleClick') {
+        key = 'ondblclick'
+    } else if (key === 'onTouchTap') {
+        key = 'onclick'
+    }
+
+    return key.toLowerCase()
 }
 
 
@@ -42,78 +42,96 @@ let ON_CLICK_KEY = 'onclick'
 
 let eventTypes = {}
 export function addEvent(elem, eventType, listener) {
-	eventType = getEventName(eventType)
+    eventType = getEventName(eventType)
 
-	let eventStore = elem.eventStore || (elem.eventStore = {})
-	eventStore[eventType] = listener
+    let eventStore = elem.eventStore || (elem.eventStore = {})
+    eventStore[eventType] = listener
 
-	if (notBubbleEvents[eventType] === 1) {
-		elem[eventType] = dispatchEvent
-		return
-	} else if (!eventTypes[eventType]) {
-		// onclick -> click
-		document.addEventListener(eventType.substr(2), dispatchEvent, false)
-		eventTypes[eventType] = true
-	}
+    if (unbubbleEvents[eventType] === 1) {
+        elem[eventType] = dispatchUnbubbleEvent
+        return
+    } else if (!eventTypes[eventType]) {
+        // onclick -> click
+        document.addEventListener(eventType.substr(2), dispatchEvent, false)
+        eventTypes[eventType] = true
+    }
 
-	if (inMobile && eventType === ON_CLICK_KEY) {
-	    elem.addEventListener('click', emptyFunction, false)
-	    return
-	}
+    if (inMobile && eventType === ON_CLICK_KEY) {
+        elem.addEventListener('click', emptyFunction, false)
+        return
+    }
 
-	let nodeName = elem.nodeName
+    let nodeName = elem.nodeName
 
-	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
-		addEvent(elem, 'oninput', listener)
-	}
+    if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
+        addEvent(elem, 'oninput', listener)
+    }
 }
 
 export function removeEvent(elem, eventType) {
-	eventType = getEventName(eventType)
+    eventType = getEventName(eventType)
 
-	let eventStore = elem.eventStore || (elem.eventStore = {})
-	delete eventStore[eventType]
+    let eventStore = elem.eventStore || (elem.eventStore = {})
+    delete eventStore[eventType]
 
-	if (notBubbleEvents[eventType] === 1) {
-		elem[eventType] = null
-		return
-	} else if (inMobile && eventType === ON_CLICK_KEY) {
-	    elem.removeEventListener('click', emptyFunction, false)
-	    return
-	}
+    if (unbubbleEvents[eventType] === 1) {
+        elem[eventType] = null
+        return
+    } else if (inMobile && eventType === ON_CLICK_KEY) {
+        elem.removeEventListener('click', emptyFunction, false)
+        return
+    }
 
-	let nodeName = elem.nodeName
+    let nodeName = elem.nodeName
 
-	if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
-		delete eventStore['oninput']
-	}
+    if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
+        delete eventStore['oninput']
+    }
 }
 
 function dispatchEvent(event) {
-	let { target, type } = event
-	let eventType = 'on' + type
-	let syntheticEvent
+    let { target, type } = event
+    let eventType = 'on' + type
+    let syntheticEvent
 
-	updateQueue.isPending = true
-	while (target) {
-		let { eventStore } = target
-		let listener = eventStore && eventStore[eventType]
-		if (!listener) {
-			target = target.parentNode
-			continue
-		}
-		if (!syntheticEvent) {
-			syntheticEvent = createSyntheticEvent(event)
-		}
-		syntheticEvent.currentTarget = target
-		listener.call(target, syntheticEvent)
-		if (syntheticEvent.$cancalBubble) {
-			break
-		}
-		target = target.parentNode
-	}
-	updateQueue.isPending = false
-	updateQueue.batchUpdate()
+    updateQueue.isPending = true
+    while (target) {
+        let { eventStore } = target
+        let listener = eventStore && eventStore[eventType]
+        if (!listener) {
+            target = target.parentNode
+            continue
+        }
+        if (!syntheticEvent) {
+            syntheticEvent = createSyntheticEvent(event)
+        }
+        syntheticEvent.currentTarget = target
+        listener.call(target, syntheticEvent)
+        if (syntheticEvent.$cancalBubble) {
+            break
+        }
+        target = target.parentNode
+    }
+    updateQueue.isPending = false
+    updateQueue.batchUpdate()
+}
+
+function dispatchUnbubbleEvent(event) {
+    let target = event.currentTarget || event.target
+    let eventType = 'on' + event.type
+    let syntheticEvent = createSyntheticEvent(event)
+    
+    syntheticEvent.currentTarget = target
+    updateQueue.isPending = true
+
+    let { eventStore } = target
+    let listener = eventStore && eventStore[eventType]
+    if (listener) {
+    	listener.call(target, syntheticEvent)
+    }
+    
+    updateQueue.isPending = false
+    updateQueue.batchUpdate()
 }
 
 function createSyntheticEvent(nativeEvent) {
@@ -122,13 +140,13 @@ function createSyntheticEvent(nativeEvent) {
     syntheticEvent.nativeEvent = nativeEvent
     syntheticEvent.persist = _.noop
     for (let key in nativeEvent) {
-    	if (typeof nativeEvent[key] !== 'function') {
-    		syntheticEvent[key] = nativeEvent[key]
-    	} else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
-    		syntheticEvent[key] = cancalBubble
-    	} else {
-    		syntheticEvent[key] = nativeEvent[key].bind(nativeEvent)
-    	}
+        if (typeof nativeEvent[key] !== 'function') {
+            syntheticEvent[key] = nativeEvent[key]
+        } else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
+            syntheticEvent[key] = cancalBubble
+        } else {
+            syntheticEvent[key] = nativeEvent[key].bind(nativeEvent)
+        }
     }
     return syntheticEvent
 }
