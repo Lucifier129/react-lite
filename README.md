@@ -85,6 +85,7 @@ via react-lite:
 - react-lite only works with a JSX toolchain([issue](https://github.com/Lucifier129/react-lite/issues/51))
 - unlike react, `event` object in react-lite is always persistent, and `event.persist` is set as no-op to avoid throwing error.
 - react-lite can't work with `react-tap-event-plugin`, please use `fastclick` instead. or add alias `'react-tap-event-plugin': 'react-lite/lib/react-tap-event-plugin'`, just like [here](https://github.com/Lucifier129/material-ui/blob/master/docs/webpack-production.config.js#L21)
+- can't work with `transform-react-inline-elements`, you will get a bunder include `react` and `react-lite`.
 
 ## Test
 react-lite reuses react's unitest(170), you can see them in `__test__`, and run the tests with:
