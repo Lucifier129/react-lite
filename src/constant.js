@@ -12,3 +12,6 @@ export const VCOMMENT = 5
 export const CREATE = 1
 export const REMOVE = 2
 export const UPDATE = 3
+export const ELEMENT_NODE_TYPE = 1
+export const DOC_NODE_TYPE = 9
+export const DOCUMENT_FRAGMENT_NODE_TYPE = 11
