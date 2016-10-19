@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.24
+ * react-lite.js v0.15.25
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -12,6 +12,9 @@ var VELEMENT = 2;
 var VSTATELESS = 3;
 var VCOMPONENT = 4;
 var VCOMMENT = 5;
+var ELEMENT_NODE_TYPE = 1;
+var DOC_NODE_TYPE = 9;
+var DOCUMENT_FRAGMENT_NODE_TYPE = 11;
 
 /**
  * current stateful component's refs property
@@ -1898,11 +1901,18 @@ if (!Object.freeze) {
     Object.freeze = identity;
 }
 
+function isValidContainer(node) {
+	return !!(node && (node.nodeType === ELEMENT_NODE_TYPE || node.nodeType === DOC_NODE_TYPE || node.nodeType === DOCUMENT_FRAGMENT_NODE_TYPE));
+}
+
 var pendingRendering = {};
 var vnodeStore = {};
 function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	if (!vnode.vtype) {
 		throw new Error('cannot render ' + vnode + ' to container');
+	}
+	if (!isValidContainer(container)) {
+		throw new Error('container ' + container + ' is not a DOM element');
 	}
 	var id = container[COMPONENT_ID] || (container[COMPONENT_ID] = getUid());
 	var argsCache = pendingRendering[id];
