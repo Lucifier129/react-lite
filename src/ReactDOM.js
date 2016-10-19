@@ -1,13 +1,31 @@
 import * as _ from './util'
-import { COMPONENT_ID, VELEMENT, VCOMPONENT } from './constant'
+import {
+	COMPONENT_ID,
+	VELEMENT,
+	VCOMPONENT,
+	ELEMENT_NODE_TYPE,
+	DOC_NODE_TYPE,
+	DOCUMENT_FRAGMENT_NODE_TYPE
+} from './constant'
 import { initVnode, destroyVnode, clearPending, compareTwoVnodes } from './virtual-dom'
 import { updateQueue } from './Component'
+
+function isValidContainer(node) {
+    return !!(node && (
+        node.nodeType === ELEMENT_NODE_TYPE ||
+        node.nodeType === DOC_NODE_TYPE ||
+        node.nodeType === DOCUMENT_FRAGMENT_NODE_TYPE
+    ))
+}
 
 let pendingRendering = {}
 let vnodeStore = {}
 function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	if (!vnode.vtype) {
 		throw new Error(`cannot render ${ vnode } to container`)
+	}
+	if (!isValidContainer(container)) {
+		throw new Error(`container ${container} is not a DOM element`)
 	}
 	let id = container[COMPONENT_ID] || (container[COMPONENT_ID] = _.getUid())
 	let argsCache = pendingRendering[id]
@@ -53,7 +71,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	} else if (vnode.vtype === VCOMPONENT) {
 		result = rootNode.cache[vnode.uid]
 	}
-	
+
 	if (!isPending) {
 		updateQueue.isPending = false
 		updateQueue.batchUpdate()
@@ -62,7 +80,7 @@ function renderTreeIntoContainer(vnode, container, callback, parentContext) {
 	if (callback) {
 		callback.call(result)
 	}
-	
+
 	return result
 }
 
