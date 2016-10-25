@@ -103,14 +103,6 @@ function applyUpdate(data) {
         } else if (vnode.vtype === VCOMPONENT) {
             newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext)
         }
-    } else {
-        // vnode is equal to newVnode, just update refs
-        if (vnode.vtype === VCOMPONENT) {
-            let component = newNode.cache[vnode.uid]
-            updateRef(vnode.refs, vnode.ref, component)
-        } else if (vnode.vtype === VELEMENT) {
-            updateRef(vnode.refs, vnode.ref, newNode)
-        }
     }
 
     // re-order
@@ -346,8 +338,6 @@ function updateVelem(velem, newVelem, node) {
     if (velem.ref !== newVelem.ref) {
         detachRef(velem.refs, velem.ref, node)
         attachRef(newVelem.refs, newVelem.ref, node)
-    } else {
-        updateRef(newVelem.refs, newVelem.ref, node)
     }
     return node
 }
@@ -454,8 +444,6 @@ function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
     if (vcomponent.ref !== newVcomponent.ref) {
         detachRef(vcomponent.refs, vcomponent.ref, component)
         attachRef(newVcomponent.refs, newVcomponent.ref, component)
-    } else {
-        updateRef(newVcomponent.refs, newVcomponent.ref, component)
     }
 
     updater.emitUpdate(nextProps, componentContext)
@@ -600,19 +588,6 @@ function detachRef(refs, refKey, refValue) {
         refKey(null)
     } else if (refs[refKey] === refValue) {
         delete refs[refKey]
-    }
-}
-
-function updateRef(refs, refKey, refValue) {
-    if (!refs || refKey == null) {
-        return
-    }
-
-    if (_.isFn(refKey)) {
-        refKey(null)
-        refKey(refValue)
-    } else if (refs[refKey] !== refValue) {
-        refs[refKey] = refValue
     }
 }
 

@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.25
+ * react-lite.js v0.15.26
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -120,14 +120,6 @@
               newNode = updateVstateless(vnode, data.newVnode, newNode, data.parentContext);
           } else if (vnode.vtype === VCOMPONENT) {
               newNode = updateVcomponent(vnode, data.newVnode, newNode, data.parentContext);
-          }
-      } else {
-          // vnode is equal to newVnode, just update refs
-          if (vnode.vtype === VCOMPONENT) {
-              var component = newNode.cache[vnode.uid];
-              updateRef(vnode.refs, vnode.ref, component);
-          } else if (vnode.vtype === VELEMENT) {
-              updateRef(vnode.refs, vnode.ref, newNode);
           }
       }
 
@@ -366,8 +358,6 @@
       if (velem.ref !== newVelem.ref) {
           detachRef(velem.refs, velem.ref, node);
           attachRef(newVelem.refs, newVelem.ref, node);
-      } else {
-          updateRef(newVelem.refs, newVelem.ref, node);
       }
       return node;
   }
@@ -486,8 +476,6 @@
       if (vcomponent.ref !== newVcomponent.ref) {
           detachRef(vcomponent.refs, vcomponent.ref, component);
           attachRef(newVcomponent.refs, newVcomponent.ref, component);
-      } else {
-          updateRef(newVcomponent.refs, newVcomponent.ref, component);
       }
 
       updater.emitUpdate(nextProps, componentContext);
@@ -631,19 +619,6 @@
           refKey(null);
       } else if (refs[refKey] === refValue) {
           delete refs[refKey];
-      }
-  }
-
-  function updateRef(refs, refKey, refValue) {
-      if (!refs || refKey == null) {
-          return;
-      }
-
-      if (isFn(refKey)) {
-          refKey(null);
-          refKey(refValue);
-      } else if (refs[refKey] !== refValue) {
-          refs[refKey] = refValue;
       }
   }
 
