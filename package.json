@@ -10,6 +10,9 @@
     "build": "node build.js && npm run build:addons",
     "prepublish": "npm test && npm run build"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Lucifier129/react-lite.git"
@@ -49,12 +52,10 @@
     "webpack": "^1.12.2"
   },
   "npmName": "react-lite",
-  "npmFileMap": [
-    {
-      "basePath": "/dist/",
-      "files": [
-        "*.js"
-      ]
-    }
-  ]
+  "npmFileMap": [{
+    "basePath": "/dist/",
+    "files": [
+      "*.js"
+    ]
+  }]
 }
