@@ -107,7 +107,7 @@ function dispatchEvent(event) {
         }
         syntheticEvent.currentTarget = target
         listener.call(target, syntheticEvent)
-        if (syntheticEvent.$cancalBubble) {
+        if (syntheticEvent.$cancelBubble) {
             break
         }
         target = target.parentNode
@@ -136,14 +136,14 @@ function dispatchUnbubbleEvent(event) {
 
 function createSyntheticEvent(nativeEvent) {
     let syntheticEvent = {}
-    let cancalBubble = () => syntheticEvent.$cancalBubble = true
+    let cancelBubble = () => syntheticEvent.$cancelBubble = true
     syntheticEvent.nativeEvent = nativeEvent
     syntheticEvent.persist = _.noop
     for (let key in nativeEvent) {
         if (typeof nativeEvent[key] !== 'function') {
             syntheticEvent[key] = nativeEvent[key]
         } else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
-            syntheticEvent[key] = cancalBubble
+            syntheticEvent[key] = cancelBubble
         } else {
             syntheticEvent[key] = nativeEvent[key].bind(nativeEvent)
         }
