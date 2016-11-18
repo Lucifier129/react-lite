@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.26
+ * react-lite.js v0.15.27
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -861,6 +861,11 @@
 
   // event config
   var unbubbleEvents = {
+      /**
+       * should not bind mousemove in document scope
+       * even though mousemove event can bubble
+       */
+      onmousemove: 1,
       onmouseleave: 1,
       onmouseenter: 1,
       onload: 1,
@@ -921,7 +926,7 @@
 
       var nodeName = elem.nodeName;
 
-      if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
+      if (eventType === 'onchange') {
           addEvent(elem, 'oninput', listener);
       }
   }
@@ -942,7 +947,7 @@
 
       var nodeName = elem.nodeName;
 
-      if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
+      if (eventType === 'onchange') {
           delete eventStore['oninput'];
       }
   }
@@ -969,7 +974,7 @@
           }
           syntheticEvent.currentTarget = target;
           listener.call(target, syntheticEvent);
-          if (syntheticEvent.$cancalBubble) {
+          if (syntheticEvent.$cancelBubble) {
               break;
           }
           target = target.parentNode;
@@ -999,8 +1004,8 @@
 
   function createSyntheticEvent(nativeEvent) {
       var syntheticEvent = {};
-      var cancalBubble = function cancalBubble() {
-          return syntheticEvent.$cancalBubble = true;
+      var cancelBubble = function cancelBubble() {
+          return syntheticEvent.$cancelBubble = true;
       };
       syntheticEvent.nativeEvent = nativeEvent;
       syntheticEvent.persist = noop;
@@ -1008,7 +1013,7 @@
           if (typeof nativeEvent[key] !== 'function') {
               syntheticEvent[key] = nativeEvent[key];
           } else if (key === 'stopPropagation' || key === 'stopImmediatePropagation') {
-              syntheticEvent[key] = cancalBubble;
+              syntheticEvent[key] = cancelBubble;
           } else {
               syntheticEvent[key] = nativeEvent[key].bind(nativeEvent);
           }

@@ -3,6 +3,11 @@ import * as _ from './util'
 
 // event config
 export const unbubbleEvents = {
+    /**
+     * should not bind mousemove in document scope
+     * even though mousemove event can bubble
+     */
+    onmousemove: 1,
     onmouseleave: 1,
     onmouseenter: 1,
     onload: 1,
@@ -63,7 +68,7 @@ export function addEvent(elem, eventType, listener) {
 
     let nodeName = elem.nodeName
 
-    if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
+    if (eventType === 'onchange') {
         addEvent(elem, 'oninput', listener)
     }
 }
@@ -84,7 +89,7 @@ export function removeEvent(elem, eventType) {
 
     let nodeName = elem.nodeName
 
-    if (eventType === 'onchange' && (nodeName === 'INPUT' || nodeName === 'TEXTAREA')) {
+    if (eventType === 'onchange') {
         delete eventStore['oninput']
     }
 }

@@ -11,3 +11,4 @@ jest
 __tests__
 webpack.config.js
 build.js
+addons
