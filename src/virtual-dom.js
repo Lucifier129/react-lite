@@ -157,7 +157,7 @@ function initVelem(velem, parentContext, namespaceURI) {
     let isCustomComponent = type.indexOf('-') >= 0 || props.is != null
     _.setProps(node, props, isCustomComponent)
 
-    if (velem.refs && velem.ref != null) {
+    if (velem.ref != null) {
         _.addItem(pendingRefs, velem)
         _.addItem(pendingRefs, node)
     }
@@ -418,7 +418,7 @@ function initVcomponent(vcomponent, parentContext, namespaceURI) {
     cache.isMounted = true
     _.addItem(pendingComponents, component)
 
-    if (vcomponent.refs && vcomponent.ref != null) {
+    if (vcomponent.ref != null) {
         _.addItem(pendingRefs, vcomponent)
         _.addItem(pendingRefs, component)
     }
@@ -566,7 +566,7 @@ function getDOMNode() {
 }
 
 function attachRef(refs, refKey, refValue) {
-    if (!refs || refKey == null || !refValue) {
+    if (refKey == null || !refValue) {
         return
     }
     if (refValue.nodeName && !refValue.getDOMNode) {
@@ -575,18 +575,18 @@ function attachRef(refs, refKey, refValue) {
     }
     if (_.isFn(refKey)) {
         refKey(refValue)
-    } else {
+    } else if (refs) {
         refs[refKey] = refValue
     }
 }
 
 function detachRef(refs, refKey, refValue) {
-    if (!refs || refKey == null) {
+    if (refKey == null) {
         return
     }
     if (_.isFn(refKey)) {
         refKey(null)
-    } else if (refs[refKey] === refValue) {
+    } else if (refs && refs[refKey] === refValue) {
         delete refs[refKey]
     }
 }

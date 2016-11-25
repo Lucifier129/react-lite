@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.27
+ * react-lite.js v0.15.28
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -179,7 +179,7 @@
       var isCustomComponent = type.indexOf('-') >= 0 || props.is != null;
       setProps(node, props, isCustomComponent);
 
-      if (velem.refs && velem.ref != null) {
+      if (velem.ref != null) {
           addItem(pendingRefs, velem);
           addItem(pendingRefs, node);
       }
@@ -447,7 +447,7 @@
       cache.isMounted = true;
       addItem(pendingComponents, component);
 
-      if (vcomponent.refs && vcomponent.ref != null) {
+      if (vcomponent.ref != null) {
           addItem(pendingRefs, vcomponent);
           addItem(pendingRefs, component);
       }
@@ -597,7 +597,7 @@
   }
 
   function attachRef(refs, refKey, refValue) {
-      if (!refs || refKey == null || !refValue) {
+      if (refKey == null || !refValue) {
           return;
       }
       if (refValue.nodeName && !refValue.getDOMNode) {
@@ -606,18 +606,18 @@
       }
       if (isFn(refKey)) {
           refKey(refValue);
-      } else {
+      } else if (refs) {
           refs[refKey] = refValue;
       }
   }
 
   function detachRef(refs, refKey, refValue) {
-      if (!refs || refKey == null) {
+      if (refKey == null) {
           return;
       }
       if (isFn(refKey)) {
           refKey(null);
-      } else if (refs[refKey] === refValue) {
+      } else if (refs && refs[refKey] === refValue) {
           delete refs[refKey];
       }
   }
