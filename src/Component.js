@@ -91,7 +91,7 @@ Updater.prototype = {
 				}
 				// replace state
 				if (isReplace) {
-					state = _.extend({}, nextState[0])
+					state = _.extend({}, nextState)
 				} else {
 					_.extend(state, nextState)
 				}
