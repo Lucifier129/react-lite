@@ -436,9 +436,10 @@ function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
     node.cache[newVcomponent.uid] = component
     cache.parentContext = parentContext
     if (component.componentWillReceiveProps) {
-        updater.isPending = true
+        let needToggleIsPending = !updater.isPending
+        if (needToggleIsPending) updater.isPending = true
         component.componentWillReceiveProps(nextProps, componentContext)
-        updater.isPending = false
+        if (needToggleIsPending) updater.isPending = false
     }
 
     if (vcomponent.ref !== newVcomponent.ref) {
