@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.28
+ * react-lite.js v0.15.29
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -464,9 +464,10 @@ function updateVcomponent(vcomponent, newVcomponent, node, parentContext) {
     node.cache[newVcomponent.uid] = component;
     cache.parentContext = parentContext;
     if (component.componentWillReceiveProps) {
-        updater.isPending = true;
+        var needToggleIsPending = !updater.isPending;
+        if (needToggleIsPending) updater.isPending = true;
         component.componentWillReceiveProps(nextProps, componentContext);
-        updater.isPending = false;
+        if (needToggleIsPending) updater.isPending = false;
     }
 
     if (vcomponent.ref !== newVcomponent.ref) {
@@ -724,7 +725,7 @@ Updater.prototype = {
 				}
 				// replace state
 				if (isReplace) {
-					state = extend({}, nextState[0]);
+					state = extend({}, nextState);
 				} else {
 					extend(state, nextState);
 				}
@@ -2002,7 +2003,7 @@ function createElement(type, props, children) {
 	if (typeof type === 'string') {
 		vtype = VELEMENT;
 	} else if (typeof type === 'function') {
-		if (type.prototype && typeof type.prototype.forceUpdate === 'function') {
+		if (type.prototype && type.prototype.isReactComponent) {
 			vtype = VCOMPONENT;
 		} else {
 			vtype = VSTATELESS;
