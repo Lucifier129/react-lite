@@ -997,6 +997,7 @@ function addEvent(elem, eventType, listener) {
 	eventType = getEventName(eventType);
 
 	if (notBubbleEvents[eventType] === true) {
+		$$1(elem).off(eventType.substr(2) + '.react');
 		$$1(elem).on(eventType.substr(2) + '.react', listener);
 		return;
 	}

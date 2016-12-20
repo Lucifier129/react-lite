@@ -13,6 +13,7 @@ export function addEvent(elem, eventType, listener) {
 	eventType = getEventName(eventType)
 
 	if (notBubbleEvents[eventType] === true) {
+		$(elem).off(eventType.substr(2) + '.react')
 		$(elem).on(eventType.substr(2) + '.react', listener)
 		return
 	}
