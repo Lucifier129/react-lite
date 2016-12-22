@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.29
+ * react-lite.js v0.15.30
  * (c) 2016 Jade Gu
  * Released under the MIT License.
  */
@@ -782,7 +782,7 @@ Component.prototype = {
 		var state = this.state;
 		var context = this.context;
 
-		if ($updater.isPending || !$cache.isMounted) {
+		if (!$cache.isMounted) {
 			return;
 		}
 		var nextProps = $cache.props || props;
