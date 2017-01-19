@@ -140,7 +140,7 @@ Component.prototype = {
 	// },
 	forceUpdate(callback) {
 		let { $updater, $cache, props, state, context } = this
-		if (!$cache.isMounted) {
+		if ($updater.isPending || !$cache.isMounted) {
 			return
 		}
 		let nextProps = $cache.props || props
