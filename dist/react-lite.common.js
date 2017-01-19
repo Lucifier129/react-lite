@@ -1,6 +1,6 @@
 /*!
- * react-lite.js v0.15.30
- * (c) 2016 Jade Gu
+ * react-lite.js v0.15.31
+ * (c) 2017 Jade Gu
  * Released under the MIT License.
  */
 'use strict';
@@ -783,6 +783,11 @@ Component.prototype = {
 		var context = this.context;
 
 		if (!$cache.isMounted) {
+			return;
+		}
+		// if updater is pending, add state to trigger nexttick update
+		if ($updater.isPending) {
+			$updater.addState(state);
 			return;
 		}
 		var nextProps = $cache.props || props;

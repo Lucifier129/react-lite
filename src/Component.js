@@ -140,8 +140,13 @@ Component.prototype = {
 	// },
 	forceUpdate(callback) {
 		let { $updater, $cache, props, state, context } = this
-		if ($updater.isPending || !$cache.isMounted) {
+		if (!$cache.isMounted) {
 			return
+		}
+		// if updater is pending, add state to trigger nexttick update
+		if ($updater.isPending) {
+            $updater.addState(state)
+			return;
 		}
 		let nextProps = $cache.props || props
 		let nextState = $cache.state || state
