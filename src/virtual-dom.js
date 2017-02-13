@@ -345,8 +345,10 @@ function updateVelem(velem, newVelem, node) {
 function destroyVelem(velem, node) {
     let { props } = velem
     let { vchildren, childNodes } = node
-    for (let i = 0, len = vchildren.length; i < len; i++) {
-        destroyVnode(vchildren[i], childNodes[i])
+    if (vchildren) {
+        for (let i = 0, len = vchildren.length; i < len; i++) {
+            destroyVnode(vchildren[i], childNodes[i])
+        }
     }
     detachRef(velem.refs, velem.ref, node)
     node.eventStore = node.vchildren = null

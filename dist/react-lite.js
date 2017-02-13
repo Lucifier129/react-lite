@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.31
+ * react-lite.js v0.15.32
  * (c) 2017 Jade Gu
  * Released under the MIT License.
  */
@@ -367,8 +367,10 @@
       var vchildren = node.vchildren;
       var childNodes = node.childNodes;
 
-      for (var i = 0, len = vchildren.length; i < len; i++) {
-          destroyVnode(vchildren[i], childNodes[i]);
+      if (vchildren) {
+          for (var i = 0, len = vchildren.length; i < len; i++) {
+              destroyVnode(vchildren[i], childNodes[i]);
+          }
       }
       detachRef(velem.refs, velem.ref, node);
       node.eventStore = node.vchildren = null;
