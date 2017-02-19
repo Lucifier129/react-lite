@@ -8,6 +8,7 @@ export const unbubbleEvents = {
      * even though mousemove event can bubble
      */
     onmousemove: 1,
+    ontouchmove: 1,
     onmouseleave: 1,
     onmouseenter: 1,
     onload: 1,
@@ -23,7 +24,8 @@ export const unbubbleEvents = {
     ondragexit: 1,
     ondraggesture: 1,
     ondragover: 1,
-    oncontextmenu: 1
+    oncontextmenu: 1,
+    onerror: 1,
 }
 
 export function getEventName(key) {

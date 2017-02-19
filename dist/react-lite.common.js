@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.32
+ * react-lite.js v0.15.33
  * (c) 2017 Jade Gu
  * Released under the MIT License.
  */
@@ -870,6 +870,7 @@ var unbubbleEvents = {
      * even though mousemove event can bubble
      */
     onmousemove: 1,
+    ontouchmove: 1,
     onmouseleave: 1,
     onmouseenter: 1,
     onload: 1,
@@ -885,7 +886,8 @@ var unbubbleEvents = {
     ondragexit: 1,
     ondraggesture: 1,
     ondragover: 1,
-    oncontextmenu: 1
+    oncontextmenu: 1,
+    onerror: 1
 };
 
 function getEventName(key) {
