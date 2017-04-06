@@ -414,4 +414,15 @@ describe('ReactChildren', function() {
     );
   });
 
+  it('should normalize children in forEach', function() {
+    var children = [];
+    var callback = function(child) {
+      children.push(child);
+    };
+
+    ReactChildren.forEach([false, true, undefined], callback);
+    expect(children).toEqual(
+      [null, null, null]
+    );
+  });
 });
