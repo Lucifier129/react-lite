@@ -25,6 +25,12 @@ export function forEach(children, iteratee, context) {
 			iteratee.call(context, child, index++)
 		})
 	} else {
+		// from traverseAllChildrenImpl in react
+		var type = typeof children
+		if (type === 'undefined' || type === 'boolean') {
+			// All of the above are perceived as null.
+			children = null
+		}
 		iteratee.call(context, children, index)
 	}
 }

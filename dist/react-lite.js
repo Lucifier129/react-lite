@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.33
+ * react-lite.js v0.15.34
  * (c) 2017 Jade Gu
  * Released under the MIT License.
  */
@@ -227,6 +227,8 @@
   }
 
   function diffVchildren(patches, vnode, newVnode, node, parentContext) {
+      if (!node.vchildren) return; // react-lite hasn't seen this DOM node before
+
       var childNodes = node.childNodes;
       var vchildren = node.vchildren;
 
@@ -2150,9 +2152,22 @@
   	var index = 0;
   	if (isArr(children)) {
   		flatEach(children, function (child) {
+  			// from traverseAllChildrenImpl in react
+  			var type = typeof child;
+  			if (type === 'undefined' || type === 'boolean') {
+  				// All of the above are perceived as null.
+  				child = null;
+  			}
+
   			iteratee.call(context, child, index++);
   		});
   	} else {
+  		// from traverseAllChildrenImpl in react
+  		var type = typeof children;
+  		if (type === 'undefined' || type === 'boolean') {
+  			// All of the above are perceived as null.
+  			children = null;
+  		}
   		iteratee.call(context, children, index);
   	}
   }
