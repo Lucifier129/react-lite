@@ -15,6 +15,13 @@ export function forEach(children, iteratee, context) {
 	let index = 0
 	if (_.isArr(children)) {
 		_.flatEach(children, child => {
+			// from traverseAllChildrenImpl in react
+			var type = typeof child
+			if (type === 'undefined' || type === 'boolean') {
+				// All of the above are perceived as null.
+				child = null
+			}
+
 			iteratee.call(context, child, index++)
 		})
 	} else {
