@@ -204,6 +204,8 @@ function collectChild(child, children) {
 }
 
 function diffVchildren(patches, vnode, newVnode, node, parentContext) {
+    if (!node.vchildren) return // react-lite hasn't seen this DOM node before
+
     let { childNodes, vchildren } = node
     let newVchildren = node.vchildren = getFlattenChildren(newVnode)
     let vchildrenLen = vchildren.length
