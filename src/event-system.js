@@ -70,7 +70,7 @@ export function addEvent(elem, eventType, listener) {
 
     let nodeName = elem.nodeName
 
-    if (eventType === 'onchange') {
+    if (eventType === 'onchange' && supportInputEvent(elem)) {
         addEvent(elem, 'oninput', listener)
     }
 }
@@ -91,7 +91,7 @@ export function removeEvent(elem, eventType) {
 
     let nodeName = elem.nodeName
 
-    if (eventType === 'onchange') {
+    if (eventType === 'onchange' && supportInputEvent(elem)) {
         delete eventStore['oninput']
     }
 }
@@ -156,4 +156,9 @@ function createSyntheticEvent(nativeEvent) {
         }
     }
     return syntheticEvent
+}
+
+function supportInputEvent(elem) {
+    let nodeName = elem.nodeName && elem.nodeName.toLowerCase()
+    return nodeName !== 'select' && !(nodeName === 'input' && elem.type === 'file')
 }

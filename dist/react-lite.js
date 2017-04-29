@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.34
+ * react-lite.js v0.15.35
  * (c) 2017 Jade Gu
  * Released under the MIT License.
  */
@@ -938,7 +938,7 @@
 
       var nodeName = elem.nodeName;
 
-      if (eventType === 'onchange') {
+      if (eventType === 'onchange' && supportInputEvent(elem)) {
           addEvent(elem, 'oninput', listener);
       }
   }
@@ -959,7 +959,7 @@
 
       var nodeName = elem.nodeName;
 
-      if (eventType === 'onchange') {
+      if (eventType === 'onchange' && supportInputEvent(elem)) {
           delete eventStore['oninput'];
       }
   }
@@ -1031,6 +1031,11 @@
           }
       }
       return syntheticEvent;
+  }
+
+  function supportInputEvent(elem) {
+      var nodeName = elem.nodeName && elem.nodeName.toLowerCase();
+      return nodeName !== 'select' && !(nodeName === 'input' && elem.type === 'file');
   }
 
   function setStyle(elemStyle, styles) {
