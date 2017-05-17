@@ -172,6 +172,7 @@ const HTMLDOMPropertyConfig = {
         prefix: 0,
         // property is also supported for OpenGraph in meta tags.
         property: 0,
+        playsInline: HAS_BOOLEAN_VALUE,
         resource: 0,
         typeof: 0,
         vocab: 0,
