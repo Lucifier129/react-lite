@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.35
+ * react-lite.js v0.15.36
  * (c) 2017 Jade Gu
  * Released under the MIT License.
  */
@@ -1321,6 +1321,7 @@
           prefix: 0,
           // property is also supported for OpenGraph in meta tags.
           property: 0,
+          playsInline: HAS_BOOLEAN_VALUE,
           resource: 0,
           'typeof': 0,
           vocab: 0,
