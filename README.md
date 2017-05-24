@@ -6,7 +6,7 @@
 
 ## Introduction
 react-lite is an implementation of React that optimizes for small script size.
-### Framework Size Comparison
+### Size Comparison
 
 | Framework              | Version    | Minified Size |
 |------------------------|------------|---------------|
