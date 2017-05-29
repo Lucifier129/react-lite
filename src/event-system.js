@@ -26,6 +26,30 @@ export const unbubbleEvents = {
     ondragover: 1,
     oncontextmenu: 1,
     onerror: 1,
+
+    // media event
+    onabort: 1,
+    oncanplay: 1,
+    oncanplaythrough: 1,
+    ondurationchange: 1,
+    onemptied: 1,
+    onended: 1,
+    onloadeddata: 1,
+    onloadedmetadata: 1,
+    onloadstart: 1,
+    onencrypted: 1,
+    onpause: 1,
+    onplay: 1,
+    onplaying: 1,
+    onprogress: 1,
+    onratechange: 1,
+    onseeking: 1,
+    onseeked: 1,
+    onstalled: 1,
+    onsuspend: 1,
+    ontimeupdate: 1,
+    onvolumechange: 1,
+    onwaiting: 1,
 }
 
 export function getEventName(key) {
