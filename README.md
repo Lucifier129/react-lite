@@ -10,13 +10,14 @@ react-lite is an implementation of React that optimizes for small script size.
 
 | Framework              | Version    | Minified Size |
 |------------------------|------------|---------------|
-| Ember                  | 2.2.0      | 446.0kb       |
-| Polymer                | 1.0.6      | 183.0kb       |
-| Angular                | 1.4.8      | 148.0kb       |
-| React                  | 0.14.3     | 136.0kb       |
-| Web Components Polyfill| 0.7.19     | 118.0kb       |
+| Ember                  | 2.2.0      | 446kb         |
+| Polymer                | 1.0.6      | 183kb         |
+| Angular                | 1.4.8      | 148kb         |
+| React                  | 0.14.3     | 136kb         |
+| Web Components Polyfill| 0.7.19     | 118kb         |
 | Riot                   | 2.3.11     | 20kb          |
 | React-lite             | 0.15.6     | 25kb          |
+| Preact                 | 8.2.1      | 3kb           |
 
 React-lite supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no `ReactDOM.renderToString` & `ReactDOM.renderToStaticMarkup`).
