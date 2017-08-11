@@ -247,16 +247,8 @@ function diffVchildren(patches, vnode, newVnode, node, parentContext) {
             }
             let newVnode = newVchildren[j]
             if (vnode === newVnode) {
-                let shouldIgnore = true
-                if (parentContext) {
-                    if (vnode.vtype === VCOMPONENT || vnode.vtype === VSTATELESS) {
-                        if (vnode.type.contextTypes) {
-                            shouldIgnore = false
-                        }
-                    }
-                }
                 updates[j] = {
-                    shouldIgnore: shouldIgnore,
+                    shouldIgnore: shouldIgnoreUpdate(node),
                     vnode: vnode,
                     newVnode: newVnode,
                     node: childNodes[i],
@@ -609,4 +601,34 @@ export function syncCache(cache, oldCache, node) {
             value.$cache.node = node
         }
     }
+}
+
+
+function shouldIgnoreUpdate(node) {
+    let {
+        vchildren,
+        children
+    } = node
+
+    if (vchildren) {
+        for (let i = 0; i < vchildren.length; i++) {
+            let vchild = vchildren[i]
+            if (vchild.vtype === VCOMPONENT || vchild.vtype === VSTATELESS) {
+                if (vchild.type.contextTypes) {
+                    console.log('vchild', vchild)
+                    return false
+                }
+            }
+        }
+    }
+
+    if (children) {
+        for (let i = 0; i < children.length; i++) {
+            if (!shouldIgnoreUpdate(children[i])) {
+                return false
+            }
+        }
+    }
+
+    return true
 }
