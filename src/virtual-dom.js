@@ -615,7 +615,6 @@ function shouldIgnoreUpdate(node) {
             let vchild = vchildren[i]
             if (vchild.vtype === VCOMPONENT || vchild.vtype === VSTATELESS) {
                 if (vchild.type.contextTypes) {
-                    console.log('vchild', vchild)
                     return false
                 }
             }

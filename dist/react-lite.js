@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.37
+ * react-lite.js v0.15.38
  * (c) 2017 Jade Gu
  * Released under the MIT License.
  */
@@ -271,16 +271,8 @@
               }
               var _newVnode = newVchildren[j];
               if (_vnode === _newVnode) {
-                  var shouldIgnore = true;
-                  if (parentContext) {
-                      if (_vnode.vtype === VCOMPONENT || _vnode.vtype === VSTATELESS) {
-                          if (_vnode.type.contextTypes) {
-                              shouldIgnore = false;
-                          }
-                      }
-                  }
                   updates[j] = {
-                      shouldIgnore: shouldIgnore,
+                      shouldIgnore: shouldIgnoreUpdate(node),
                       vnode: _vnode,
                       newVnode: _newVnode,
                       node: childNodes[i],
@@ -640,6 +632,32 @@
               value.$cache.node = node;
           }
       }
+  }
+
+  function shouldIgnoreUpdate(node) {
+      var vchildren = node.vchildren;
+      var children = node.children;
+
+      if (vchildren) {
+          for (var i = 0; i < vchildren.length; i++) {
+              var vchild = vchildren[i];
+              if (vchild.vtype === VCOMPONENT || vchild.vtype === VSTATELESS) {
+                  if (vchild.type.contextTypes) {
+                      return false;
+                  }
+              }
+          }
+      }
+
+      if (children) {
+          for (var i = 0; i < children.length; i++) {
+              if (!shouldIgnoreUpdate(children[i])) {
+                  return false;
+              }
+          }
+      }
+
+      return true;
   }
 
   var updateQueue = {
