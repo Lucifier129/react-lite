@@ -7,7 +7,8 @@ import {
 } from './CSSPropertyOperations.js'
 import {
     setPropValue,
-    removePropValue
+    removePropValue,
+    updateSelectOptions
 } from './DOMPropertyOperations'
 import { HTML_KEY } from './constant'
 
@@ -119,18 +120,28 @@ function patchProp(elem, key, value, oldValue, isCustomComponent) {
 }
 
 export function setProps(elem, props, isCustomComponent) {
+    var isSelect = elem.nodeName === 'SELECT'
     for (let key in props) {
         if (key !== 'children') {
-            setProp(elem, key, props[key], isCustomComponent)
+            if (isSelect && (key === 'value' || key === 'defaultValue')) {
+                updateSelectOptions(elem, props.multiple, props[key])
+            } else {
+                setProp(elem, key, props[key], isCustomComponent)
+            }
         }
     }
 }
 
 export function patchProps(elem, props, newProps, isCustomComponent) {
+    var isSelect = elem.nodeName === 'SELECT'
     for (let key in props) {
         if (key !== 'children') {
             if (newProps.hasOwnProperty(key)) {
-                patchProp(elem, key, newProps[key], props[key], isCustomComponent)
+                if (isSelect && (key === 'value' || key === 'defaultValue')) {
+                    updateSelectOptions(elem, newProps.multiple, newProps[key])
+                } else {
+                    patchProp(elem, key, newProps[key], props[key], isCustomComponent)
+                }
             } else {
                 removeProp(elem, key, props[key], isCustomComponent)
             }
@@ -138,7 +149,11 @@ export function patchProps(elem, props, newProps, isCustomComponent) {
     }
     for (let key in newProps) {
         if (key !== 'children' && !props.hasOwnProperty(key)) {
-            setProp(elem, key, newProps[key], isCustomComponent)
+            if (isSelect && (key === 'value' || key === 'defaultValue')) {
+                updateSelectOptions(elem, newProps.multiple, newProps[key])
+            } else {
+                setProp(elem, key, newProps[key], isCustomComponent)
+            }
         }
     }
 }

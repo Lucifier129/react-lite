@@ -379,14 +379,85 @@ describe('ReactDOMComponent', function() {
       expect(container.textContent).toEqual('bonjour');
     });
 
-    it('should not incur unnecessary DOM mutations', function() {
+    it('should not incur unnecessary DOM mutations for attributes', () => {
       var container = document.createElement('div');
-      ReactDOM.render(<div value="" />, container);
+      ReactDOM.render(<div id="" />, container);
 
       var node = container.firstChild;
-      var nodeValue = ''; // node.value always returns undefined
+      var nodeSetAttribute = node.setAttribute;
+      node.setAttribute = mocks.getMockFunction();
+      node.setAttribute.mockImplementation(nodeSetAttribute);
+
+      var nodeRemoveAttribute = node.removeAttribute;
+      node.removeAttribute = mocks.getMockFunction();
+      node.removeAttribute.mockImplementation(nodeRemoveAttribute);
+
+      ReactDOM.render(<div id="" />, container);
+      expect(node.setAttribute.mock.calls.length).toBe(0);
+      expect(node.removeAttribute.mock.calls.length).toBe(0);
+
+      ReactDOM.render(<div id="foo" />, container);
+      expect(node.setAttribute.mock.calls.length).toBe(1);
+      expect(node.removeAttribute.mock.calls.length).toBe(0);
+
+      ReactDOM.render(<div id="foo" />, container);
+      expect(node.setAttribute.mock.calls.length).toBe(1);
+      expect(node.removeAttribute.mock.calls.length).toBe(0);
+
+      ReactDOM.render(<div />, container);
+      expect(node.setAttribute.mock.calls.length).toBe(1);
+      expect(node.removeAttribute.mock.calls.length).toBe(1);
+
+      ReactDOM.render(<div id="" />, container);
+      expect(node.setAttribute.mock.calls.length).toBe(2);
+      expect(node.removeAttribute.mock.calls.length).toBe(1);
+
+      ReactDOM.render(<div />, container);
+      expect(node.setAttribute.mock.calls.length).toBe(2);
+      expect(node.removeAttribute.mock.calls.length).toBe(2);
+    });
+
+    it('should not incur unnecessary DOM mutations for string properties', () => {
+      var container = document.createElement('div');
+      ReactDOM.render(<div data-value="" />, container);
+
+      var node = container.firstChild;
+
+      var nodeValueSetter = jest.genMockFn();
+
+      var oldSetAttribute = node.setAttribute.bind(node);
+      node.setAttribute = function(key, value) {
+        oldSetAttribute(key, value);
+        nodeValueSetter(key, value);
+      };
+
+      ReactDOM.render(<div data-value="foo" />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(1);
+
+      ReactDOM.render(<div data-value="foo" />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(1);
+
+      ReactDOM.render(<div />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(1);
+
+      ReactDOM.render(<div data-value={null} />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(1);
+
+      ReactDOM.render(<div data-value="" />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(2);
+
+      ReactDOM.render(<div />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(2);
+    });
+
+    it('should not incur unnecessary DOM mutations for boolean properties', () => {
+      var container = document.createElement('div');
+      ReactDOM.render(<div checked={true} />, container);
+
+      var node = container.firstChild;
+      var nodeValue = true;
       var nodeValueSetter = mocks.getMockFunction();
-      Object.defineProperty(node, 'value', {
+      Object.defineProperty(node, 'checked', {
         get: function() {
           return nodeValue;
         },
@@ -395,15 +466,44 @@ describe('ReactDOMComponent', function() {
         }),
       });
 
-      ReactDOM.render(<div value="" />, container);
+      ReactDOM.render(<div checked={true} />, container);
       expect(nodeValueSetter.mock.calls.length).toBe(0);
 
       ReactDOM.render(<div />, container);
-      expect(nodeValueSetter.mock.calls.length).toBe(0);
-
-      ReactDOM.render(<div value="1" />, container);
       expect(nodeValueSetter.mock.calls.length).toBe(1);
+
+      ReactDOM.render(<div checked={false} />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(2);
+
+      ReactDOM.render(<div checked={true} />, container);
+      expect(nodeValueSetter.mock.calls.length).toBe(3);
     });
+
+    // it('should not incur unnecessary DOM mutations', function() {
+    //   var container = document.createElement('div');
+    //   ReactDOM.render(<div value="" />, container);
+
+    //   var node = container.firstChild;
+    //   var nodeValue = ''; // node.value always returns undefined
+    //   var nodeValueSetter = mocks.getMockFunction();
+    //   Object.defineProperty(node, 'value', {
+    //     get: function() {
+    //       return nodeValue;
+    //     },
+    //     set: nodeValueSetter.mockImplementation(function(newValue) {
+    //       nodeValue = newValue;
+    //     }),
+    //   });
+
+    //   ReactDOM.render(<div value="" />, container);
+    //   expect(nodeValueSetter.mock.calls.length).toBe(0);
+
+    //   ReactDOM.render(<div />, container);
+    //   expect(nodeValueSetter.mock.calls.length).toBe(0);
+
+    //   ReactDOM.render(<div value="1" />, container);
+    //   expect(nodeValueSetter.mock.calls.length).toBe(1);
+    // });
 
     it('should ignore attribute whitelist for elements with the "is: attribute', function() {
       var container = document.createElement('div');

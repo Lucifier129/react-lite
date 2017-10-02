@@ -1,5 +1,5 @@
 /*!
- * react-lite.js v0.15.38
+ * react-lite.js v0.15.39
  * (c) 2017 Jade Gu
  * Released under the MIT License.
  */
@@ -1751,11 +1751,7 @@
           if (value == null || propInfo.hasBooleanValue && !value || propInfo.hasNumericValue && isNaN(value) || propInfo.hasPositiveNumericValue && value < 1 || propInfo.hasOverloadedBooleanValue && value === false) {
               removePropValue(node, name);
           } else if (propInfo.mustUseProperty) {
-              var propName = propInfo.propertyName;
-              // dom.value has side effect
-              if (propName !== 'value' || '' + node[propName] !== '' + value) {
-                  node[propName] = value;
-              }
+              node[propInfo.propertyName] = value;
           } else {
               var attributeName = propInfo.attributeName;
               var namespace = propInfo.attributeNamespace;
@@ -1794,16 +1790,59 @@
               if (propInfo.hasBooleanValue) {
                   node[propName] = false;
               } else {
-                  // dom.value accept string value has side effect
-                  if (propName !== 'value' || '' + node[propName] !== '') {
-                      node[propName] = '';
-                  }
+                  node[propName] = '';
               }
           } else {
               node.removeAttribute(propInfo.attributeName);
           }
       } else if (isCustomAttribute(name)) {
           node.removeAttribute(name);
+      }
+  }
+
+  function updateSelectOptions(select, multiple, propValue) {
+      var selectedValue, i;
+      var options = select.options;
+
+      if (multiple) {
+          select.multiple = true;
+          if (!Array.isArray(propValue)) {
+              throw new Error('The value prop supplied to <select> must be an array if `multiple` is true');
+          }
+          selectedValue = {};
+          for (i = 0; i < propValue.length; i++) {
+              selectedValue['' + propValue[i]] = true;
+          }
+          for (i = 0; i < options.length; i++) {
+              var selected = selectedValue.hasOwnProperty(options[i].value);
+              if (options[i].selected !== selected) {
+                  options[i].selected = selected;
+              }
+          }
+      } else {
+          select.multiple = false;
+          if (Array.isArray(propValue)) {
+              throw new Error('The value prop supplied to <select> must be a scalar value if `multiple` is false.');
+          }
+          // Do not set `select.value` as exact behavior isn't consistent across all
+          // browsers for all cases.
+          selectedValue = '' + propValue;
+          for (i = 0; i < options.length; i++) {
+              var option = options[i];
+              if (option.value === selectedValue) {
+                  if (!option.selected) {
+                      option.selected = true;
+                  }
+              } else {
+                  if (option.selected) {
+                      option.selected = false;
+                  }
+              }
+          }
+
+          if (options.selectedIndex < 0 && options.length) {
+              options[0].selected = true;
+          }
       }
   }
 
@@ -1917,18 +1956,28 @@
   }
 
   function setProps(elem, props, isCustomComponent) {
+      var isSelect = elem.nodeName === 'SELECT';
       for (var key in props) {
           if (key !== 'children') {
-              setProp(elem, key, props[key], isCustomComponent);
+              if (isSelect && (key === 'value' || key === 'defaultValue')) {
+                  updateSelectOptions(elem, props.multiple, props[key]);
+              } else {
+                  setProp(elem, key, props[key], isCustomComponent);
+              }
           }
       }
   }
 
   function patchProps(elem, props, newProps, isCustomComponent) {
+      var isSelect = elem.nodeName === 'SELECT';
       for (var key in props) {
           if (key !== 'children') {
               if (newProps.hasOwnProperty(key)) {
-                  patchProp(elem, key, newProps[key], props[key], isCustomComponent);
+                  if (isSelect && (key === 'value' || key === 'defaultValue')) {
+                      updateSelectOptions(elem, newProps.multiple, newProps[key]);
+                  } else {
+                      patchProp(elem, key, newProps[key], props[key], isCustomComponent);
+                  }
               } else {
                   removeProp(elem, key, props[key], isCustomComponent);
               }
@@ -1936,7 +1985,11 @@
       }
       for (var key in newProps) {
           if (key !== 'children' && !props.hasOwnProperty(key)) {
-              setProp(elem, key, newProps[key], isCustomComponent);
+              if (isSelect && (key === 'value' || key === 'defaultValue')) {
+                  updateSelectOptions(elem, newProps.multiple, newProps[key]);
+              } else {
+                  setProp(elem, key, newProps[key], isCustomComponent);
+              }
           }
       }
   }
