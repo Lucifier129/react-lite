@@ -53,7 +53,7 @@ supports IE9+ / ES5 enviroment
 
 ## Documentation
 
-learn react-lite from [React official documentation](http://facebook.github.io/react/)
+learn react-lite from [React official documentation](https://reactjs.org)
 
 ## What can react-lite do?
 
