@@ -25,6 +25,7 @@ Note: react-lite dose not support React v16.x now.
 React-lite supports the core APIs of React, such as Virtual DOM, intended as a drop-in
 replacement for React, when you don't need server-side rendering in browser(no `ReactDOM.renderToString` & `ReactDOM.renderToStaticMarkup`).
 
+### Usage
 If you are using webpack, it's so easy to use react-lite, just [config alias](http://webpack.github.io/docs/configuration.html#resolve-alias) in webpack.config.js:
 
 ```javascript
