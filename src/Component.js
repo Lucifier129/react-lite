@@ -208,6 +208,9 @@ function shouldUpdate(component, nextProps, nextState, nextContext, callback) {
 		component.props = nextProps
 		component.state = nextState
 		component.context = nextContext || {}
+		if(callback) {
+			callback.call(component)
+		}
 		return
 	}
 	let cache = component.$cache
