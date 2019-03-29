@@ -1,6 +1,6 @@
 /*!
  * react-lite.js v0.15.39
- * (c) 2017 Jade Gu
+ * (c) 2019 Jade Gu
  * Released under the MIT License.
  */
 'use strict';
@@ -874,6 +874,9 @@ function shouldUpdate(component, nextProps, nextState, nextContext, callback) {
 		component.props = nextProps;
 		component.state = nextState;
 		component.context = nextContext || {};
+		if (callback) {
+			callback.call(component);
+		}
 		return;
 	}
 	var cache = component.$cache;
